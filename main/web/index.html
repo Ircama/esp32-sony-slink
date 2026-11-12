@@ -89,6 +89,9 @@ body.off .mini-vol{opacity:.4;pointer-events:none}
 .mv-bar{display:block;width:34px;height:3px;border-radius:2px;background:var(--line2);overflow:hidden}
 .mv-bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 @media(max-width:480px){.brand .mk{display:none}header.top{gap:8px}.mv-b{width:29px;height:29px}.mv-val{min-width:34px}.mv-bar{width:28px}.pwr{width:40px;height:40px}}
+svg.i.glass{width:22px;height:22px;flex:none;color:var(--warn);animation:flip 1.6s ease-in-out infinite}
+@keyframes flip{0%,35%{transform:rotate(0)}65%,100%{transform:rotate(180deg)}}
+body.waiting,body.waiting *{cursor:progress}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex:none}
 .dot.live{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
 .dot.wait{background:var(--warn);animation:pulse 1.2s infinite}
@@ -351,6 +354,7 @@ svg.eq circle.drag{fill:var(--accent)}
 input.cc{width:44px;height:30px;padding:0;border:1px solid var(--line2);border-radius:8px;background:none;cursor:pointer}
 .kmode label.kthr{display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer}
 .kthr input{accent-color:var(--accent);width:16px;height:16px}
+.offline{opacity:.45;filter:grayscale(.6);transition:opacity .2s}
 .skins{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .sk{width:32px;height:32px;border-radius:50%;border:2px solid var(--line2);background:var(--c);padding:0;position:relative;cursor:pointer;flex:none}
 .sk[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--c)}
@@ -440,6 +444,7 @@ body.hxon .hx{display:block}
 <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
 <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6 2h12M6 22h12"/><path d="M7 2v4.5L12 12l-5 5.5V22M17 2v4.5L12 12l5 5.5V22"/></symbol>
 <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
 <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></symbol>
 <symbol id="i-radio" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0"/><path d="M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1" fill="currentColor"/><path d="M12 13v8"/></symbol>
@@ -464,16 +469,17 @@ body.hxon .hx{display:block}
       <h1 id="ampName">Sony S-Link</h1>
       <small><span class="dot wait" id="dot"></span><span id="conn">Connessione…</span></small>
     </div>
-    <div class="mini-vol" id="miniVol" role="group" aria-label="Volume">
+    <div class="mini-vol offline" id="miniVol" inert role="group" aria-label="Volume">
       <button class="mv-b" id="mvDn" aria-label="Volume giù"><svg class="i"><use href="#i-minus"/></svg></button>
       <div class="mv-val"><b id="mvNum">--</b><span class="mv-bar"><span id="mvFill"></span></span></div>
       <button class="mv-b" id="mvUp" aria-label="Volume su"><svg class="i"><use href="#i-plus"/></svg></button>
       <button class="mv-b" id="mvMute" aria-pressed="false" aria-label="Muto"><svg class="i"><use href="#i-vol"/></svg></button>
     </div>
-    <button class="pwr" id="pwr" aria-label="Accendi o spegni l'amplificatore" title="Accendi / standby"><svg class="i"><use href="#i-power"/></svg></button>
+    <svg class="i glass" id="glass" hidden role="img" aria-label="Comando in coda" aria-live="polite"><title>Comando in coda</title><use href="#i-hourglass"/></svg>
+    <button class="pwr offline" id="pwr" inert aria-label="Accendi o spegni l'amplificatore" title="Accendi / standby"><svg class="i"><use href="#i-power"/></svg></button>
   </header>
 
-  <main>
+  <main class="offline" inert>
     <div class="standby" id="standby" role="status">
       <svg class="i" style="width:26px;height:26px;color:var(--text3)"><use href="#i-power"/></svg>
       <div><b id="sbTitle">Amplificatore in standby</b><span id="sbText">Accendilo per usare i controlli.</span></div>
@@ -1354,6 +1360,7 @@ const TRX = [
   ["Attenzione: questo comando può essere udibile, distruttivo o cambiare le impostazioni dell'impianto.", 'Warning: this command may be audible, destructive or change the setup of the system.', "Attention : cette commande peut être audible, destructrice ou modifier les réglages de l'installation.", 'Achtung: Dieser Befehl kann hörbar sein, Daten zerstören oder die Einstellungen der Anlage ändern.', 'Atención: este comando puede ser audible, destructivo o cambiar los ajustes del equipo.'],
   ['Nessun apparecchio di questo tipo è collegato al bus: il comando non avrà risposta.', 'No such unit is connected to the bus: the command will get no answer.', "Aucun appareil de ce type n'est relié au bus : la commande restera sans réponse.", 'Kein solches Gerät ist am Bus angeschlossen: Der Befehl bleibt ohne Antwort.', 'No hay ningún aparato de ese tipo en el bus: el comando no tendrá respuesta.'],
   ['Questo comando non è stato verificato su questo amplificatore: potrebbe non avere effetto.', 'This command has not been verified on this amplifier: it may have no effect.', "Cette commande n'a pas été vérifiée sur cet amplificateur : elle peut rester sans effet.", 'Dieser Befehl wurde an diesem Verstärker nicht geprüft: Er hat möglicherweise keine Wirkung.', 'Este comando no se ha verificado en este amplificador: puede no tener efecto.'],
+  ['Comando in coda', 'Command queued', 'Commande en attente', 'Befehl in der Warteschlange', 'Comando en cola'],
   ['Comando non supportato da questo apparecchio', 'Command not supported by this unit', 'Commande non prise en charge par cet appareil', 'Befehl von diesem Gerät nicht unterstützt', 'Comando no admitido por este aparato'],
   ['Livello linea: {v}', 'Line level: {v}', 'Niveau de la ligne : {v}', 'Leitungspegel: {v}', 'Nivel de la línea: {v}'],
   ['Diagnostica S-Link', 'S-Link diagnostics', 'Diagnostic S-Link', 'S-Link-Diagnose', 'Diagnóstico S-Link'],
@@ -1543,34 +1550,81 @@ const codeTxt = c => (UI.codes ? ' (' + c + ')' : '');
 let rdsAt = 0;                             /* last time the RDS name was asked (asked again every 20 s while it is still missing) */
 let volCalUntil = 0;                       /* volume calibration (VOL MIN) in progress until this time, or until the device answers */
 let userAt = 0, userLine = '', busyRetry = 0, infoAt = 0;                            /* time of the last command the USER caused (automatic reads don't count) */
+/* Bus scheduler. The device runs the commands one by one (a backlog can build up) and the amplifier answers on the bus a few hundred ms AFTER each
+ * one; the reply carries no command id. A click made right after an automatic read (the start-up probes, e.g. C0 0E, which the DA50ES rejects with
+ * "C8 0F") would get that late error blamed on it ("Comando non supportato"). So the bus commands go through one queue: the user's commands jump ahead
+ * of the automatic ones, and a command of the other kind (user / automatic) is sent only when the device has finished the previous one (its OK / ERR
+ * line) plus BUS_GAP for the amplifier's reply; the click is shown as queued meanwhile. Every error reply then belongs to the command sent last.
+ * Commands of the device itself (settings, diagnostics) do not touch the bus and go out at once. */
+const BUS_GAP = 600, BUS_MAXWAIT = 4000;
+const LOCAL_CMD = /^(VOLCFG|UITITLE|DECODE|LOOPBACK|PAD|WIFIPWR|CFG|HELP|NET)\b/i;
+let busQ = [], busTimer = null, busAt = 0, busSentAt = 0, busPend = 0, busUser = false;   /* busAt: last completion; busPend: sent, not yet completed */
+function wsSend(line) { ws.send(line); log('me', '> ' + maskLine(line)); }
+/* hourglass in the header while a click of the user is waiting to go out (shown after 200 ms, so a short wait does not flicker) */
+let glassT = null;
+function glassUpd() {
+  const w = busQ.some(x => x.user);
+  if (!w) { clearTimeout(glassT); glassT = null; $('#glass').toggleAttribute('hidden', true); document.body.classList.remove('waiting'); }
+  else if (!glassT && $('#glass').hasAttribute('hidden')) glassT = setTimeout(() => { glassT = null; if (busQ.some(x => x.user)) { $('#glass').toggleAttribute('hidden', false); document.body.classList.add('waiting'); } }, 200);
+}
+function busPump() { busPump0(); glassUpd(); }
+function busPump0() {
+  clearTimeout(busTimer); busTimer = null;
+  if (!busQ.length) return;
+  if (!ws || ws.readyState !== 1) { busQ = []; busPend = 0; return; }
+  const it = busQ[0];
+  if (busPend > 0 && Date.now() - busSentAt > BUS_MAXWAIT) busPend = 0;          /* no completion line: do not wait for ever */
+  let wait = 0;
+  if (busSentAt && it.user !== busUser) wait = busPend > 0 ? Math.min(250, busSentAt + BUS_MAXWAIT - Date.now()) : busAt + BUS_GAP - Date.now();
+  if (wait > 0) {
+    busTimer = setTimeout(busPump, wait); return;
+  }
+  busQ.shift(); wsSend(it.line); busSentAt = Date.now(); busUser = it.user; busPend++;
+  busPump0();
+}
+function busDone() { if (busPend > 0) busPend--; busAt = Date.now(); if (busQ.length) busPump(); }
 function cmd(line, opts) {
   opts = opts || {};
   if (!opts.auto) { userAt = Date.now(); userLine = line; }
   if (opts.ack) ackUntil = Date.now() + 5000;
   if (DEMO) { log('me', '> ' + maskLine(line)); demoCmd(line); return true; }
-  if (ws && ws.readyState === 1) { ws.send(line); log('me', '> ' + maskLine(line)); return true; }
+  if (ws && ws.readyState === 1) {
+    if (LOCAL_CMD.test(line.trim())) { wsSend(line); return true; }
+    if (!opts.auto) {                                           /* the user acts: the queued background reads give way and the command goes before the other automatic ones */
+      busQ = busQ.filter(x => x.user || !x.soft);
+      let i = busQ.findIndex(x => !x.user); if (i < 0) i = busQ.length;
+      busQ.splice(i, 0, { line, user: true });
+    } else busQ.push({ line, user: false, soft: !!opts.soft });
+    busPump(); return true;
+  }
   toast('Non connesso al dispositivo', 'err'); return false;
 }
 /* soft = automatic background reads: they stop as soon as the user does something, so a click never waits behind them */
-async function seq(lines, gap, soft) { const t = Date.now(); for (const l of lines) { if (soft && userAt > t) return; cmd(l, { auto: true }); await sleep(gap || 450); } }
+async function seq(lines, gap, soft) { const t = Date.now(); for (const l of lines) { if (soft && userAt > t) return; cmd(l, { auto: true, soft: soft }); await sleep(gap || 450); } }
 /* The firmware's EQ command keeps its command queue busy for ~3.6 s (6 reads of 0.5 s): a click made meanwhile would wait that
  * long and look ignored. The same reads sent as separate short frames (C3 50 POS BAND: 0 = front, 2 = rear) leave the queue free. */
 const eqReads = () => ['C3 50 00 00', 'C3 50 00 01', 'C3 50 00 02'].concat(S.sf > 0 ? ['C3 50 02 00', 'C3 50 02 01', 'C3 50 02 02'] : []);
 function eqRead() { seq(eqReads(), 550); }
 
+let linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
 function setConn(ok, txt) {
-  S.connected = ok; $('#dot').className = 'dot ' + (ok ? 'live' : 'wait'); $('#conn').textContent = tr(txt);
+  S.connected = ok; if (!ok) linkReady = false;
+  const live = ok && linkReady;
+  $('#dot').className = 'dot ' + (live ? 'live' : 'wait'); $('#conn').textContent = tr(ok && !linkReady ? 'Connessione…' : txt);
+  /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
+  ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the page, the header's volume buttons and the power button */
 }
 /* Every socket handles ONLY itself (the global `ws` is the current one): while the device reboots several attempts can be in
  * flight, and a late error/close of an old socket must not tear down the new one (that made an endless reconnect chain). One
  * reconnect timer at most, with a back-off of 1, 2, 3, 4, 5 s. */
 let reconnectTimer = null;
 function connect() {
-  if (DEMO) { setConn(true, 'Modalità demo'); demoStart(); return; }
+  if (DEMO) { linkReady = true; setConn(true, 'Modalità demo'); demoStart(); return; }
   clearTimeout(reconnectTimer); reconnectTimer = null;
+  if (!S.connected) setConn(false, retry ? 'Riconnessione…' : 'Connessione…');
   const s = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
   ws = s;
-  s.onopen = () => { if (ws !== s) return; retry = 0; lastRx = Date.now(); loadedInfo = Date.now() - infoAt < 30000; rdsAsked = 0; sfSt = null; setConn(true, 'Connesso'); cmd('STATUS', { auto: true }); setTimeout(() => { cmd('VOLCFG', { auto: true }); cmd('UITITLE', { auto: true }); cmd('DECODE', { auto: true }); cmd('LOOPBACK', { auto: true }); cmd('PAD', { auto: true }); cmd('WIFIPWR', { auto: true }); cmd('C0 0E', { auto: true }); setTimeout(jbProbe, 1500); }, 2200); };
+  s.onopen = () => { if (ws !== s) return; busQ = []; glassUpd(); busAt = 0; busSentAt = 0; busPend = 0; retry = 0; lastRx = Date.now(); loadedInfo = Date.now() - infoAt < 30000; rdsAsked = 0; sfSt = null; setConn(true, 'Connesso'); setTimeout(() => { if (ws === s && !linkReady) { linkReady = true; setConn(true, 'Connesso'); } }, 3000); cmd('STATUS', { auto: true }); setTimeout(() => { cmd('VOLCFG', { auto: true }); cmd('UITITLE', { auto: true }); cmd('DECODE', { auto: true }); cmd('LOOPBACK', { auto: true }); cmd('PAD', { auto: true }); cmd('WIFIPWR', { auto: true }); cmd('C0 0E', { auto: true }); setTimeout(jbProbe, 1500); }, 2200); };
   s.onmessage = e => { if (ws === s) onMsg(e.data); };
   s.onclose = () => { if (ws !== s) return; setConn(false, 'Riconnessione…'); if (!reconnectTimer) reconnectTimer = setTimeout(connect, Math.min(1000 * (++retry), 5000)); };
   s.onerror = () => { try { s.close(); } catch (e) {} };
@@ -1583,6 +1637,7 @@ function onMsg(d) {
   if (d[0] === '{') {
     let j; try { j = JSON.parse(d); } catch (e) { return; }
     if (j.t === 'state') {
+      if (!linkReady && S.connected) { linkReady = true; setConn(true, 'Connesso'); }
       Object.assign(S, { power: j.power, mute: j.mute, in: j.in, video: j.video, vol: j.vol10 >= 0 ? j.vol10 / 10 : j.vol, name: j.name, labels: j.labels || {}, sf: j.sf, par: j.par || {}, eq: j.eq || S.eq, tuner: j.tuner,
         cc: j.cc ?? -1, itype: j.itype ?? -1, snd: j.snd ?? -1, idev: j.idev ?? -1, sfp: j.sfp ?? -1, spk: j.spk ?? -1, info: j.info || {} }); render();
       /* the amp name and the source labels are only sent on request: ask once when the amp is on and they are missing */
@@ -1606,13 +1661,14 @@ function onMsg(d) {
 }
 function logClass(d) { return d.startsWith('RX') ? 'rx' : d.startsWith('TX') ? 'tx' : d.startsWith('OK') ? 'ok' : d.startsWith('ERR') ? 'err' : 'info'; }
 function handleLine(d) {
+  if (/^(OK|ERR)\b/.test(d)) busDone();                /* the device finished a command */
   if (CAP) { if (CAP.re.test(d)) CAP.lines.push(d); if (CAP.end.test(d)) CAP.done(); }
   jbLine(d);
   const pm = /^PAD (\d)\b/.exec(d); if (pm) $('#dgPad').value = pm[1];
   const dl = /^(?:OK )?(decode|loopback)\s+(on|off)\b/i.exec(d);
   if (dl) { const k = dl[1].toLowerCase() === 'decode' ? 'dgDec' : 'dgLoop', on = dl[2].toLowerCase() === 'on'; $('#' + k + 'On').setAttribute('aria-pressed', on); $('#' + k + 'Off').setAttribute('aria-pressed', !on); }
   /* a unit answered "error" (0F) to something the user just did: say it (background reads do not count) */
-  if (/^RX (C8|C9|CB|B8|98|99|9A) 0F\b/.test(d) && Date.now() - userAt < 2500) toast('Comando non supportato da questo apparecchio', 'err');
+  if (/^RX (C8|C9|CB|B8|98|99|9A) 0F\b/.test(d) && busUser && Date.now() - Math.max(busAt, busSentAt) < 2500) toast('Comando non supportato da questo apparecchio', 'err');
   const ln = /^LINE (\d)/.exec(d); if (ln) toast(tr('Livello linea: {v}', { v: tr(ln[1] === '1' ? 'a riposo (alta)' : 'bassa') }));
   const vcm = /^VOLCFG up=(\d+) down=(\d+) margin=(\d+)/.exec(d);
   if (vcm) { $('#vcUp').value = vcm[1]; $('#vcDn').value = vcm[2]; $('#vcMg').value = vcm[3]; }
@@ -2275,7 +2331,7 @@ function wire() {
     requestAnimationFrame(() => { scrollTick = false; const on = scrolledOn ? scrollY > 4 : scrollY > 16; if (on !== scrolledOn) { scrolledOn = on; $('#top').classList.toggle('scrolled', on); } });
   }, { passive: true });
   addEventListener('keydown', e => {
-    if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!S.connected || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'm' || e.key === 'M') $('#mute').click();
     else if (e.key === 'ArrowUp') { e.preventDefault(); cmd('VOL UP ' + volStep()); } else if (e.key === 'ArrowDown') { e.preventDefault(); cmd('VOL DOWN ' + volStep()); }
     else if (e.key >= '1' && e.key <= '6') showTab(['home', 'radio', 'sound', 'stats', 'console', 'set'][+e.key - 1]);
