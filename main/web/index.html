@@ -1453,7 +1453,9 @@ const I18N = { en: {}, fr: {}, de: {}, es: {} };
 TRX.forEach(r => ['en', 'fr', 'de', 'es'].forEach((l, i) => { I18N[l][r[0]] = r[i + 1]; }));
 const QS = k => { const m = new RegExp('[?&]' + k + '=([a-z]+)').exec(location.search); return m && m[1]; };
 let LANG = QS('lang') || store.get('lang', '');
-if (!LANGS.some(l => l[0] === LANG)) { const n = (navigator.language || 'it').slice(0, 2).toLowerCase(); LANG = LANGS.some(l => l[0] === n) ? n : 'en'; }
+if (!LANGS.some(l => l[0] === LANG)) { /* no saved choice: the first browser language the portal speaks, otherwise English */
+  const pref = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']).map(x => String(x).slice(0, 2).toLowerCase());
+  LANG = pref.find(x => LANGS.some(l => l[0] === x)) || 'en'; }
 /* tr('Italian text', {param: value}): translated text, the Italian original if there is no translation */
 function tr(k, p) {
   let s = (I18N[LANG] && I18N[LANG][k]) || k;
