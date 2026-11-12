@@ -1,0 +1,48 @@
+menu "S-Link interface"
+
+    config SLINK_SINGLE_PIN
+        bool "Single GPIO, open-drain (2 wires: GPIO + GND)"
+        default y
+        help
+          The same GPIO reads and drives the S-Link line (open-drain).
+          Valid when the line idles at <= 3.3 V (STR-DA1000ES is reported as 3V TTL).
+          Disable to use separate TX (NPN) and RX (divider) pins for 5 V lines.
+
+    config SLINK_TX_GPIO
+        int "S-Link GPIO (single-pin mode) / TX GPIO (NPN base) in dual-pin mode"
+        default 10 if IDF_TARGET_ESP32H2
+        default 8
+        help
+          ESP32-H2: GPIO 2, 3, 8, 9 and 25 are strapping pins and 26/27 are USB; GPIO 10 is free.
+
+    config SLINK_RX_GPIO
+        int "RX GPIO (dual-pin mode only)"
+        depends on !SLINK_SINGLE_PIN
+        default 4 if IDF_TARGET_ESP32H2
+        default 3
+
+    config SLINK_TX_INVERT
+        bool "TX inverted (dual-pin mode: GPIO high = line low, via NPN)"
+        depends on !SLINK_SINGLE_PIN
+        default y
+
+    config SLINK_DEFAULT_DEVICE
+        hex "Default device ID byte used by mnemonic commands"
+        default 0xC0
+        help
+          0xC0 = verified on a real STR-DA50ES (replies C8/C9/CB).
+          0x70 is the code reported for STR-DA1000ES-class amps (not verified here).
+
+    config SLINK_LED_GPIO
+        int "GPIO of a status LED mirroring S-Link traffic (-1 = none)"
+        default 48 if IDF_TARGET_ESP32S3
+        default -1
+        help
+          The LED lights while the S-Link line is low (any in/out traffic).
+          Can be changed at run time with the LED command.
+
+    config SLINK_LED_INVERT
+        bool "LED is active-low"
+        default n
+
+endmenu

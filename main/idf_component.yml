@@ -1,0 +1,9 @@
+dependencies:
+  espressif/mdns:
+    version: "^1.4.0"
+    rules:
+      - if: "target != esp32h2"
+  espressif/mqtt:
+    version: "*"
+    rules:
+      - if: "target != esp32h2"

@@ -1,0 +1,24 @@
+build/
+sdkconfig
+sdkconfig.old
+
+# PlatformIO / VS Code: generated, per-machine
+.pio/
+.vscode/
+
+# downloaded by the ESP-IDF component manager (pinned in dependencies.lock)
+managed_components/
+
+# generated per environment by PlatformIO/ESP-IDF from sdkconfig.defaults + Kconfig defaults (delete to regenerate)
+sdkconfig.esp32c3
+sdkconfig.esp32c6
+sdkconfig.esp32s3
+
+# Sony's copyrighted manual: local reference only
+docs/RM-TP501.pdf
+
+# saved web pages used as references (third-party content)
+docs/tmp/
+
+# generated per environment (ESP-IDF 6 build of the H2 target)
+sdkconfig.esp32h2

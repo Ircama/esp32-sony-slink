@@ -1,0 +1,5 @@
+# ESP32-H2 (no WiFi): read in addition to sdkconfig.defaults. The CPU runs at 96 MHz at most; the "ECO" setting scales it to 32..48 MHz at run time
+# (net_nowifi.c). Power management is enabled (dynamic frequency scaling only, no automatic light sleep: the S-Link receiver needs the GPIO
+# interrupt latency to stay in the microseconds).
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_96=y
+CONFIG_PM_ENABLE=y

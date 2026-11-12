@@ -1,0 +1,29 @@
+# Console off: the USB Serial/JTAG port carries ONLY the S-Link protocol
+CONFIG_ESP_CONSOLE_NONE=y
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
+CONFIG_LOG_DEFAULT_LEVEL_NONE=y
+
+# 4 MB flash, custom partition table (app 1.75 MB: WiFi + BLE + web portal)
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
+# BLE: NimBLE peripheral only (Nordic UART Service)
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=247
+
+# WiFi + BLE coexistence (STA only)
+CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
+
+# Power management: CPU frequency scaling is configured at run time (net.c, "ECO" setting).
+# No automatic light sleep: the S-Link receiver needs the GPIO interrupt latency to stay in the microseconds.
+CONFIG_PM_ENABLE=y
+
+# Web portal
+CONFIG_HTTPD_WS_SUPPORT=y
+CONFIG_LWIP_MAX_SOCKETS=12

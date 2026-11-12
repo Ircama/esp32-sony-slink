@@ -1,0 +1,41 @@
+# Publishes the web portal in demo mode (simulated amplifier, no device needed) on GitHub Pages:
+#   https://<owner>.github.io/<repo>/
+# The files of main/web/ are copied as they are; only a one-line script is added to index.html to switch the demo on.
+name: Demo on GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["main/web/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the demo site
+        run: |
+          mkdir _site
+          cp main/web/* _site/
+          sed -i '0,/<head>/s//<head>\n<script>window.SLINK_DEMO = true;<\/script>/' _site/index.html
+          grep -q 'SLINK_DEMO' _site/index.html
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
