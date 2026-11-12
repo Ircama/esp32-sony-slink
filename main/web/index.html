@@ -1560,20 +1560,24 @@ const BUS_GAP = 600, BUS_MAXWAIT = 4000;
 const LOCAL_CMD = /^(VOLCFG|UITITLE|DECODE|LOOPBACK|PAD|WIFIPWR|CFG|HELP|NET)\b/i;
 let busQ = [], busTimer = null, busAt = 0, busSentAt = 0, busPend = 0, busUser = false;   /* busAt: last completion; busPend: sent, not yet completed */
 function wsSend(line) { ws.send(line); log('me', '> ' + maskLine(line)); }
-/* hourglass in the header while a click of the user is waiting to go out (shown after 200 ms, so a short wait does not flicker) */
-let glassT = null;
+/* hourglass in the header from the click until the command has really been transmitted: still in the queue, or sent to the device and not yet
+ * executed (its OK / ERR line not back), or waiting for the one retry after "busy". Shown after 200 ms, so a short wait does not flicker. */
+let glassT = null, glassPoll = null, userRetry = false;
+const userWaiting = () => S.connected && (userRetry || busQ.some(x => x.user) || (busUser && busPend > 0));
 function glassUpd() {
-  const w = busQ.some(x => x.user);
+  const w = userWaiting();
+  clearTimeout(glassPoll); glassPoll = null;
+  if (w) glassPoll = setTimeout(busPump, 300);          /* re-check (also lets the "no completion line" time-out release the hourglass) */
   if (!w) { clearTimeout(glassT); glassT = null; $('#glass').toggleAttribute('hidden', true); document.body.classList.remove('waiting'); }
-  else if (!glassT && $('#glass').hasAttribute('hidden')) glassT = setTimeout(() => { glassT = null; if (busQ.some(x => x.user)) { $('#glass').toggleAttribute('hidden', false); document.body.classList.add('waiting'); } }, 200);
+  else if (!glassT && $('#glass').hasAttribute('hidden')) glassT = setTimeout(() => { glassT = null; if (userWaiting()) { $('#glass').toggleAttribute('hidden', false); document.body.classList.add('waiting'); } }, 200);
 }
 function busPump() { busPump0(); glassUpd(); }
 function busPump0() {
   clearTimeout(busTimer); busTimer = null;
+  if (busPend > 0 && Date.now() - busSentAt > BUS_MAXWAIT) busPend = 0;          /* no completion line: do not wait for ever */
   if (!busQ.length) return;
   if (!ws || ws.readyState !== 1) { busQ = []; busPend = 0; return; }
   const it = busQ[0];
-  if (busPend > 0 && Date.now() - busSentAt > BUS_MAXWAIT) busPend = 0;          /* no completion line: do not wait for ever */
   let wait = 0;
   if (busSentAt && it.user !== busUser) wait = busPend > 0 ? Math.min(250, busSentAt + BUS_MAXWAIT - Date.now()) : busAt + BUS_GAP - Date.now();
   if (wait > 0) {
@@ -1582,7 +1586,7 @@ function busPump0() {
   busQ.shift(); wsSend(it.line); busSentAt = Date.now(); busUser = it.user; busPend++;
   busPump0();
 }
-function busDone() { if (busPend > 0) busPend--; busAt = Date.now(); if (busQ.length) busPump(); }
+function busDone() { if (busPend > 0) busPend--; busAt = Date.now(); busPump(); }
 function cmd(line, opts) {
   opts = opts || {};
   if (!opts.auto) { userAt = Date.now(); userLine = line; }
@@ -1677,7 +1681,7 @@ function handleLine(d) {
   const ttm = /^UITITLE (APP|PAGE) "(.*)"/.exec(d);
   if (ttm) { TITLE[ttm[1].toLowerCase()] = ttm[2]; store.set('t_' + ttm[1].toLowerCase(), ttm[2]); applyTitles(); }
   if (/^ERR busy/.test(d)) {            /* the single command worker was occupied: retry the user's own command once, say nothing for background reads */
-    if (userLine && Date.now() - userAt < 3000 && Date.now() - busyRetry > 2500) { busyRetry = Date.now(); const l = userLine; setTimeout(() => cmd(l, { auto: true }), 1500); }
+    if (userLine && Date.now() - userAt < 3000 && Date.now() - busyRetry > 2500) { busyRetry = Date.now(); const l = userLine; userRetry = true; glassUpd(); setTimeout(() => { userRetry = false; cmd(l); }, 1500); }
     else if (Date.now() - userAt < 3000) toast(d.replace(/^ERR\s*/, ''), 'err');
   }
   else if (d.startsWith('ERR')) toast(d.replace(/^ERR\s*/, ''), 'err');
