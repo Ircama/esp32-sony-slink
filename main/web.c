@@ -128,8 +128,15 @@ static void tx_task(void *arg)
 static esp_err_t h_asset(httpd_req_t *r)
 {
     const web_asset_t *a = (const web_asset_t *)r->user_ctx;
-    httpd_resp_set_type(r, a->mime);
+    httpd_resp_set_hdr(r, "ETag", a->etag);                      /* unchanged since the last visit: answer 304 with no body (the page is ~100 KB over a slow WiFi) */
     httpd_resp_set_hdr(r, "Cache-Control", a->cache);
+    char inm[48];
+    if (httpd_req_get_hdr_value_str(r, "If-None-Match", inm, sizeof inm) == ESP_OK && !strcmp(inm, a->etag)) {
+        httpd_resp_set_status(r, "304 Not Modified");
+        return httpd_resp_send(r, NULL, 0);
+    }
+    httpd_resp_set_type(r, a->mime);
+    if (a->gz) { httpd_resp_set_hdr(r, "Content-Encoding", "gzip"); httpd_resp_set_hdr(r, "Vary", "Accept-Encoding"); }
     if (!strcmp(a->uri, "/sw.js")) httpd_resp_set_hdr(r, "Service-Worker-Allowed", "/");
     return httpd_resp_send(r, (const char *)a->data, (ssize_t)a->len);
 }

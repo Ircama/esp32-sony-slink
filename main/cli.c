@@ -361,7 +361,7 @@ static void help(void)
         "  TUNER FM|AM|SCAN+|SCAN-|PRESET+|PRESET-|MONO|STEREO  TUNE FM <MHz>|AM <kHz>  PRESET <bank 1-3> <n 1-10>" CRLF
         "  FAV [ADD [FM <MHz>|AM <kHz>] | DEL <n> | <n>]  presets kept by the bridge (max 30; the amp's own presets can only be stored from its panel)" CRLF
         "  FMSCAN             list all FM stations with level and RDS name (amp must be on TUNER input)" CRLF
-        "  NAME               RDS name of the tuned FM station (asked on demand, not pushed during scans)" CRLF
+        "  NAME [FORCE]       RDS name of the tuned FM station (on demand; gives way to other commands; a failure is remembered 2 min per frequency)" CRLF
         "  STATIONS | TUNE <name>|#n|101.5   stored FM stations (built by FMSCAN, kept in flash); tune by name/number/MHz" CRLF
         "  EQCURVE            draw the active EQ curve (frequency / dB) for front and rear" CRLF
         "  EQ                 read bass/mid/treble front+rear;  EQ F|R BASS|MID|TREBLE GAIN <-10..10> | FREQ <Hz>" CRLF
@@ -466,6 +466,8 @@ static void handle_cmd(char *line);
 static int split_args(char *raw, char **av, int max);
 static unsigned s_last_fm = 9825, s_last_am = 720;   /* last frequency tuned per band (98.25 MHz / 720 kHz measured) */
 
+static bool cmd_waiting(void);                   /* another command is queued behind the one running (defined with the queue) */
+
 /* the volume estimate is not part of the amp state, so no frame announces its change: push it to the web/MQTT
  * clients explicitly after every VOL command */
 static void handle(char *line)
@@ -503,6 +505,14 @@ static void handle_cmd(char *line)
     else if (!strcmp(c0, "NAME")) {
         /* RDS station name of the tuned station. The amp does not push it: it must be asked for, with the CURRENT
          * bank (read from the tuner status; the board forgets it at every reset) and only while the TUNER input is on. */
+        /* This command can run for ~15 s on a station without RDS and the worker executes one command at a time: it gives way as soon as another
+         * command is queued (a click on power or volume must not wait for it), and a failure is remembered for 2 minutes per frequency, so the
+         * periodic automatic asks of the web page do not keep the worker busy ("NAME FORCE" asks again at once). */
+        static unsigned none_f; static int64_t none_us;
+        bool force = nt > 1 && !strcasecmp(tok[1], "FORCE");
+        if (!force && none_f && none_f == s_tun.f && esp_timer_get_time() - none_us < 120000000LL) {
+            out("NAME: no RDS name at %u.%02u MHz (tried a moment ago; NAME FORCE asks again)" CRLF, s_tun.f / 100, s_tun.f % 100); return;
+        }
         uint8_t ask[2] = {TUNER_DEV, 0x0F};
         uint32_t s0 = s_tun.seq;
         slink_send(ask, 2, 1);
@@ -514,19 +524,22 @@ static void handle_cmd(char *line)
          * So after a failed round, re-tune once per frequency and ask again. */
         static unsigned retuned_f;
         for (int attempt = 1; attempt <= 9; attempt++) {     /* RDS can need a few seconds after tuning */
+            if (cmd_waiting()) { out("NAME: interrupted by another command" CRLF); return; }
             if (attempt == 4 && retuned_f != s_tun.f) {
                 retuned_f = s_tun.f;
                 uint8_t re[5] = {TUNER_DEV, 0x50, 0, (uint8_t)(s_tun.f >> 8), (uint8_t)s_tun.f};
                 slink_send(re, 5, 1);
-                vTaskDelay(pdMS_TO_TICKS(1500));
+                for (int w = 0; w < 15 && !cmd_waiting(); w++) vTaskDelay(pdMS_TO_TICKS(100));
             }
             uint32_t ns = s_tun.name_seq;
             uint8_t nq[4] = {TUNER_DEV, 0x48, s_tun.bank, 0xFF};
             slink_send(nq, 4, 1);
-            for (int i = 0; i < 12 && s_tun.name_seq == ns; i++) vTaskDelay(pdMS_TO_TICKS(100));
+            for (int i = 0; i < 12 && s_tun.name_seq == ns && !cmd_waiting(); i++) vTaskDelay(pdMS_TO_TICKS(100));
+            if (s_tun.name_seq == ns && cmd_waiting()) { out("NAME: interrupted by another command" CRLF); return; }
             if (s_tun.name_seq != ns) { out("NAME \"%s\" (%u.%02u MHz)" CRLF, s_tun.name, s_tun.f / 100, s_tun.f % 100); return; }
-            vTaskDelay(pdMS_TO_TICKS(500));
+            for (int i = 0; i < 5 && !cmd_waiting(); i++) vTaskDelay(pdMS_TO_TICKS(100));
         }
+        none_f = s_tun.f; none_us = esp_timer_get_time();
         out("NAME: no RDS name after 9 tries (one re-tune) at %u.%02u MHz (%s%s): weak signal or a station without RDS" CRLF,
             s_tun.f / 100, s_tun.f % 100, (s_tun.fl & 0x08) ? "locked" : "not locked",
             (s_tun.fl & 0x40) ? ", stereo" : "");
@@ -1183,6 +1196,7 @@ static void handle_net(char *raw, char **tok, int nt)
 
 /* ---- command queue: every transport submits lines, one worker executes them in order ---- */
 static QueueHandle_t s_cmdq;
+static bool cmd_waiting(void) { return s_cmdq && uxQueueMessagesWaiting(s_cmdq) > 0; }
 
 bool cli_submit(const char *line)
 {

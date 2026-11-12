@@ -1540,7 +1540,7 @@ function srcActive(s) { return S.in === s.c || (s.alt && s.alt.includes(S.in)); 
 
 /* ---------------- transport ---------------- */
 const maskLine = t => t.replace(/^(CFG (?:SET )?(?:pass|mqtt_pass) ).*/i, '$1"***"');      /* passwords never reach the console log */
-let ws = null, retry = 0, ackUntil = 0, lastRx = 0, loadedInfo = false, rdsAsked = 0, sfSt = null;
+let ws = null, retry = 0, ackUntil = 0, lastRx = 0, loadedInfo = false, rdsAsked = 0, rdsNone = 0, sfSt = null;
 /* interface options (per browser) */
 const UIDEF = { allOff: 1, codes: 1, quick: 1, kmode: 1, vchips: 1, hx: 0, tabs: { home: 1, radio: 1, sound: 1, stats: 1, console: 1, jukebox: 1 } };
 let UI = (() => { let o = {}; try { o = JSON.parse(store.get('ui', '{}')) || {}; } catch (e) {} return Object.assign({}, UIDEF, o, { tabs: Object.assign({}, UIDEF.tabs, o.tabs || {}) }); })();
@@ -1557,7 +1557,7 @@ let userAt = 0, userLine = '', busyRetry = 0, infoAt = 0;                       
  * line) plus BUS_GAP for the amplifier's reply; the click is shown as queued meanwhile. Every error reply then belongs to the command sent last.
  * Commands of the device itself (settings, diagnostics) do not touch the bus and go out at once. */
 const BUS_GAP = 600, BUS_MAXWAIT = 4000;
-const LOCAL_CMD = /^(VOLCFG|UITITLE|DECODE|LOOPBACK|PAD|WIFIPWR|CFG|HELP|NET)\b/i;
+const LOCAL_CMD = /^(VOLCFG|UITITLE|DECODE|LOOPBACK|PAD|WIFIPWR|CFG|HELP|NET|NAME)\b/i;     /* NAME (RDS) is a slow read that never errors with 0F: it does not hold the queue */
 let busQ = [], busTimer = null, busAt = 0, busSentAt = 0, busPend = 0, busUser = false;   /* busAt: last completion; busPend: sent, not yet completed */
 function wsSend(line) { ws.send(line); log('me', '> ' + maskLine(line)); }
 /* hourglass in the header from the click until the command has really been transmitted: still in the queue, or sent to the device and not yet
@@ -1647,7 +1647,7 @@ function onMsg(d) {
       /* the amp name and the source labels are only sent on request: ask once when the amp is on and they are missing */
       /* RDS name: the tuner never pushes it, ask (NAME retries for a few seconds) once per tuned FM frequency */
       const tu = S.tuner;
-      if (!DEMO && S.power === 1 && S.in === 0 && tu && tu.band === 'FM' && !tu.name && tu.f && (rdsAsked !== tu.f || Date.now() - rdsAt > 20000)) { rdsAsked = tu.f; rdsAt = Date.now(); cmd('NAME', { auto: true }); }
+      if (!DEMO && S.power === 1 && S.in === 0 && tu && tu.band === 'FM' && !tu.name && tu.f && rdsNone !== tu.f && (rdsAsked !== tu.f || Date.now() - rdsAt > 20000)) { rdsAsked = tu.f; rdsAt = Date.now(); cmd('NAME', { auto: true }); }
       if (!DEMO && S.power === 1 && !loadedInfo && (!S.name || !Object.keys(S.labels).length)) { loadedInfo = true; infoAt = Date.now(); seq(['AMPNAME', 'C0 22', 'C1 22', 'C3 22', 'C3 0F', 'C3 46', 'C3 47'].concat(eqReads(), ['INPUTS']), 900, true).then(() => S.sf > 0 && seq(['C3 40', 'C3 42', 'C3 43'], 600, true)); }
       /* the sound field changed: what the amp can read (EQ values, rear levels) changes with it */
       if (!DEMO && sfSt !== null && sfSt >= 0 && sfSt !== j.sf && j.sf >= 0 && S.power === 1) seq(eqReads().concat(j.sf > 0 ? ['C3 40', 'C3 42', 'C3 43'] : []), 700, true);
@@ -1673,6 +1673,7 @@ function handleLine(d) {
   if (dl) { const k = dl[1].toLowerCase() === 'decode' ? 'dgDec' : 'dgLoop', on = dl[2].toLowerCase() === 'on'; $('#' + k + 'On').setAttribute('aria-pressed', on); $('#' + k + 'Off').setAttribute('aria-pressed', !on); }
   /* a unit answered "error" (0F) to something the user just did: say it (background reads do not count) */
   if (/^RX (C8|C9|CB|B8|98|99|9A) 0F\b/.test(d) && busUser && Date.now() - Math.max(busAt, busSentAt) < 2500) toast('Comando non supportato da questo apparecchio', 'err');
+  if (/^NAME: no RDS name/.test(d)) rdsNone = rdsAsked;            /* a station without RDS: stop asking while it stays tuned (the device is busy ~15 s on each ask) */
   const ln = /^LINE (\d)/.exec(d); if (ln) toast(tr('Livello linea: {v}', { v: tr(ln[1] === '1' ? 'a riposo (alta)' : 'bassa') }));
   const vcm = /^VOLCFG up=(\d+) down=(\d+) margin=(\d+)/.exec(d);
   if (vcm) { $('#vcUp').value = vcm[1]; $('#vcDn').value = vcm[2]; $('#vcMg').value = vcm[3]; }
