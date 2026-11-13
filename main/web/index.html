@@ -102,6 +102,7 @@ body.waiting,body.waiting *{cursor:progress}
 .pwr:hover{border-color:var(--accent);color:var(--accent)}
 .pwr.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft),0 0 24px var(--accent-glow)}
 
+.helpf{display:block;width:100%;border:1px solid var(--line,#8884);border-radius:12px;background:#fff;min-height:360px;height:70vh}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
   padding:0 8px env(safe-area-inset-bottom,0px);background:color-mix(in srgb,var(--surface) 92%,transparent);
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:4px}
@@ -459,6 +460,7 @@ body.hxon .hx{display:block}
 <symbol id="i-radio" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0"/><path d="M8 12a4 4 0 0 1 8 0"/><circle cx="12" cy="12" r="1" fill="currentColor"/><path d="M12 13v8"/></symbol>
 <symbol id="i-sound" viewBox="0 0 24 24"><path d="M5 4v16M12 4v16M19 4v16"/><circle cx="5" cy="14" r="2" fill="var(--surface)"/><circle cx="12" cy="8" r="2" fill="var(--surface)"/><circle cx="19" cy="15" r="2" fill="var(--surface)"/></symbol>
 <symbol id="i-term" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3M13 15h4"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.9"/><circle cx="12" cy="17.2" r=".6"/></symbol>
 <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
 <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 5v14M19 5l-9 7 9 7z"/></symbol>
 <symbol id="i-next" viewBox="0 0 24 24"><path d="M18 5v14M5 5l9 7-9 7z"/></symbol>
@@ -913,6 +915,10 @@ body.hxon .hx{display:block}
         </div>
       </div>
     </section>
+
+    <section class="tab" id="tab-help" role="tabpanel">
+      <iframe id="helpFrame" class="helpf" title="Manuale" referrerpolicy="no-referrer" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals"></iframe>
+    </section>
   </main>
 </div>
 
@@ -924,6 +930,7 @@ body.hxon .hx{display:block}
   <button role="tab" aria-selected="false" data-tab="console"><svg class="i"><use href="#i-term"/></svg>Console</button>
   <button role="tab" aria-selected="false" data-tab="jukebox" hidden><svg class="i"><use href="#i-sound"/></svg>Jukebox</button>
   <button role="tab" aria-selected="false" data-tab="set"><svg class="i"><use href="#i-gear"/></svg>Impostazioni</button>
+  <button role="tab" aria-selected="false" data-tab="help"><svg class="i"><use href="#i-help"/></svg>Help</button>
 </nav>
 
 <div id="toasts" aria-live="polite"></div>
@@ -2506,6 +2513,13 @@ function wire() {
     else if (e.key >= '1' && e.key <= '6') showTab(['home', 'radio', 'sound', 'stats', 'console', 'set'][+e.key - 1]);
   });
 }
+/* Help: the manual (the README of the repository) is shown by help.html, a separate page in a sandboxed frame so its styles stay out of this one */
+function helpOpen() {
+  const f = $('#helpFrame'); if (!f) return;
+  if (!f.getAttribute('src')) f.src = 'help.html';
+  const fit = () => { const r = f.getBoundingClientRect(), nav = $('nav.tabs'); f.style.height = Math.max(360, innerHeight - r.top - (nav ? nav.offsetHeight : 64) - 12) + 'px'; };
+  fit(); if (!helpOpen.on) { helpOpen.on = 1; addEventListener('resize', fit); }
+}
 function showTab(n) {
   $$('section.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + n));
   $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === n));
@@ -2514,6 +2528,7 @@ function showTab(n) {
   if (n === 'stats') { pollStats(); statsTimer = setInterval(() => { if (!document.hidden) pollStats(); }, 3000); }
   if (n === 'sound' && !S.eq[0].every(Boolean) && S.power === 1) eqRead();
   if (n === 'set') otaLoad();
+  if (n === 'help') helpOpen();
   if (n === 'radio' && !S.stations.length) fetchJson('/api/stations');
   if (n === 'radio' && !S.presets.length) fetchJson('/api/presets');
   if (n === 'radio') fetchJson('/api/favs');

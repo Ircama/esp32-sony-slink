@@ -1,0 +1,1764 @@
+<!doctype html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Manuale</title>
+
+    <!-- Preconnessioni: riducono la latenza verso le CDN usate dal viewer -->
+    <link rel="preconnect" href="https://esm.sh" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Avvia in parallelo i moduli markdown-it e i plugin -->
+    <link rel="modulepreload" href="https://esm.sh/js-yaml@4">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-abbr@2.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-anchor@9.2.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-deflist@3.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-emoji@3.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-footnote@4.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-ins@4.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-mark@4.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-sub@2.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-sup@2.0.0">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it-task-lists@2.1.1">
+    <link rel="modulepreload" href="https://esm.sh/markdown-it@14.1.0">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        crossorigin="anonymous">
+
+    <!-- GitHub Markdown CSS -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+    <!-- Highlight.js CSS per GitHub theme -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
+        id="highlight-style">
+
+    <!-- Google Fonts -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    </style>
+
+    <style>
+        /* ── Sidebar custom styling ────────────────────── */
+        :root {
+            --sidebar-w: 260px;
+        }
+
+        .bd-sidebar {
+            width: var(--sidebar-w) !important;
+            min-width: 150px;
+            max-width: 50vw;
+            flex: 0 0 var(--sidebar-w) !important;
+            height: calc(100vh - 52px);
+            /* Flex column: search fixed at top, toc-nav scrolls below */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* sidebar itself does NOT scroll */
+            position: sticky;
+            top: 52px;
+            border-right: none;
+            background-color: #f8f9fa;
+            z-index: 1000;
+        }
+
+        /* Resize handle on the right edge of the sidebar */
+        .resize-handle {
+            width: 5px;
+            cursor: col-resize;
+            background: rgba(0, 0, 0, .08);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1001;
+            transition: background .15s;
+        }
+
+        .resize-handle:hover,
+        .resize-handle.active {
+            background: rgba(13, 14, 17, .3);
+        }
+
+        /* Search stays pinned at the top */
+        .bd-sidebar-search {
+            flex-shrink: 0;
+            padding: 1rem;
+        }
+
+        /* TOC list fills the remaining height and scrolls */
+        #toc-nav {
+            flex: 1 1 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 2rem;
+        }
+
+        /* ── Sidebar TOC links ─────────────────────────── */
+        /* Base sidebar link: visual defaults only — padding/font/margin handled by toc-hX */
+        .bd-sidebar a {
+            color: rgba(0, 0, 0, .65);
+            text-decoration: none;
+            display: block;
+            border-radius: 4px;
+            transition: background .15s, color .15s;
+        }
+
+        /* Override Bootstrap's .nav-link padding via CSS variables + !important */
+        #toc-nav a.nav-link {
+            --bs-nav-link-padding-x: 0;
+            --bs-nav-link-padding-y: 0;
+            padding: .30rem .75rem !important;
+            color: rgba(0, 0, 0, .65) !important;
+            text-decoration: none !important;
+            display: block;
+            line-height: 1.45 !important;
+            word-break: break-word;
+            border-radius: 4px;
+            transition: background .15s, color .15s;
+        }
+
+        #toc-nav a.nav-link.toc-hidden {
+            display: none !important;
+        }
+
+        #toc-nav a.nav-link:hover,
+        #toc-nav a.nav-link:focus {
+            color: rgba(0, 0, 0, .9) !important;
+            background-color: rgba(121, 82, 179, .1) !important;
+        }
+
+        #toc-nav a.nav-link.active {
+            font-weight: 600 !important;
+            color: #0d0e11 !important;
+            background-color: rgba(13, 14, 17, .07) !important;
+            border-left: 3px solid #0d0e11 !important;
+        }
+
+        /* H2 = capitoli principali */
+        #toc-nav a.nav-link.toc-h2 {
+            padding: .35rem .75rem .35rem 0.5rem !important;
+            font-size: .84rem !important;
+            font-weight: 600 !important;
+            color: rgba(0, 0, 0, .85) !important;
+            margin-top: 0.5rem !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* H3 = sottosezioni: indentate, leggermente più compatte */
+        #toc-nav a.nav-link.toc-h3 {
+            padding: .25rem .75rem .25rem 1.6rem !important;
+            font-size: .80rem !important;
+            font-weight: 400 !important;
+            color: rgba(0, 0, 0, .62) !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* H4 = sotto-sottosezioni: molto indentate, compatte, italic */
+        #toc-nav a.nav-link.toc-h4 {
+            padding: .18rem .75rem .18rem 2.8rem !important;
+            font-size: .75rem !important;
+            font-weight: 400 !important;
+            font-style: italic !important;
+            color: rgba(0, 0, 0, .45) !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* ── Inline TOC nesting in main content ──────── */
+        /* Sub-items that fixInlineTocLists() creates */
+        #_html ol li ol {
+            list-style: none;
+            padding-left: 1.2em;
+            margin: 0.1em 0 0.3em;
+        }
+
+        #_html ol li ol li {
+            margin: 0.2em 0;
+            color: rgba(0, 0, 0, .75);
+        }
+
+        /* ── Octicon anchor links on headings ─────────── */
+        /* GitHub-style: icon appears on hover, links the heading */
+        #_html h1 .anchor,
+        #_html h2 .anchor,
+        #_html h3 .anchor,
+        #_html h4 .anchor,
+        #_html h5 .anchor,
+        #_html h6 .anchor {
+            visibility: hidden;
+            text-decoration: none;
+            margin-left: -1.2em;
+            padding-right: 0.3em;
+            opacity: 0.6;
+            position: relative;
+            display: inline-block;
+            width: 1em;
+        }
+
+        /* Keep anchor visible on heading hover AND when hovering the anchor itself */
+        #_html h1:hover .anchor,
+        #_html h2:hover .anchor,
+        #_html h3:hover .anchor,
+        #_html h4:hover .anchor,
+        #_html h5:hover .anchor,
+        #_html h6:hover .anchor,
+        #_html .anchor:hover,
+        #_html .anchor:focus {
+            visibility: visible;
+        }
+
+        /* Give headings left-padding so the anchor icon sits INSIDE the heading box */
+        #_html h1,
+        #_html h2,
+        #_html h3,
+        #_html h4,
+        #_html h5,
+        #_html h6 {
+            padding-left: 1.3em;
+            scroll-margin-top: 60px;
+        }
+
+        #_html pre,
+        #_html pre code {
+            line-height: 1.45 !important;
+        }
+
+        .octicon-link {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            /* Link icon via SVG mask */
+            background-color: currentColor;
+            -webkit-mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z'/></svg>");
+            mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z'/></svg>");
+        }
+
+        .markdown-body {
+            flex: 1;
+            max-width: 100%;
+            padding-left: 2rem;
+            padding-top: 1rem;
+        }
+
+        .bd-content {
+            scroll-margin-top: 56px;
+        }
+
+        html {
+            scroll-padding-top: 70px;
+        }
+
+        @media (max-width: 767.98px) {
+            .bd-sidebar {
+                display: none !important;
+            }
+
+            .bd-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 1rem !important;
+            }
+
+            #doc-topbar {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .doc-topbar-title {
+                display: none;
+            }
+        }
+
+        /* ── Print layout ─────────────────────────────── */
+        @media print {
+
+            .bd-sidebar,
+            .resize-handle,
+            #doc-topbar,
+            #fab-top,
+            #fab-bottom,
+            .anchor {
+                display: none !important;
+            }
+
+            .bd-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+
+            #_html h1,
+            #_html h2,
+            #_html h3,
+            #_html h4,
+            #_html h5,
+            #_html h6 {
+                padding-left: 0 !important;
+                border: none !important;
+            }
+        }
+
+        /* ── Base typography ───────────────────────────── */
+        html,
+        body,
+        .markdown-body,
+        .bd-sidebar {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        html {
+            scroll-padding-top: 70px;
+        }
+
+        /* ── Top nav bar ───────────────────────────────── */
+        #doc-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1050;
+            background: #0d0e11;
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            gap: 16px;
+            border-bottom: 2px solid #e1b66a;
+            box-shadow: 0 2px 12px rgba(13, 14, 17, .35);
+            width: 100%;
+        }
+
+        .doc-topbar-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #e1b66a;
+            text-decoration: none;
+            font-size: .85em;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(225, 182, 106, .35);
+            transition: background .2s;
+            white-space: nowrap;
+        }
+
+        .doc-topbar-back:hover {
+            background: rgba(225, 182, 106, .12);
+            color: #e1b66a;
+        }
+
+        .doc-topbar-logo img {
+            height: 28px;
+            display: block;
+        }
+
+        .doc-topbar-title {
+            flex: 1;
+            font-size: .88em;
+            font-weight: 600;
+            color: rgba(255, 255, 255, .75);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .doc-topbar-title:hover {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .doc-topbar-badge {
+            font-size: .7em;
+            font-family: ui-monospace, monospace;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: rgba(225, 182, 106, .1);
+            border: 1px solid rgba(225, 182, 106, .3);
+            color: #e1b66a;
+            white-space: nowrap;
+        }
+
+        /* ── Sidebar refinements ───────────────────────── */
+        .bd-sidebar {
+            background: #fafbfc !important;
+            border-right: 1px solid #e8ecf2 !important;
+            padding-top: 0 !important;
+        }
+
+        .bd-sidebar-inner {
+            padding: 1rem 0;
+        }
+
+        .bd-sidebar #toc-search {
+            border-radius: 8px;
+            border: 1px solid #d0d7de;
+            font-size: .85em;
+            box-shadow: none;
+        }
+
+        .bd-sidebar #toc-search:focus {
+            border-color: #0d0e11;
+            box-shadow: 0 0 0 3px rgba(13, 14, 17, .1);
+        }
+
+        .bd-sidebar a {
+            font-size: .82rem !important;
+            border-radius: 6px;
+            margin: 1px 6px;
+            padding: .3rem .75rem !important;
+            transition: background .15s, color .15s;
+        }
+
+        .bd-sidebar a:hover {
+            background: rgba(13, 14, 17, .06) !important;
+            color: #0d0e11 !important;
+        }
+
+        .bd-sidebar a.active {
+            color: #0d0e11 !important;
+            background: rgba(13, 14, 17, .08) !important;
+            border-right: 2px solid #0d0e11 !important;
+            font-weight: 600 !important;
+        }
+
+        .toc-h2 {
+            font-weight: 600 !important;
+            font-size: .82rem !important;
+        }
+
+        .toc-h3 {
+            font-weight: 400 !important;
+        }
+
+        /* ── Markdown body refinements ─────────────────── */
+        .markdown-body {
+            max-width: 880px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding: 1.5rem 2.5rem 3rem !important;
+            font-size: 15px !important;
+            line-height: 1.7 !important;
+            color: #1a2840 !important;
+            background: transparent !important;
+        }
+
+        .markdown-body h1 {
+            font-size: 1.9em;
+            padding-bottom: .35em;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.35em;
+            padding-bottom: .3em;
+            border-bottom: 2px solid #e8ecf2;
+            margin-top: 2.5rem;
+        }
+
+        .markdown-body h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 1em;
+            background: #0d0e11;
+            border-radius: 2px;
+            margin-right: 10px;
+            vertical-align: middle;
+            margin-top: -2px;
+        }
+
+        .markdown-body h3 {
+            font-size: 1.1em;
+            margin-top: 1.8rem;
+        }
+
+        .markdown-body h4 {
+            font-size: .95em;
+            margin-top: 1.5rem;
+            color: #3a4060;
+        }
+
+        /* Code blocks */
+        .markdown-body pre {
+            background: #f6f8fa !important;
+            border: 1px solid #e8ecf2 !important;
+            border-radius: 10px !important;
+            padding: 1.1em 1.4em !important;
+            font-size: 13px !important;
+            line-height: 1.6 !important;
+            overflow-x: auto !important;
+        }
+
+        .markdown-body code:not([class]) {
+            background: rgba(13, 14, 17, .06) !important;
+            color: #5c0d8a !important;
+            border-radius: 5px !important;
+            padding: .15em .45em !important;
+            font-size: .88em !important;
+        }
+
+        /* Tables */
+        .markdown-body table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+            border: 1px solid #e8ecf2 !important;
+            font-size: .9em !important;
+            width: 100% !important;
+            margin: 1.25rem 0 !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .05) !important;
+        }
+
+        .markdown-body table th {
+            background: #0d0e11 !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            padding: 10px 14px !important;
+        }
+
+        .markdown-body table td {
+            padding: 9px 14px !important;
+            border-top: 1px solid #e8ecf2 !important;
+            color: #1a2840 !important;
+            background: #fff !important;
+        }
+
+        .markdown-body tr:nth-child(even) td {
+            background: #fafbfc !important;
+        }
+
+        /* Blockquotes */
+        .markdown-body blockquote {
+            border-left: 4px solid #e1b66a !important;
+            background: rgba(225, 182, 106, .06) !important;
+            border-radius: 0 8px 8px 0 !important;
+            padding: .75em 1.2em !important;
+            color: #3a4060 !important;
+        }
+
+        /* hr */
+        .markdown-body hr {
+            border: none !important;
+            border-top: 1px solid #e8ecf2 !important;
+            margin: 2.5rem 0 !important;
+        }
+
+        /* Mermaid */
+        .mermaid {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        /* Stampa */
+        @media print {
+
+            #doc-topbar,
+            .bd-sidebar {
+                display: none !important;
+            }
+
+            .bd-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .markdown-body {
+                padding: 0 !important;
+            }
+
+            @page {
+                size: A4;
+                margin: 15mm 15mm 25mm 15mm;
+            }
+        }
+
+        /* Error box */
+        .error-message {
+            color: #cf222e;
+            padding: 20px;
+            border: 1px solid #cf222e;
+            border-radius: 6px;
+            background: #ffebe9;
+        }
+
+        .error-message h3 {
+            margin-top: 0;
+            color: #cf222e;
+        }
+
+        /* ── Footnotes cleanup ────────────────────────── */
+        #_html .footnotes-sep {
+            display: none !important;
+        }
+
+        #_html h1:has(+ .footnotes-sep),
+        #_html h1:has(+ .footnotes),
+        #_html h2:has(+ .footnotes-sep),
+        #_html h2:has(+ .footnotes) {
+            border-bottom: none !important;
+            padding-bottom: 0 !important;
+        }
+
+        /* Footnote list items: prevent bold bleed from leading <strong> term */
+        #_html .footnotes ol li,
+        #_html .footnotes ol li p,
+        #_html section.footnotes ol li,
+        #_html section.footnotes ol li p {
+            font-weight: 400 !important;
+        }
+
+        /* Keep the leading term (first <strong> in a footnote) at normal bold weight */
+        #_html .footnotes ol li > p > strong:first-child,
+        #_html .footnotes ol li > strong:first-child,
+        #_html section.footnotes ol li > p > strong:first-child,
+        #_html section.footnotes ol li > strong:first-child {
+            font-weight: 600 !important;
+        }
+
+        /* ── Floating nav FABs ─────────────────────────── */
+        .fab-nav {
+            position: fixed;
+            right: 24px;
+            z-index: 1060;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #fab-top {
+            position: fixed;
+            right: 24px;
+            bottom: 74px;
+            z-index: 1060;
+        }
+
+        #fab-bottom {
+            position: fixed;
+            right: 24px;
+            bottom: 20px;
+            z-index: 1060;
+        }
+
+        .fab-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0d0e11;
+            color: #ffffff;
+            box-shadow: 0 3px 12px rgba(13, 14, 17, .35);
+            opacity: 1;
+            transition: opacity .25s ease, transform .2s ease, background .15s;
+            text-decoration: none;
+        }
+
+        .fab-btn:hover {
+            background: #2d008a;
+            transform: scale(1.1);
+        }
+
+        .fab-btn.fab-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.7);
+        }
+
+        /* ── Hamburger settings menu ───────────────────── */
+        .settings-hamburger {
+            position: relative;
+            margin-left: auto;
+        }
+
+        .settings-hamburger-btn {
+            background: transparent;
+            border: 1px solid rgba(225, 182, 106, .35);
+            color: #e1b66a;
+            font-size: 1.3rem;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s, transform .2s;
+            line-height: 1;
+        }
+
+        .settings-hamburger-btn:hover {
+            background: rgba(225, 182, 106, .12);
+            transform: scale(1.08);
+        }
+
+        .settings-hamburger-btn.active {
+            background: rgba(225, 182, 106, .18);
+        }
+
+        .settings-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: #0d0e11;
+            border: 1px solid rgba(225, 182, 106, .3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            min-width: 280px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .45);
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px) scale(0.97);
+            transition: opacity .2s ease, transform .2s ease, visibility .2s;
+        }
+
+        .settings-panel.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .settings-panel-title {
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: rgba(225, 182, 106, .6);
+            margin-bottom: 12px;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-label {
+            color: rgba(255, 255, 255, .85);
+            font-size: .85rem;
+            font-weight: 500;
+        }
+
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+            margin-left: 14px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, .15);
+            border-radius: 24px;
+            transition: background .25s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .25s;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background: #e1b66a;
+        }
+
+        .toggle-switch input:checked+.toggle-slider::before {
+            transform: translateX(20px);
+        }
+
+        /* States applied by JS */
+        .sidebar-hidden .bd-sidebar,
+        .sidebar-hidden .resize-handle {
+            display: none !important;
+        }
+
+        .no-content-padding .markdown-body {
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            max-width: 100% !important;
+        }
+
+        /* ── Frontmatter metadata banner ──────────────── */
+        .fm-banner {
+            margin: 0.6rem 0 1.4rem;
+            padding: 0;
+            font-size: .88rem;
+            line-height: 1.6;
+            padding-left: 1.3em;
+            /* align with heading padding */
+        }
+
+        /* Compact always-visible row: authors + date */
+        .fm-summary {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px 18px;
+            color: rgba(0, 0, 0, .55);
+            cursor: pointer;
+            user-select: none;
+            padding: 6px 0;
+            transition: color .15s;
+        }
+
+        .fm-summary:hover {
+            color: rgba(0, 0, 0, .8);
+        }
+
+        .fm-summary-icon {
+            font-size: .75rem;
+            transition: transform .25s ease;
+            margin-right: 2px;
+        }
+
+        .fm-banner.open .fm-summary-icon {
+            transform: rotate(90deg);
+        }
+
+        .fm-authors,
+        .fm-date {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .fm-authors svg,
+        .fm-date svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+
+        /* Collapsible detail panel */
+        .fm-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .35s ease, opacity .25s ease;
+            opacity: 0;
+        }
+
+        .fm-banner.open .fm-details {
+            opacity: 1;
+        }
+
+        .fm-subtitle {
+            font-size: .92rem;
+            font-weight: 500;
+            color: #3a4060;
+            margin-bottom: 0.4rem;
+        }
+
+        .fm-description {
+            color: rgba(0, 0, 0, .6);
+            font-size: .87rem;
+            margin-bottom: 0.6rem;
+            line-height: 1.65;
+            border-left: 3px solid rgba(13, 14, 17, .15);
+            padding-left: 0.8rem;
+        }
+
+        .fm-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 0.3rem;
+        }
+
+        .fm-tag {
+            display: inline-block;
+            font-size: .72rem;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 20px;
+            background: rgba(13, 14, 17, .07);
+            color: #0d0e11;
+            letter-spacing: .02em;
+        }
+
+        /* HTTP Headers footer metadata */
+        .fm-http-meta-footer {
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px dashed rgba(13, 14, 17, .15);
+            font-size: .75rem;
+            color: rgba(0, 0, 0, .45);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .fm-http-meta-footer span strong {
+            font-weight: 600;
+            color: rgba(0, 0, 0, .55);
+        }
+
+        @media print {
+
+            .fm-banner,
+            .fm-http-meta-footer {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="_theme-github _color-light _toc-left" data-bs-spy="scroll" data-bs-target="#toc-nav"
+    data-bs-smooth-scroll="true" tabindex="0">
+
+    <!-- Top bar -->
+    <div id="doc-topbar">
+        <div class="doc-topbar-logo">
+            <a href="https://github.com/Ircama/esp32-sony-slink" target="_blank" rel="noopener" title="github.com/Ircama/esp32-sony-slink">
+                <img src="./icon.svg" alt="S-Link">
+            </a>
+        </div>
+        <span class="doc-topbar-title" id="page-title" onclick="window.print()"
+            title="Clicca per Stampare/Salvare in PDF">Manuale</span>
+        <a class="doc-topbar-back" href="https://github.com/Ircama/esp32-sony-slink" target="_blank" rel="noopener">GitHub</a>
+
+        <!-- Hamburger settings -->
+        <div class="settings-hamburger" id="settings-hamburger">
+            <button class="settings-hamburger-btn" id="settings-btn" title="Impostazioni visualizzazione"
+                aria-label="Impostazioni">
+                ☰
+            </button>
+            <div class="settings-panel" id="settings-panel">
+                <div class="settings-panel-title">Impostazioni</div>
+                <div class="settings-item">
+                    <span class="settings-label">Barra di navigazione</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-navbar" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-label">Modalità lettura</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-padding" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-label">Aggiornamento dinamico</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-autoreload">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid" style="display:flex; padding:0;">
+        <!-- Sidebar -->
+        <div class="bd-sidebar">
+            <!-- Search box: sticky, does not scroll with TOC -->
+            <div class="bd-sidebar-search">
+                <input type="search" class="form-control" id="toc-search" placeholder="Filtra indice...">
+            </div>
+            <!-- Nav per lo ScrollSpy: scrolls independently -->
+            <nav id="toc-nav" class="nav flex-column flex-nowrap">
+                <!-- Il TOC verrà generato qui -->
+            </nav>
+        </div>
+
+        <!-- Resize handle -->
+        <div class="resize-handle" id="sidebar-resize"></div>
+
+        <!-- Main Content -->
+        <main class="py-md-3 bd-content" role="main" style="flex:1;min-width:0;">
+            <div id="_html" class="markdown-body">
+                <em>Caricamento del Markdown in corso...</em>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating navigation buttons (body-level so position:fixed works correctly) -->
+    <button class="fab-btn" id="fab-top" title="Torna in cima">↑</button>
+    <button class="fab-btn" id="fab-bottom" title="Vai in fondo">↓</button>
+
+    <!-- Bootstrap 5 JS per lo ScrollSpy -->
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+
+    <!-- Libs per Markdown Rendering -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+
+    <!-- Configurazione MathJax -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            }
+        };
+    </script>
+
+    <script type="module">
+        // Caricamento su richiesta delle librerie pesanti (Mermaid, MathJax).
+        const lazyLibraries = new Map();
+        function loadLazyLibrary(url, isReady) {
+            if (isReady()) return Promise.resolve(true);
+            if (!lazyLibraries.has(url)) {
+                lazyLibraries.set(url, new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.async = true;
+                    script.onload = () => resolve(isReady());
+                    script.onerror = () => resolve(false);
+                    document.head.append(script);
+                }));
+            }
+            return lazyLibraries.get(url);
+        }
+        function hasMathMarkup(root) {
+            if (!root) return false;
+            const text = root.textContent || '';
+            return /\$[^$\n]{1,200}\$|\\\(|\\\[|\\begin\{(?:equation|align|matrix|bmatrix|pmatrix|array)\}/.test(text);
+        }
+
+        import MarkdownIt from 'https://esm.sh/markdown-it@14.1.0';
+        import * as emojiModule from 'https://esm.sh/markdown-it-emoji@3.0.0';
+        import * as subModule from 'https://esm.sh/markdown-it-sub@2.0.0';
+        import * as supModule from 'https://esm.sh/markdown-it-sup@2.0.0';
+        import * as footnoteModule from 'https://esm.sh/markdown-it-footnote@4.0.0';
+        import * as deflistModule from 'https://esm.sh/markdown-it-deflist@3.0.0';
+        import * as abbrModule from 'https://esm.sh/markdown-it-abbr@2.0.0';
+        import * as insModule from 'https://esm.sh/markdown-it-ins@4.0.0';
+        import * as markModule from 'https://esm.sh/markdown-it-mark@4.0.0';
+        import * as taskListsModule from 'https://esm.sh/markdown-it-task-lists@2.1.1';
+        import * as anchorModule from 'https://esm.sh/markdown-it-anchor@9.2.0';
+        import jsyaml from 'https://esm.sh/js-yaml@4';
+
+        // Estrai la funzione plugin per quelli che non espongono il default nativo
+        const emoji = emojiModule.default || emojiModule.full || emojiModule;
+        const sub = subModule.default || subModule;
+        const sup = supModule.default || supModule;
+        const footnote = footnoteModule.default || footnoteModule;
+        const deflist = deflistModule.default || deflistModule;
+        const abbr = abbrModule.default || abbrModule;
+        const ins = insModule.default || insModule;
+        const mark = markModule.default || markModule;
+        const taskLists = taskListsModule.default || taskListsModule;
+        const anchor = anchorModule.default || anchorModule;
+
+        // Gestione Tema per l'evidenziazione sintattica
+        function updateHighlightTheme() {
+            const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.getElementById('highlight-style').href = isDark
+                ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
+                : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+        }
+        updateHighlightTheme();
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateHighlightTheme);
+
+        // Utilities per gli ID CSS safe dello ScrollSpy
+        function sanitizeId(id) {
+            return /^\d/.test(id) ? "s" + id : id;
+        }
+
+        // ── Frontmatter parser ─────────────────────────────────────
+        function parseFrontmatter(text) {
+            const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+            if (!match) return { frontmatter: {}, body: text };
+            const yamlStr = match[1];
+            const body = text.slice(match[0].length).replace(/^\s*\n/, '');
+            try {
+                const fm = jsyaml.load(yamlStr) || {};
+                return { frontmatter: fm, body };
+            } catch (e) {
+                console.warn('Frontmatter YAML parse error:', e);
+                return { frontmatter: {}, body };
+            }
+        }
+
+        // Helper: format a date value to Italian locale string
+        function formatDate(val) {
+            if (!val) return null;
+            try {
+                const d = (val instanceof Date) ? val : new Date(val);
+                if (isNaN(d.getTime())) return String(val);
+                return d.toLocaleDateString('it-IT', { year: 'numeric', month: 'long', day: 'numeric' });
+            } catch {
+                return String(val);
+            }
+        }
+
+        // Helper: normalise authors to array of strings
+        function normalizeAuthors(fm) {
+            const raw = fm.authors || fm.author;
+            if (!raw) return [];
+            if (typeof raw === 'string') return [raw];
+            if (Array.isArray(raw)) {
+                return raw.map(a => {
+                    if (typeof a === 'string') return a;
+                    if (a && a.name) return a.name;
+                    return String(a);
+                });
+            }
+            return [];
+        }
+
+        // Build the collapsible frontmatter banner HTML
+        function buildFrontmatterBanner(fm) {
+            const authors = normalizeAuthors(fm);
+            const date = formatDate(fm.date);
+            const tags = fm.tags || fm.keywords || [];
+            const subtitle = fm.subtitle || '';
+            const description = fm.description || '';
+
+            // If there's nothing to show, skip
+            if (!authors.length && !date && !tags.length && !subtitle && !description) return null;
+
+            // SVG icons (inline, tiny)
+            const userIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm4.735 4c.618 0 1.093-.561.872-1.139A6.002 6.002 0 0 0 2.393 10.86c-.22.579.254 1.139.872 1.139h9.47z"/></svg>`;
+            const calIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M4 0a.5.5 0 0 1 .5.5V1h7V.5a.5.5 0 0 1 1 0V1h1A1.5 1.5 0 0 1 15 2.5v11A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1h1V.5A.5.5 0 0 1 4 0zM2.5 4v9.5a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5V4h-11z"/></svg>`;
+
+            // Summary row (always visible)
+            let summaryParts = [];
+            if (authors.length) summaryParts.push(`<span class="fm-authors">${userIcon} ${authors.join(', ')}</span>`);
+            if (date) summaryParts.push(`<span class="fm-date">${calIcon} ${date}</span>`);
+
+            // Determine if we have expandable details
+            const hasDetails = subtitle || description || tags.length;
+
+            let html = `<div class="fm-banner" id="fm-banner">`;
+
+            if (summaryParts.length) {
+                html += `<div class="fm-summary"${hasDetails ? ' id="fm-toggle"' : ''}>`;
+                if (hasDetails) html += `<span class="fm-summary-icon">▸</span>`;
+                html += summaryParts.join('');
+                html += `</div>`;
+            }
+
+            if (hasDetails) {
+                html += `<div class="fm-details" id="fm-details">`;
+                if (subtitle) html += `<div class="fm-subtitle">${DOMPurify.sanitize(subtitle)}</div>`;
+                if (description) html += `<div class="fm-description">${DOMPurify.sanitize(description)}</div>`;
+                if (tags.length) {
+                    html += `<div class="fm-tags">`;
+                    (Array.isArray(tags) ? tags : [tags]).forEach(t => {
+                        html += `<span class="fm-tag">${DOMPurify.sanitize(String(t))}</span>`;
+                    });
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+            return html;
+        }
+
+        // Variabili per Auto-Reload
+        let lastModifiedTime = null;
+        let currentFileUrl = null;
+        let autoReloadEnabled = false; // default: disattivato
+
+        async function checkAutoReload() {
+            if (!autoReloadEnabled || !currentFileUrl) return;
+            try {
+                const res = await fetch(currentFileUrl, { method: 'HEAD', cache: 'no-cache' });
+                if (res.ok) {
+                    const modified = res.headers.get('Last-Modified');
+                    if (lastModifiedTime && modified && lastModifiedTime !== modified) {
+                        window.location.reload();
+                    }
+                }
+            } catch (e) { }
+        }
+        setInterval(checkAutoReload, 3000); // 3 seconds autoreload poll
+
+        // The manual lives in the repository: the README is fetched from GitHub and its relative links/images are resolved there
+        const DEFAULT_MANUAL = 'https://raw.githubusercontent.com/Ircama/esp32-sony-slink/refs/heads/main/README.md';
+        const REPO_BLOB = 'https://github.com/Ircama/esp32-sony-slink/blob/main/';
+        function fixLinks(root, fileUrl) {
+            const base = fileUrl.replace(/[^/]*$/, '');
+            const isAbs = u => /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(u);
+            root.querySelectorAll('img[src]').forEach(i => { const u = i.getAttribute('src'); if (!isAbs(u)) i.src = new URL(u, base).href; });
+            root.querySelectorAll('a[href]').forEach(a => {
+                const u = a.getAttribute('href');
+                if (u.startsWith('#')) return;
+                if (!isAbs(u)) a.href = new URL(u, /^https:\/\/raw\.githubusercontent\.com\//.test(base) ? REPO_BLOB : base).href;
+                a.target = '_blank'; a.rel = 'noopener';
+            });
+        }
+
+        async function loadMarkdown() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const file = urlParams.get('file') || DEFAULT_MANUAL;
+            currentFileUrl = file;
+
+            // Estrai il nome base senza path e senza estensione .md
+            const fileBaseName = file.split('/').pop().split('\\').pop().replace(/\.md$/i, '');
+
+            try {
+                // Fetch del file
+                const response = await fetch(file);
+                if (!response.ok) {
+                    throw new Error(`Impossibile caricare il file "${file}". Status: ${response.status}`);
+                }
+
+                // Estrai header HTTP di interesse
+                lastModifiedTime = response.headers.get('Last-Modified');
+                const contentLength = response.headers.get('Content-Length');
+                const amzVersion = response.headers.get('x-amz-version-id');
+
+                let httpMeta = null;
+                if (lastModifiedTime || contentLength || amzVersion) {
+                    httpMeta = {};
+                    if (lastModifiedTime) {
+                        const d = new Date(lastModifiedTime);
+                        httpMeta.lastModified = isNaN(d) ? lastModifiedTime : d.toLocaleString('it-IT', {
+                            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                    if (contentLength) {
+                        const bytes = parseInt(contentLength, 10);
+                        if (!isNaN(bytes)) {
+                            httpMeta.size = bytes > 1024 * 1024
+                                ? (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+                                : (bytes / 1024).toFixed(1) + ' KB';
+                        }
+                    }
+                    if (amzVersion && amzVersion !== 'null') {
+                        // short version string for display
+                        httpMeta.version = amzVersion.length > 12 ? amzVersion.substring(0, 12) + '...' : amzVersion;
+                        httpMeta.fullVersion = amzVersion;
+                    }
+                }
+
+                let markdownText = await response.text();
+
+                // Estrai e parsa il frontmatter YAML
+                const { frontmatter, body } = parseFrontmatter(markdownText);
+                markdownText = body;
+
+                // Titolo: frontmatter.title ha priorità sul nome file
+                const h1 = /^#\s+(.+)$/m.exec(markdownText);
+                const pageTitle = frontmatter.title || (h1 ? h1[1].replace(/[*_`]/g, '').trim() : fileBaseName);
+                document.title = pageTitle;
+                document.getElementById('page-title').textContent = pageTitle;
+
+                // Setup Markdown-it (full compiler features)
+                const md = new MarkdownIt({
+                    html: true,
+                    linkify: true,
+                    typographer: true,
+                    breaks: false,
+                    highlight: function (str, lang) {
+                        if (lang === 'mermaid') return str;
+                        if (lang && window.hljs.getLanguage(lang)) {
+                            try { return window.hljs.highlight(str, { language: lang }).value; } catch (__) { }
+                        }
+                        return '';
+                    }
+                })
+                    .use(emoji)
+                    .use(sub)
+                    .use(sup)
+                    .use(footnote)
+                    .use(deflist)
+                    .use(abbr)
+                    .use(ins)
+                    .use(mark)
+                    .use(taskLists)
+                    .use(anchor, {
+                        // GitHub's exact slugify algorithm
+                        slugify: s => String(s).toLowerCase()
+                            .replace(/ /g, '-')
+                            .replace(/[^\w-]/g, '')
+                    });
+
+                // Rendering HTML da Markdown
+                const rawHtml = md.render(markdownText);
+
+                // Configura DOMPurify (script non ammessi: questa pagina e' sulla stessa origine del dispositivo)
+                const purifyConfig = {
+                    ADD_TAGS: ['iframe', 'style'],
+                    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target']
+                };
+                const cleanHtml = DOMPurify.sanitize(rawHtml, purifyConfig);
+
+                // Inietta nel content
+                document.getElementById('_html').innerHTML = cleanHtml;
+                fixLinks(document.getElementById('_html'), /^https?:/i.test(file) ? file : new URL(file, location.href).href);
+
+                // Inietta il banner frontmatter sotto il primo H1
+                const bannerHtml = buildFrontmatterBanner(frontmatter);
+                if (bannerHtml) {
+                    const firstH1 = document.querySelector('#_html h1');
+                    if (firstH1) {
+                        firstH1.insertAdjacentHTML('afterend', bannerHtml);
+                    } else {
+                        // Nessun H1: inserisci all'inizio del contenuto
+                        document.getElementById('_html').insertAdjacentHTML('afterbegin', bannerHtml);
+                    }
+                    // Toggle expand/collapse
+                    const toggle = document.getElementById('fm-toggle');
+                    const details = document.getElementById('fm-details');
+                    const banner = document.getElementById('fm-banner');
+                    if (toggle && details) {
+                        toggle.addEventListener('click', () => {
+                            const isOpen = banner.classList.toggle('open');
+                            // Animate max-height
+                            if (isOpen) {
+                                details.style.maxHeight = details.scrollHeight + 'px';
+                            } else {
+                                details.style.maxHeight = '0';
+                            }
+                        });
+                    }
+                }
+
+                // Aggiungi i metadati HTTP come footer alla fine del documento
+                if (httpMeta && (httpMeta.lastModified || httpMeta.size)) {
+                    let footerParts = [];
+                    if (httpMeta.lastModified) footerParts.push(`<span><strong>Ultimo aggiornamento:</strong> ${httpMeta.lastModified}</span>`);
+                    if (httpMeta.size) footerParts.push(`<span><strong>Dimensione del documento:</strong> ${httpMeta.size}</span>`);
+
+                    const footerHtml = `<div class="fm-http-meta-footer">${footerParts.join('')}</div>`;
+                    document.getElementById('_html').insertAdjacentHTML('beforeend', footerHtml);
+                }
+
+                // Post-processing: aggiungi anchor octicon-link a tutti gli heading
+                document.querySelectorAll('#_html h1, #_html h2, #_html h3, #_html h4, #_html h5, #_html h6').forEach(h => {
+                    if (!h.id || h.querySelector('.anchor')) return; // salta se già presente
+                    const a = document.createElement('a');
+                    a.className = 'anchor';
+                    a.setAttribute('name', h.id);
+                    a.setAttribute('tabindex', '-1');
+                    a.href = '#' + h.id;
+                    a.innerHTML = '<span class="octicon octicon-link"></span>';
+                    h.setAttribute('tabindex', '-1');
+                    h.insertBefore(a, h.firstChild);
+                });
+
+                // Processa Mermaid
+                let hasMermaid = false;
+                document.querySelectorAll('code.language-mermaid').forEach((block) => {
+                    hasMermaid = true;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = block.textContent;
+                    block.parentNode.replaceChild(div, block);
+                });
+
+                if (hasMermaid) {
+                    // Mermaid e MathJax sono pesanti: vengono scaricati solo se servono davvero.
+                    await loadLazyLibrary('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js', () => Boolean(window.mermaid));
+                    if (window.mermaid) {
+                        window.mermaid.initialize({ startOnLoad: false, theme: 'default' });
+                        await window.mermaid.run();
+                    }
+                }
+
+                // Avvia MathJax se ci sono blocchi matematici nel DOM
+                if (hasMathMarkup(document.getElementById('_html'))) {
+                    await loadLazyLibrary('https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js', () => Boolean(window.MathJax && window.MathJax.typesetPromise));
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        try {
+                            await window.MathJax.typesetPromise([document.getElementById('_html')]);
+                        } catch (e) { console.warn('MathJax error:', e); }
+                    }
+                }
+
+                // Genera TOC e ScrollSpy
+                buildTOCAndSpy();
+
+                // Ristruttura i sotto-punti dell'indice inline (es. 3.1. link 3.2. link ...)
+                // che markdown-it mette come testo inline dentro un singolo <li> anziché
+                // come <ol> annidate.
+                fixInlineTocLists();
+
+                // Scroll to URL hash after async content is ready.
+                // The browser fires the native hash-scroll before fetch() returns, so we
+                // must do it manually. We try both the raw hash and the sanitized variant
+                // (e.g. #36-... → #s36-...) in case the ID starts with a digit.
+                if (window.location.hash) {
+                    try {
+                        const rawId = decodeURIComponent(window.location.hash.slice(1));
+                        const safeId = sanitizeId(rawId);
+                        let target = document.getElementById(safeId) || document.getElementById(rawId);
+
+                        // Fallback: If direct lookup fails, try matching against TOC links.
+                        // Sometimes the Markdown slugger skips dots (e.g. 3.6 -> 36) generating
+                        // a hash like #36-..., while our sanitizer sees it as starting with a digit.
+                        // By checking if the TOC link ends with the hash, we can find the real ID.
+                        if (!target) {
+                            const tocLinks = document.querySelectorAll('#toc-nav a');
+                            for (let link of tocLinks) {
+                                const href = link.getAttribute('href'); // e.g '#s36-...'
+                                if (href && (href.endsWith(rawId) || href.endsWith(safeId))) {
+                                    target = document.getElementById(href.slice(1));
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (target) {
+                            // Small delay to let layout settle after mermaid/hljs rendering
+                            setTimeout(() => {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 300);
+                        }
+                    } catch (e) { console.warn(e); }
+                }
+
+            } catch (error) {
+                document.getElementById('_html').innerHTML = `
+                    <div class="error-message">
+                        <h3>Manuale non disponibile</h3>
+                        <p>${error.message}</p>
+                        <hr>
+                        <p>Il manuale viene scaricato da GitHub e visualizzato con librerie caricate da internet: serve una connessione dal browser.</p>
+                        <p><a href="https://github.com/Ircama/esp32-sony-slink#readme" target="_blank" rel="noopener">Apri il manuale su GitHub</a></p>
+                    </div>
+                `;
+            }
+        }
+
+        // Ristruttura le liste inline del TOC: markdown-it mette sotto-punti come
+        // "3.1. <a>link</a>" come testo inside il <li> padre, non come <ol> annidata.
+        // Questa funzione li trasforma in una struttura <ol><li> correttamente annidata.
+        function fixInlineTocLists() {
+            document.querySelectorAll('#_html ol > li').forEach(li => {
+                const allAnchors = Array.from(li.querySelectorAll('a'));
+                if (allAnchors.length <= 1) return; // Nothing to restructure
+
+                const firstAnchor = allAnchors[0];
+                const segments = [];
+                let currentLabel = '';
+                let pastFirst = false;
+                const toRemove = [];
+
+                Array.from(li.childNodes).forEach(node => {
+                    if (!pastFirst) {
+                        if (node === firstAnchor) pastFirst = true;
+                        return;
+                    }
+                    toRemove.push(node);
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        currentLabel += node.textContent;
+                    } else if (node.nodeName === 'A') {
+                        segments.push({ label: currentLabel.trim(), link: node });
+                        currentLabel = '';
+                    }
+                });
+
+                if (segments.length === 0) return;
+
+                // Remove old inline content after firstAnchor
+                toRemove.forEach(n => li.contains(n) && li.removeChild(n));
+
+                // Build nested <ol>
+                const subOl = document.createElement('ol');
+                subOl.style.cssText = 'padding-left:1.2em;margin:0.2em 0 0.3em;';
+                segments.forEach(({ label, link }) => {
+                    const subLi = document.createElement('li');
+                    subLi.style.listStyle = 'none';
+                    if (label) subLi.appendChild(document.createTextNode(label + ' '));
+                    if (link) subLi.appendChild(link);
+                    subOl.appendChild(subLi);
+                });
+                li.appendChild(subOl);
+            });
+        }
+
+        function buildTOCAndSpy() {
+            const container = document.getElementById("toc-nav");
+            const headings = document.querySelectorAll("#_html h1, #_html h2, #_html h3, #_html h4");
+
+            const searchInput = document.getElementById("toc-search");
+            const tocLinks = [];
+
+            // Per tenere traccia di ID duplicati
+            const idCounts = {};
+            // Map from original ID → sanitized ID (only populated when they differ)
+            const idMap = {};
+
+            headings.forEach((heading) => {
+                // Genera o recupera ID base
+                let targetId = heading.id;
+                if (!targetId) {
+                    // Cerca un anchor implicito
+                    const anchor = heading.querySelector("a.anchor");
+                    if (anchor && anchor.name) {
+                        targetId = anchor.name;
+                    } else {
+                        targetId = heading.innerText.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+                    }
+                }
+
+                // Gestisci duplicati
+                if (idCounts[targetId]) {
+                    idCounts[targetId]++;
+                    targetId = `${targetId}-${idCounts[targetId]}`;
+                } else {
+                    idCounts[targetId] = 1;
+                }
+
+                // Sanitize per un utilizzo sicuro da parte di querySelector / CSS (usati dallo scrollSpy)
+                const safeId = sanitizeId(targetId);
+                // Track renamed IDs so we can fix inline links in the document body
+                if (safeId !== targetId) {
+                    idMap[targetId] = safeId;
+                }
+                heading.id = safeId;
+
+                // Salta l'H1 (è già il titolo del documento, usiamo solo H2, H3, H4 per il menu)
+                const level = parseInt(heading.tagName.substring(1));
+                if (level === 1) return;
+
+                // Crea Link nel Menu
+                const link = document.createElement("a");
+                link.href = "#" + safeId;
+
+                // Clona e pulisci il testo (rimuovi icone di anchor se ci sono)
+                let clone = heading.cloneNode(true);
+                let anchors = clone.querySelectorAll(".anchor");
+                anchors.forEach(a => a.remove());
+                link.innerText = clone.innerText.trim();
+
+                link.className = `nav-link toc-h${level}`;
+
+                container.appendChild(link);
+                tocLinks.push({ element: link, text: link.innerText.toLowerCase() });
+            });
+
+            // Fix inline links in the document body that point to renamed (sanitized) IDs.
+            // This covers the numbered TOC list that marked.js renders directly from the .md.
+            if (Object.keys(idMap).length > 0) {
+                document.querySelectorAll('#_html a[href^="#"]').forEach(function (a) {
+                    const targetUri = a.getAttribute('href').slice(1); // strip leading '#'
+                    if (!targetUri) return;
+
+                    try {
+                        const target = decodeURIComponent(targetUri);
+                        if (idMap[target]) {
+                            a.setAttribute('href', '#' + idMap[target]);
+                        }
+                    } catch (e) {
+                        // ignore malformed URIs
+                    }
+                });
+            }
+
+            // Ricerca nella TOC
+            searchInput.addEventListener("input", function (e) {
+                const term = e.target.value.toLowerCase();
+                tocLinks.forEach(item => {
+                    if (item.text.includes(term)) {
+                        item.element.classList.remove('toc-hidden');
+                    } else {
+                        item.element.classList.add('toc-hidden');
+                    }
+                });
+            });
+
+            // Sidebar click: scroll heading below the sticky topbar
+            const TOPBAR_OFFSET = 64; // px below viewport top
+            container.addEventListener('click', function (e) {
+                const link = e.target.closest('a[href^="#"]');
+                if (!link) return;
+                const targetId = link.getAttribute('href').slice(1);
+                const target = document.getElementById(targetId);
+                if (!target) return;
+                e.preventDefault();
+                const top = target.getBoundingClientRect().top + window.scrollY - TOPBAR_OFFSET;
+                window.scrollTo({ top: top, behavior: 'smooth' });
+                // Update URL hash without triggering default scroll
+                history.pushState(null, '', '#' + targetId);
+            });
+
+            // Inizializza Bootstrap ScrollSpy per l'evidenziazione automatica
+            const scrollSpyObj = bootstrap.ScrollSpy.getInstance(document.body);
+            if (scrollSpyObj) {
+                scrollSpyObj.refresh();
+            } else {
+                new bootstrap.ScrollSpy(document.body, {
+                    target: "#toc-nav"
+                });
+            }
+
+            // Auto-scroll #toc-nav to keep the active TOC link in view.
+            // NOTE: after the flex refactor .bd-sidebar has overflow:hidden — only #toc-nav scrolls.
+            document.body.addEventListener('activate.bs.scrollspy', function (e) {
+                const activeItem = e.relatedTarget; // the <a> in #toc-nav that became active
+                const tocNav = document.getElementById('toc-nav');
+                if (!activeItem || !tocNav) return;
+
+                const itemRect = activeItem.getBoundingClientRect();
+                const containerRect = tocNav.getBoundingClientRect();
+                const MARGIN = 80; // px of context to keep above/below the active item
+
+                // Below visible area → scroll down
+                if (itemRect.bottom > containerRect.bottom - MARGIN) {
+                    tocNav.scrollTop += itemRect.bottom - containerRect.bottom + MARGIN;
+                }
+                // Above visible area → scroll up
+                else if (itemRect.top < containerRect.top + MARGIN) {
+                    tocNav.scrollTop -= containerRect.top - itemRect.top + MARGIN;
+                }
+            });
+        }
+
+        // Avvio procedura on load
+        window.addEventListener('load', loadMarkdown);
+
+        // ── Floating nav buttons ─────────────────────────────────────
+        (function () {
+            const btnTop = document.getElementById('fab-top');
+            const btnBottom = document.getElementById('fab-bottom');
+            const THRESHOLD = 120; // px from top/bottom to hide the respective button
+
+            function updateFabs() {
+                const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                const docHeight = document.documentElement.scrollHeight;
+                const winHeight = window.innerHeight;
+                const distBottom = docHeight - scrollTop - winHeight;
+
+                // Hide «top» when near the top
+                btnTop.classList.toggle('fab-hidden', scrollTop < THRESHOLD);
+                // Hide «bottom» when near the bottom
+                btnBottom.classList.toggle('fab-hidden', distBottom < THRESHOLD);
+            }
+
+            btnTop.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            btnBottom.addEventListener('click', () => {
+                window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+            });
+
+            window.addEventListener('scroll', updateFabs, { passive: true });
+            updateFabs(); // run once on load
+        })();
+
+        // ── Sidebar resize handle drag logic ──────────────
+        (function () {
+            const handle = document.getElementById('sidebar-resize');
+            const sidebar = document.querySelector('.bd-sidebar');
+            if (!handle || !sidebar) return;
+
+            let dragging = false;
+
+            handle.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                dragging = true;
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!dragging) return;
+                let newWidth = e.clientX;
+                if (newWidth < 150) newWidth = 150;
+                if (newWidth > window.innerWidth * 0.5) newWidth = window.innerWidth * 0.5;
+                document.documentElement.style.setProperty('--sidebar-w', newWidth + 'px');
+            });
+
+            document.addEventListener('mouseup', function () {
+                if (!dragging) return;
+                dragging = false;
+                handle.classList.remove('active');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            });
+        })();
+
+        // ── Settings hamburger menu ──────────────────────────────
+        (function () {
+            const btn = document.getElementById('settings-btn');
+            const panel = document.getElementById('settings-panel');
+            const toggleNavbar = document.getElementById('toggle-navbar');
+            const togglePadding = document.getElementById('toggle-padding');
+
+            // Open / close panel
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const isOpen = panel.classList.toggle('open');
+                btn.classList.toggle('active', isOpen);
+            });
+
+            // Close on outside click
+            document.addEventListener('click', function (e) {
+                if (!panel.contains(e.target) && e.target !== btn) {
+                    panel.classList.remove('open');
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Toggle: Navbar (sidebar)
+            toggleNavbar.addEventListener('change', function () {
+                document.body.classList.toggle('sidebar-hidden', !this.checked);
+                // Refresh ScrollSpy when sidebar toggled
+                const spy = bootstrap.ScrollSpy.getInstance(document.body);
+                if (spy) spy.refresh();
+            });
+
+            // Toggle: Content side padding
+            togglePadding.addEventListener('change', function () {
+                document.body.classList.toggle('no-content-padding', !this.checked);
+            });
+
+            // Toggle: Auto-reload
+            const toggleAutoReload = document.getElementById('toggle-autoreload');
+            toggleAutoReload.addEventListener('change', function () {
+                autoReloadEnabled = this.checked;
+            });
+        })();
+
+    </script>
+</body>
+
+</html>

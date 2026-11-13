@@ -15,6 +15,7 @@ dst = os.path.join(root, "main", "web_page.c")
 
 ASSETS = [  # (file in main/web, URL, MIME type, Cache-Control)
     ("index.html", "/", "text/html; charset=utf-8", "no-cache"),
+    ("help.html", "/help.html", "text/html; charset=utf-8", "no-cache"),
     ("manifest.webmanifest", "/manifest.webmanifest", "application/manifest+json", "no-cache"),
     ("sw.js", "/sw.js", "text/javascript; charset=utf-8", "no-cache"),
     ("icon.svg", "/icon.svg", "image/svg+xml", "public, max-age=86400"),
