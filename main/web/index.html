@@ -1678,7 +1678,7 @@ function srcActive(s) { return S.in === s.c || (s.alt && s.alt.includes(S.in)); 
 const maskLine = t => t.replace(/^(CFG (?:SET )?(?:pass|mqtt_pass|ota_pass|ota_token) ).*/i, '$1"***"').replace(/^(OTA (?:PASS|TOKEN) ).*/i, '$1"***"');      /* passwords never reach the console log */
 let ws = null, retry = 0, ackUntil = 0, lastRx = 0, loadedInfo = false, rdsAsked = 0, rdsNone = 0, sfSt = null;
 /* interface options (per browser) */
-const UIDEF = { allOff: 1, codes: 1, quick: 1, kmode: 1, vchips: 1, hx: 0, tabs: { home: 1, radio: 1, sound: 1, stats: 1, console: 1, jukebox: 1 } };
+const UIDEF = { allOff: 1, codes: 1, quick: 1, kmode: 1, vchips: 1, hx: 0, tabs: { home: 1, radio: 1, sound: 1, stats: 1, console: 1, jukebox: 1, help: 1 } };
 let UI = (() => { let o = {}; try { o = JSON.parse(store.get('ui', '{}')) || {}; } catch (e) {} return Object.assign({}, UIDEF, o, { tabs: Object.assign({}, UIDEF.tabs, o.tabs || {}) }); })();
 let HID = (() => { try { const a = JSON.parse(store.get('hid', '[]')); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
 let TITLE = { app: store.get('t_app', ''), page: store.get('t_page', '') };
@@ -2521,7 +2521,7 @@ function wire() {
     if (!S.connected || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'm' || e.key === 'M') $('#mute').click();
     else if (S.power === 1 && e.key === 'ArrowUp') { e.preventDefault(); cmd('VOL UP ' + volStep()); } else if (S.power === 1 && e.key === 'ArrowDown') { e.preventDefault(); cmd('VOL DOWN ' + volStep()); }
-    else if (e.key >= '1' && e.key <= '6') showTab(['home', 'radio', 'sound', 'stats', 'console', 'set'][+e.key - 1]);
+    else if (e.key >= '1' && e.key <= '7') showTab(['home', 'radio', 'sound', 'stats', 'console', 'set', 'help'][+e.key - 1]);
   });
 }
 /* Help: the manual (the README of the repository) is shown by help.html, a separate page in a sandboxed frame so its styles stay out of this one */
@@ -3495,7 +3495,7 @@ function initBackup() {
 /* ---------------- interface options, hideable boxes, titles ---------------- */
 const saveUI = () => store.set('ui', JSON.stringify(UI));
 const qt = t => '"' + t.replace(/"/g, '') + '"';
-const TABS = [['home', 'Ascolto'], ['radio', 'Radio'], ['sound', 'Suono'], ['stats', 'Statistiche'], ['console', 'Console'], ['jukebox', 'Jukebox']];
+const TABS = [['home', 'Ascolto'], ['radio', 'Radio'], ['sound', 'Suono'], ['stats', 'Statistiche'], ['console', 'Console'], ['jukebox', 'Jukebox'], ['help', 'Help']];
 function applyTitles() {
   document.title = TITLE.page || 'S-Link · Sony ES';
   let m = $('meta[name=apple-mobile-web-app-title]'); if (!m) { m = document.createElement('meta'); m.name = 'apple-mobile-web-app-title'; document.head.appendChild(m); }
