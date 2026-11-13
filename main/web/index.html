@@ -1409,6 +1409,9 @@ const TRX = [
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
+  ['Dimensione firmware', 'Firmware size', 'Taille du firmware', 'Firmware-Größe', 'Tamaño del firmware'],
+  ['dello slot', 'of the slot', 'de l'emplacement', 'des Slots', 'de la ranura'],
+  ['flash', 'flash', 'flash', 'Flash', 'flash'],
   ['Slot firmware', 'Firmware slot', 'Emplacement du firmware', 'Firmware-Slot', 'Ranura del firmware'],
   ['non disponibile (installato via USB o orologio non sincronizzato)', 'not available (installed over USB, or clock not synchronised)', 'indisponible (installé par USB, ou horloge non synchronisée)', 'nicht verfügbar (per USB installiert oder Uhr nicht synchronisiert)', 'no disponible (instalado por USB o reloj sin sincronizar)'],
   ['Temperatura chip', 'Chip temperature', 'Température de la puce', 'Chip-Temperatur', 'Temperatura del chip'],
@@ -2278,13 +2281,16 @@ let statsTimer = null;
 const fmtUp = s => { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60, p = v => String(v).padStart(2, '0');
   return (d ? d + 'd ' : '') + p(h) + ':' + p(m) + ':' + p(x); };
 const fmtKb = n => (n / 1024).toFixed(1) + ' kB';
+const fmtMb = n => n >= 1048576 ? (n / 1048576).toFixed(2) + ' MB' : fmtKb(n);
+const fmtFw = j => !j.fimg ? '—' : fmtMb(j.fimg) + (j.fslot ? ' / ' + fmtMb(j.fslot) + ' (' + (j.fimg * 100 / j.fslot).toFixed(1) + '% ' + tr('dello slot') + ')' : '') +
+  (j.fflash ? ' · ' + tr('flash') + ' ' + fmtMb(j.fflash) : '');
 const fmtInst = t => t ? new Date(t * 1000).toLocaleString() : tr('non disponibile (installato via USB o orologio non sincronizzato)');
 const otaStateName = st => ({ valid: tr('valido'), pending: tr('in prova: non ancora confermato') })[st] || st || '—';
 function kvRows(sel, rows) { $(sel).innerHTML = rows.map(r => '<dt>' + tr(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join(''); }
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
   kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
-    ['Firmware', j.fw], ['Compilato', j.built], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
+    ['Firmware', j.fw], ['Compilato', j.built], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['Memoria libera', fmtKb(j.heap) + ' / ' + fmtKb(j.heapTotal)], ['Minimo storico', fmtKb(j.heapMin)], ['Blocco più grande', fmtKb(j.heapBlock)], ['Task attivi', j.tasks]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);

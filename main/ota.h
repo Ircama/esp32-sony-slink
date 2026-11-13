@@ -16,3 +16,4 @@ esp_err_t ota_http_info(httpd_req_t *r);      /* GET  /api/ota : JSON with versi
 esp_err_t ota_http_push(httpd_req_t *r);      /* POST /api/ota : raw .bin body */
 int64_t ota_installed(void);                  /* epoch seconds of the WiFi installation of the running firmware, 0 = unknown */
 void ota_slot_info(char *slot, size_t n, const char **state);   /* running slot label and image state */
+void ota_size_info(uint32_t *img, uint32_t *slot, uint32_t *flash);   /* bytes: running image, its slot, flash chip (0 = unknown) */

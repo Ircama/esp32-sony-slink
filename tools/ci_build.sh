@@ -10,7 +10,7 @@ rm -rf build sdkconfig dependencies.lock                                    # on
 python tools/gen_web.py                                                     # main/web_page.c from main/web/
 idf.py set-target "$T"
 idf.py build
-idf.py merge-bin -o build/factory.bin
+idf.py merge-bin -o "$PWD/build/factory.bin"     # idf.py runs it inside build/, so the path must be absolute
 mkdir -p out
 cp build/esp32c3_slink.bin "out/slink-$T.bin"
 cp build/factory.bin "out/slink-$T-factory.bin"

@@ -17,6 +17,8 @@
 #include "esp_crt_bundle.h"
 #include "esp_netif_sntp.h"
 #include "nvs.h"
+#include "esp_partition.h"
+#include "esp_flash.h"
 #include <time.h>
 #include "settings.h"
 #include "cli.h"
@@ -142,6 +144,33 @@ void ota_slot_info(char *slot, size_t n, const char **state)
     const esp_partition_t *run = esp_ota_get_running_partition();
     snprintf(slot, n, "%s", run ? run->label : "");
     *state = state_name(run);
+}
+
+/* size of the running image (header + segments + padding/checksum + appended hash), read from the headers in flash; the slot and the flash chip */
+void ota_size_info(uint32_t *img, uint32_t *slot, uint32_t *flash)
+{
+    static uint32_t cached = 0;
+    const esp_partition_t *run = esp_ota_get_running_partition();
+    *img = *slot = *flash = 0;
+    if (run) {
+        *slot = run->size;
+        if (!cached) {
+            uint8_t h[24];
+            if (esp_partition_read(run, 0, h, sizeof h) == ESP_OK && h[0] == ESP_IMAGE_HEADER_MAGIC) {
+                uint32_t off = sizeof h; bool ok = true;
+                for (int i = 0; i < h[1] && ok; i++) {
+                    uint32_t sh[2];
+                    if (esp_partition_read(run, off, sh, sizeof sh) != ESP_OK || sh[1] > run->size) { ok = false; break; }
+                    off += 8 + sh[1];
+                }
+                if (ok) { off = (off + 1 + 15) & ~15u; if (h[23]) off += 32; cached = off; }
+            }
+        }
+        *img = cached;
+    }
+    uint32_t f = 0;
+    if (esp_flash_get_physical_size(NULL, &f) != ESP_OK) f = 0;
+    *flash = f;
 }
 
 static int64_t hdr_time(httpd_req_t *r)

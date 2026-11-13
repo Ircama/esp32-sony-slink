@@ -80,8 +80,9 @@ size_t stats_json(char *b, size_t sz)
     float t = 0; bool t_ok = read_temp(&t);
 
     char slot[20]; const char *ost; ota_slot_info(slot, sizeof slot, &ost);
-    P("{\"t\":\"stats\",\"inst\":%lld,\"slot\":\"%s\",\"ostate\":\"%s\",\"up\":%lld,\"reset\":\"%s\",\"chip\":\"%s\",\"rev\":%d,\"cores\":%d,\"fw\":\"%s\",\"built\":\"%s\",\"idf\":\"%s\",",
-      (long long)ota_installed(), slot, ost, (long long)(esp_timer_get_time() / 1000000), reset_reason(), CONFIG_IDF_TARGET, ci.revision, ci.cores, fw, built, idf);
+    uint32_t fimg, fslot, fflash; ota_size_info(&fimg, &fslot, &fflash);
+    P("{\"t\":\"stats\",\"inst\":%lld,\"slot\":\"%s\",\"ostate\":\"%s\",\"fimg\":%u,\"fslot\":%u,\"fflash\":%u,\"up\":%lld,\"reset\":\"%s\",\"chip\":\"%s\",\"rev\":%d,\"cores\":%d,\"fw\":\"%s\",\"built\":\"%s\",\"idf\":\"%s\",",
+      (long long)ota_installed(), slot, ost, (unsigned)fimg, (unsigned)fslot, (unsigned)fflash, (long long)(esp_timer_get_time() / 1000000), reset_reason(), CONFIG_IDF_TARGET, ci.revision, ci.cores, fw, built, idf);
     if (t_ok) P("\"temp\":%.1f,", (double)t); else P("\"temp\":null,");
     P("\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,",
       (unsigned)esp_get_free_heap_size(), (unsigned)esp_get_minimum_free_heap_size(),
