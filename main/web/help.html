@@ -1022,6 +1022,11 @@
             title="Clicca per Stampare/Salvare in PDF">Manuale</span>
         <a class="doc-topbar-back" href="https://github.com/Ircama/esp32-sony-slink" target="_blank" rel="noopener">GitHub</a>
 
+        <!-- Full screen (the page that embeds this one does it) -->
+        <div class="settings-hamburger" id="fs-wrap">
+            <button class="settings-hamburger-btn" id="fs-btn" title="Schermo intero" aria-label="Schermo intero">&#x26F6;</button>
+        </div>
+
         <!-- Hamburger settings -->
         <div class="settings-hamburger" id="settings-hamburger">
             <button class="settings-hamburger-btn" id="settings-btn" title="Impostazioni visualizzazione"
@@ -1163,7 +1168,13 @@
             document.getElementById('highlight-style').href = CDN + 'highlight.js/11.9.0/styles/github' + (dark ? '-dark' : '') + '.min.css';
         }
         applyTheme(new URLSearchParams(location.search).get('theme') === 'dark');
-        window.addEventListener('message', e => { const d = e.data; if (d && d.slink === 'theme') applyTheme(d.dark, d.accent); });
+        let fsOn = false;
+        function setFs(on) { fsOn = !!on; const b = document.getElementById('fs-btn'); b.innerHTML = fsOn ? '&#x2715;' : '&#x26F6;'; b.title = b.ariaLabel = fsOn ? 'Esci dallo schermo intero' : 'Schermo intero'; }
+        window.addEventListener('message', e => { const d = e.data; if (!d) return; if (d.slink === 'theme') applyTheme(d.dark, d.accent); else if (d.slink === 'fs') setFs(d.on); });
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('fs-btn').addEventListener('click', e => { e.stopPropagation(); parent.postMessage({ slink: 'fs', on: !fsOn }, '*'); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && fsOn) parent.postMessage({ slink: 'fs', on: false }, '*'); });
+        });
         try { parent.postMessage({ slink: 'ready' }, '*'); } catch (e) { }
 
         // Utilities per gli ID CSS safe dello ScrollSpy
