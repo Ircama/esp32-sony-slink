@@ -1313,6 +1313,8 @@ const TRX = [
   ['Nome della rete', 'Network name', 'Nom du réseau', 'Netzwerkname', 'Nombre de la red'],
   ['Password', 'Password', 'Mot de passe', 'Passwort', 'Contraseña'],
   ['Lascia vuoto per rete aperta', 'Leave empty for an open network', 'Laisser vide pour un réseau ouvert', 'Leer lassen für ein offenes Netzwerk', 'Déjalo vacío para una red abierta'],
+  ['letto solo ad amplificatore acceso', 'read only while the amplifier is on', "lu seulement quand l'amplificateur est allumé", 'nur bei eingeschaltetem Verstärker lesbar', 'se lee solo con el amplificador encendido'],
+  ['ultimo noto', 'last known', 'dernier connu', 'zuletzt bekannt', 'último conocido'],
   ['Nome host', 'Host name', "Nom d'hôte", 'Hostname', 'Nombre de host'],
   ['Salva e connetti', 'Save and connect', 'Enregistrer et connecter', 'Speichern und verbinden', 'Guardar y conectar'],
   ['Utente', 'User', 'Utilisateur', 'Benutzer', 'Usuario'],
@@ -1419,6 +1421,11 @@ const TRX = [
   ["Il firmware in uso ({f}) è successivo all'ultima release {v}", 'The running firmware ({f}) is newer than the latest release {v}', 'Le firmware en cours ({f}) est plus récent que la dernière version {v}', 'Die laufende Firmware ({f}) ist neuer als das letzte Release {v}', 'El firmware en uso ({f}) es posterior a la última versión {v}'],
   ['Nuova versione disponibile: {v} ({d}). In uso: {f}. Premi «Cerca e installa» per installarla.', 'New version available: {v} ({d}). Running: {f}. Press "Check and install" to install it.', "Nouvelle version disponible : {v} ({d}). En cours : {f}. Utilisez le bouton d'installation.", 'Neue Version verfügbar: {v} ({d}). Läuft: {f}. Mit der Schaltfläche zum Installieren aktualisieren.', 'Nueva versión disponible: {v} ({d}). En uso: {f}. Use el botón de instalar.'],
   ['Controllo non riuscito: {e}', 'Check failed: {e}', 'Échec de la vérification : {e}', 'Prüfung fehlgeschlagen: {e}', 'Comprobación fallida: {e}'],
+  ['Nome host', 'Hostname', "Nom d'hôte", 'Hostname', 'Nombre de host'],
+  ['Indirizzo MAC', 'MAC address', 'Adresse MAC', 'MAC-Adresse', 'Dirección MAC'],
+  ['Pin GPIO del bus', 'Bus GPIO pin', 'Broche GPIO du bus', 'GPIO-Pin des Busses', 'Pin GPIO del bus'],
+  ['Intervallo minimo tra i frame', 'Minimum gap between frames', 'Intervalle minimal entre trames', 'Mindestabstand zwischen Frames', 'Intervalo mínimo entre tramas'],
+  ['Loopback', 'Loopback', 'Loopback', 'Loopback', 'Loopback'],
   ['Dimensione firmware', 'Firmware size', 'Taille du firmware', 'Firmware-Größe', 'Tamaño del firmware'],
   ['dello slot', 'of the slot', "de l'emplacement", 'des Slots', 'de la ranura'],
   ['flash', 'flash', 'flash', 'Flash', 'flash'],
@@ -1739,7 +1746,7 @@ addEventListener('resize', fitTitle);
 if (window.ResizeObserver) new ResizeObserver(fitTitle).observe($('#ampName'));      /* the room changes with the volume box, the language, the fonts */
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 $('#dot').onclick = () => toast(connTxt);                 /* touch screens have no hover: a tap shows the status */
-let linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
+let nameTry = 0, linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
 function setConn(ok, txt) {
   S.connected = ok; if (!ok) linkReady = false;
   const live = ok && linkReady;
@@ -1777,6 +1784,7 @@ function onMsg(d) {
       /* RDS name: the tuner never pushes it, ask (NAME retries for a few seconds) once per tuned FM frequency */
       const tu = S.tuner;
       if (!DEMO && S.power === 1 && S.in === 0 && tu && tu.band === 'FM' && !tu.name && tu.f && rdsNone !== tu.f && (rdsAsked !== tu.f || Date.now() - rdsAt > 20000)) { rdsAsked = tu.f; rdsAt = Date.now(); cmd('NAME', { auto: true }); }
+      if (!DEMO && S.power === 1 && loadedInfo && !S.name && Date.now() - infoAt > 20000 && nameTry++ < 6) { infoAt = Date.now(); cmd('AMPNAME', { auto: true }); }
       if (!DEMO && S.power === 1 && !loadedInfo && (!S.name || !Object.keys(S.labels).length)) { loadedInfo = true; infoAt = Date.now(); seq(['AMPNAME', 'C0 22', 'C1 22', 'C3 22', 'C3 0F', 'C3 46', 'C3 47'].concat(eqReads(), ['INPUTS']), 900, true).then(() => S.sf > 0 && seq(['C3 40', 'C3 42', 'C3 43'], 600, true)); }
       /* the sound field changed: what the amp can read (EQ values, rear levels) changes with it */
       if (!DEMO && sfSt !== null && sfSt >= 0 && sfSt !== j.sf && j.sf >= 0 && S.power === 1) seq(eqReads().concat(j.sf > 0 ? ['C3 40', 'C3 42', 'C3 43'] : []), 700, true);
@@ -1927,9 +1935,13 @@ function renderAmpExtras() {
   const rs = $('#recSrc'); rs.closest('.set').hidden = S.snd < 0;      /* only on amplifiers that answer C0 0E with the 2nd audio source (C8 71) */
   if (document.activeElement !== rs) rs.value = [0, 2, 3, 4, 5, 15].includes(S.snd) ? String(S.snd) : '';
   $('#ampFlags').innerHTML = chips.map(c => '<span class="badge on">' + esc(c) + '</span>').join('');
-  kvRows('#stDev', [['Amplificatore', S.name || '—'], ['Info modello: amplificatore', S.info.amp || '—'], ['Info modello: sintonizzatore', S.info.tun || '—'],
-    ['Info modello: surround', S.info.sur || '—'], ['Preset del campo sonoro', S.sfp >= 0 ? S.sfp + 1 : '—'], ['Configurazione altoparlanti', S.spk >= 0 ? hex2(S.spk) : '—'],
-    ["Unità sull'ingresso", S.idev >= 0 && S.idev !== 255 ? (LINKED[S.idev] || '?') + codeTxt(hex2(S.idev)) : '—'], ['Tipo ingresso', it], ['2° ingresso audio', S.snd >= 0 ? srcName(S.snd) : '—'], ['Flag amplificatore', S.cc >= 0 ? hex2(S.cc) : '—']]);
+  /* name and model info are read from the amp only while it is on: when it is off show the last values this browser saw */
+  const unk = S.power === 1 ? '—' : tr('letto solo ad amplificatore acceso'), mem = (() => { try { return JSON.parse(store.get('ampinfo', '{}')); } catch (e) { return {}; } })();
+  if (S.name || S.info.amp) store.set('ampinfo', JSON.stringify({ name: S.name || mem.name || '', amp: S.info.amp || '', tun: S.info.tun || '', sur: S.info.sur || '' }));
+  const rem = (v, m) => v || (m ? m + ' (' + tr('ultimo noto') + ')' : unk);
+  kvRows('#stDev', [['Amplificatore', rem(S.name, mem.name)], ['Info modello: amplificatore', rem(S.info.amp, mem.amp)], ['Info modello: sintonizzatore', rem(S.info.tun, mem.tun)],
+    ['Info modello: surround', rem(S.info.sur, mem.sur)], ['Preset del campo sonoro', S.sfp >= 0 ? S.sfp + 1 : unk], ['Configurazione altoparlanti', S.spk >= 0 ? hex2(S.spk) : unk],
+    ["Unità sull'ingresso", S.idev >= 0 && S.idev !== 255 ? (LINKED[S.idev] || '?') + codeTxt(hex2(S.idev)) : unk], ['Tipo ingresso', S.itype >= 0 ? it : unk], ['2° ingresso audio', S.snd >= 0 ? srcName(S.snd) : unk], ['Flag amplificatore', S.cc >= 0 ? hex2(S.cc) : unk]]);
 }
 /* Round master-volume knob, like the front panel of the STR-DA50ES: 270 degrees of travel, 0 at 7:30 (225 deg clockwise
  * from 12 o'clock), 10 at 4:30 (135 deg), going clockwise over the top. */
@@ -2294,19 +2306,20 @@ const fmtKb = n => (n / 1024).toFixed(1) + ' kB';
 const fmtMb = n => n >= 1048576 ? (n / 1048576).toFixed(2) + ' MB' : fmtKb(n);
 const fmtFw = j => !j.fimg ? '—' : fmtMb(j.fimg) + (j.fslot ? ' / ' + fmtMb(j.fslot) + ' (' + (j.fimg * 100 / j.fslot).toFixed(1) + '% ' + tr('dello slot') + ')' : '') +
   (j.fflash ? ' · ' + tr('flash') + ' ' + fmtMb(j.fflash) : '');
+const fmtBuilt = b => { const d = new Date(String(b || '').replace(/\s+/g, ' ')); return isNaN(d) ? (b || '—') : d.toLocaleString(); };
 const fmtInst = t => t ? new Date(t * 1000).toLocaleString() : tr('non disponibile (installato via USB o orologio non sincronizzato)');
 const otaStateName = st => ({ valid: tr('valido'), pending: tr('in prova: non ancora confermato') })[st] || st || '—';
 function kvRows(sel, rows) { $(sel).innerHTML = rows.map(r => '<dt>' + tr(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join(''); }
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
-  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
-    ['Firmware', j.fw], ['Compilato', j.built], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
+  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC', j.mac || '—'], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
+    ['Firmware', j.fw], ['Compilato', fmtBuilt(j.built)], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['Memoria libera', fmtKb(j.heap) + ' / ' + fmtKb(j.heapTotal)], ['Minimo storico', fmtKb(j.heapMin)], ['Blocco più grande', fmtKb(j.heapBlock)], ['Task attivi', j.tasks]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);
   kvRows('#stConn', [['Client web', j.web], ['Client TCP', j.tcp], ['BLE', j.ble ? (j.bleConn ? tr('connesso') : tr('attivo')) : tr('spento')],
     ['MQTT', j.mqtt ? (j.mqttOk ? tr('connesso') : tr('in connessione…')) : tr('non configurato')]]);
-  kvRows('#stBus', [['Fronti rilevati', j.bus.edges], ['Sincronismi', j.bus.syncs], ['Bit ricevuti', j.bus.bits], ['Frame ricevuti', j.bus.frames], ['Linea', tr(j.bus.level ? 'a riposo (alta)' : 'bassa')], ['Impulsi lunghi (>6 ms)', (j.bus.long || 0) + (j.bus.long ? ' (max ' + (j.bus.longMax / 1000).toFixed(1) + ' ms)' : '')]]);
+  kvRows('#stBus', [['Fronti rilevati', j.bus.edges], ['Sincronismi', j.bus.syncs], ['Bit ricevuti', j.bus.bits], ['Frame ricevuti', j.bus.frames], ['Linea', tr(j.bus.level ? 'a riposo (alta)' : 'bassa')], ['Pin GPIO del bus', j.gpio >= 0 ? j.gpio : '—'], ['Intervallo minimo tra i frame', j.gap + ' ms'], ['Loopback', tr(j.loop ? 'On' : 'Off')], ['Impulsi lunghi (>6 ms)', (j.bus.long || 0) + (j.bus.long ? ' (max ' + (j.bus.longMax / 1000).toFixed(1) + ' ms)' : '')]]);
   kvRows('#stPow', [['Modalità risparmio', tr(j.eco ? 'On' : 'Off')], ['Frequenza CPU', j.cpu + ' MHz' + (j.cpuMax ? ' (' + j.cpuMin + '–' + j.cpuMax + ')' : '')],
     ['Risparmio energia WiFi', psName], ['Potenza di trasmissione', (j.txq / 4).toFixed(1) + ' dBm'],
     ['Target Wake Time', [tr('Non supportato dal chip (serve il WiFi 6: ESP32-C6/C5)'), tr('Spento (risparmio energetico disattivato)'), tr('Il router non supporta il WiFi 6'),
@@ -3540,7 +3553,7 @@ function otaProg(txt, pct) {
 function otaRender() {
   const o = OTA.info, st = { valid: tr('valido'), pending: tr('in prova: non ancora confermato') }[o.state] || o.state || '—';
   const row = (k, v) => '<dt>' + esc(tr(k)) + '</dt><dd>' + esc(v) + '</dd>';
-  $('#otaKv').innerHTML = row('Versione', (o.fw || '—') + (o.target ? ' · ' + o.target : '')) + row('Compilato', o.built || '—') + row('Installato', fmtInst(o.inst)) + row('In uso', (o.run || '—') + ' · ' + st) +
+  $('#otaKv').innerHTML = row('Versione', (o.fw || '—') + (o.target ? ' · ' + o.target : '')) + row('Compilato', fmtBuilt(o.built)) + row('Installato', fmtInst(o.inst)) + row('In uso', (o.run || '—') + ' · ' + st) +
     row('Altro slot', (o.other || '—') + ' · ' + (o.ofw ? o.ofw : tr('vuoto'))) + row('Sorgente degli aggiornamenti', o.source || '—') +
     row('Password di invio', o.pass ? tr('impostata') : tr('nessuna: chiunque in rete può inviare un firmware'));
   const act = document.activeElement;

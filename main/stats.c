@@ -11,6 +11,7 @@
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
+#include "esp_mac.h"
 #include "esp_netif.h"
 #include "esp_pm.h"
 #include "esp_rom_sys.h"
@@ -91,6 +92,11 @@ size_t stats_json(char *b, size_t sz)
     unsigned twt_ms = 0; int twt = net_twt_state(&twt_ms);
     P("\"cpu\":%u,\"cpuMax\":%d,\"cpuMin\":%d,\"eco\":%d,\"twt\":%d,\"twtMs\":%u,", (unsigned)esp_rom_get_cpu_ticks_per_us(),
       pm_ok ? pm.max_freq_mhz : 0, pm_ok ? pm.min_freq_mhz : 0, g_set.eco, twt, twt_ms);
+
+    uint8_t mac[6] = {0}; esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    char host[40]; jesc(host, sizeof host, g_set.host);
+    P("\"host\":\"%s\",\"mac\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"gpio\":%d,\"gap\":%d,\"loop\":%d,", host, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+      slink_get_gpio(), slink_get_gap_ms(), slink_get_loopback());
 
     /* WiFi */
     wifi_ap_record_t ap;
