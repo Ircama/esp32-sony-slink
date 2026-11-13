@@ -27,3 +27,9 @@ CONFIG_PM_ENABLE=y
 # Web portal
 CONFIG_HTTPD_WS_SUPPORT=y
 CONFIG_LWIP_MAX_SOCKETS=12
+
+# Over-the-air update (ota.c): two app slots (partitions.csv); the bootloader goes back to the previous firmware when the new one
+# does not confirm itself (main.c / ota.c). http:// sources are accepted for the update URL (a LAN server); https uses the certificate bundle.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y

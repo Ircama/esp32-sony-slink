@@ -27,6 +27,9 @@
 #include "state.h"
 #include "settings.h"
 #include "net.h"
+#if SOC_WIFI_SUPPORTED
+#include "ota.h"
+#endif
 #include "nvs_flash.h"
 #include "nvs.h"
 
@@ -66,13 +69,10 @@ void cli_sink_remove(cli_sink_t fn)
     xSemaphoreGive(s_out_mtx);
 }
 
-static void out(const char *fmt, ...)
+static void vout(const char *fmt, va_list ap)
 {
     char buf[1400];
-    va_list ap;
-    va_start(ap, fmt);
     int n = vsnprintf(buf, sizeof buf, fmt, ap);
-    va_end(ap);
     if (n <= 0) return;
     if (n > (int)sizeof buf - 1) n = sizeof buf - 1;
     xSemaphoreTake(s_out_mtx, portMAX_DELAY);
@@ -86,6 +86,22 @@ static void out(const char *fmt, ...)
         }
     }
     xSemaphoreGive(s_out_mtx);
+}
+
+static void out(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vout(fmt, ap);
+    va_end(ap);
+}
+
+void cli_out(const char *fmt, ...)               /* the same output as the commands' own, for the other modules (ota.c) */
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vout(fmt, ap);
+    va_end(ap);
 }
 
 static void rx_task(void *arg)
@@ -375,6 +391,7 @@ static void help(void)
         "  ALLOFF             power off every Sony unit on the bus (CD 1-3, MD, tuner, then the amplifier): the remote's SYSTEM/STANDBY \"ALL OFF\"" CRLF
         "  ECO ON|OFF         low-power profile: WiFi max modem sleep, CPU 40-80 MHz, 11 dBm TX (default ON, saved)" CRLF
         "  WIFI <ssid> [pass] | WIFI CLEAR   MQTT <mqtt://host> [user] [pass] | MQTT CLEAR   HOSTNAME <name>   NET (status)" CRLF
+        "  OTA [UPDATE [url] [FORCE] | URL [url|DEFAULT] | PASS [text|OFF] | TOKEN [text|OFF] | ROLLBACK]   firmware update over WiFi: from the GitHub release or a URL; PASS protects the upload (POST /api/ota); (WiFi chips)" CRLF
         "  HELP" CRLF
         "Replies: 'TX ..' echo, 'OK', 'ERR ..', 'RX ..  ; decoded text' for every bus frame." CRLF,
         slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
@@ -999,6 +1016,14 @@ static void handle_cmd(char *line)
             do_send(b, 5);
         } else out("ERR usage: FAV | FAV ADD [FM <MHz>|AM <kHz>] | FAV DEL <n> | FAV <n>" CRLF);
     }
+    else if (!strcmp(c0, "OTA")) {
+#if SOC_WIFI_SUPPORTED
+        char *av[6]; int na = split_args(raw, av, 6);
+        ota_cli(av, na);
+#else
+        out("ERR not available: this chip (ESP32-H2) has no WiFi; update the firmware over USB" CRLF);
+#endif
+    }
     else if (!strcmp(c0, "PRESET") && nt > 2) {
         uint8_t b[4] = {TUNER_DEV, 0x51, (uint8_t)atoi(tok[1]), (uint8_t)atoi(tok[2])};
         do_send(b, 4);
@@ -1120,6 +1145,9 @@ static void handle_net(char *raw, char **tok, int nt)
             else if (!strcmp(k, "mqtt_pass") && strlen(vv) < sizeof g_set.mqtt_pass) strcpy(g_set.mqtt_pass, vv);
             else if (!strcmp(k, "title_app") && strlen(vv) < sizeof g_set.title_app) strcpy(g_set.title_app, vv);
             else if (!strcmp(k, "title_page") && strlen(vv) < sizeof g_set.title_page) strcpy(g_set.title_page, vv);
+            else if (!strcmp(k, "ota_url") && strlen(vv) < sizeof g_set.ota_url) strcpy(g_set.ota_url, vv);
+            else if (!strcmp(k, "ota_token") && strlen(vv) < sizeof g_set.ota_token) strcpy(g_set.ota_token, vv);
+            else if (!strcmp(k, "ota_pass") && strlen(vv) < sizeof g_set.ota_pass) strcpy(g_set.ota_pass, vv);
             else { out("ERR cfg: unknown key or invalid value (%s)" CRLF, k); return; }
             settings_save();
             out("OK cfg %s" CRLF, k);
@@ -1134,7 +1162,8 @@ static void handle_net(char *raw, char **tok, int nt)
             out("CFG vol_up %d" CRLF "CFG vol_down %d" CRLF "CFG vol_margin %d" CRLF, (int)g_set.vol_up, (int)g_set.vol_down, (int)g_set.vol_margin);
             out("CFG host \"%s\"" CRLF "CFG ssid \"%s\"" CRLF "CFG mqtt_uri \"%s\"" CRLF "CFG mqtt_user \"%s\"" CRLF, g_set.host, g_set.ssid, g_set.mqtt_uri, g_set.mqtt_user);
             out("CFG title_app \"%s\"" CRLF "CFG title_page \"%s\"" CRLF, g_set.title_app, g_set.title_page);
-            if (pw) out("CFG pass \"%s\"" CRLF "CFG mqtt_pass \"%s\"" CRLF, g_set.pass, g_set.mqtt_pass);
+            out("CFG ota_url \"%s\"" CRLF, g_set.ota_url);
+            if (pw) out("CFG pass \"%s\"" CRLF "CFG mqtt_pass \"%s\"" CRLF "CFG ota_pass \"%s\"" CRLF "CFG ota_token \"%s\"" CRLF, g_set.pass, g_set.mqtt_pass, g_set.ota_pass, g_set.ota_token);
             out("OK cfg end%s" CRLF, pw ? " (with passwords)" : "");
         }
     }

@@ -45,4 +45,12 @@ menu "S-Link interface"
         bool "LED is active-low"
         default n
 
+
+    config SLINK_OTA_GITHUB_REPO
+        string "GitHub repository (owner/name) whose latest release holds the firmware for the over-the-air update"
+        default "Ircama/esp32-sony-slink"
+        help
+          The default source of "OTA UPDATE" is
+          https://github.com/<repo>/releases/latest/download/slink-<chip>.bin  (built by .github/workflows/firmware.yml).
+
 endmenu

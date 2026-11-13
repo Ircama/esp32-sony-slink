@@ -11,7 +11,7 @@ Written in C with ESP-IDF, this firmware interfaces with the Sony S-Link / Contr
 - **Raw TCP Console:** Direct text-based command interface over the network.
 - **USB Serial:** Direct local connection for logging and commands.
 
-**Supported hardware:** ESP32-C3, ESP32-S3, ESP32-H2, ESP32-C6.
+**Supported hardware:** ESP32-C3, ESP32-S3, ESP32-H2, ESP32-C6, ESP32-C5.
 
 ## Build and flash
 
@@ -21,7 +21,8 @@ PlatformIO (latest `espressif32` platform, Python ≥ 3.10):
 pio run -e esp32s3 -t upload --upload-port COM3     # ESP32-S3 (4 MB flash)
 pio run -e esp32c3 -t upload --upload-port COMx     # ESP32-C3 Super Mini
 pio run -e esp32c6                                   # ESP32-C6 (WiFi 6): builds, not tried on a board yet
-# ESP32-H2 (no WiFi, USB + BLE only): see docs/en/ESP32-H2.md (builds with ESP-IDF; PlatformIO's platform does not support it yet)
+# ESP32-H2 (no WiFi, USB + BLE only) and ESP32-C5 (WiFi 6, 2.4 + 5 GHz): build with ESP-IDF (PlatformIO's platform does not support them yet),
+# see docs/en/ESP32-H2.md; the GitHub workflow builds both (.github/workflows/firmware.yml)
 ```
 
 or ESP-IDF: `idf.py set-target esp32c3 && idf.py menuconfig && idf.py build flash`
@@ -159,9 +160,35 @@ The HTML file is embedded in the firmware: `tools/gen_web.py` converts it into `
 (automatic with PlatformIO, or by hand with `python tools/gen_web.py`). `tools/gen_coverage.py` regenerates the coverage document.
 
 Build notes: ESP-IDF 6.x (`mdns` and `mqtt` are managed components, downloaded by the component manager: internet is needed on the
-first build); partition table in `partitions.csv` (app 1.75 MB, flash 4 MB). After changing
+first build); partition table in `partitions.csv` (two app slots of 1.9 MB for the over-the-air update, flash 4 MB). After changing
 `sdkconfig.defaults` delete the generated `sdkconfig.esp32s3` / `sdkconfig.esp32c3` / `sdkconfig.esp32c6` to regenerate them
 (they are git-ignored).
+
+## Firmware update over WiFi (OTA)
+
+Every WiFi chip (C3, C5, C6, S3; the H2 has none) keeps two firmware slots, so it can be updated without the USB cable, and goes back to
+the previous firmware by itself when the new one does not work. **The first installation, and the one that introduces this partition table,
+must be done over USB**; the settings (WiFi, stations, ...) are kept.
+
+- **From the device (pull)**: *Settings > Firmware update > Check and install*, or the CLI command `OTA UPDATE`. The device downloads
+  `slink-<chip>.bin` from the latest GitHub release of this repository (https, certificates checked) and restarts. Another source can be
+  set in the same card or with `OTA URL https://example.org/slink-esp32s3.bin` (`OTA URL DEFAULT` goes back to GitHub; http:// works for a
+  server on the local network). An optional access token (`OTA TOKEN <text>`, sent as `Authorization: Bearer`) is meant for a server of your own.
+  `OTA UPDATE FORCE` installs even when the version is the same.
+- **From a computer (push)**: `python tools/ota_push.py slink.local .pio/build/esp32s3/firmware.bin` (or `--build esp32s3` to build and send;
+  `--password` if one is set). The *Settings* card can also send a `.bin` chosen in the browser.
+- **Upload password (optional, off by default)**: `OTA PASS <text>` or the Settings card; `OTA PASS OFF` removes it. When set, the device gives a
+  one-time nonce (`GET /api/ota`) and the sender proves the password with `sha256("<nonce>:<password>")` (header `X-OTA-Auth`), so the password
+  never travels on the network. **Without a password anyone on the local network can upload a firmware** (like the rest of the interface, which has no
+  login): the password protects the upload endpoint only, not the CLI/portal commands that change the OTA settings.
+- **Rollback**: a new firmware is *on trial* until it has run 30 s (and, if the WiFi is in use, got an IP address); if it crashes or hangs before,
+  the bootloader starts the previous one. `OTA ROLLBACK` (or the button in Settings) goes back by hand. `OTA` shows the state of both slots.
+- Only an image with the right chip and the right project name is accepted; an upload is written to the unused slot and checked before it is selected.
+
+**Releases**: `.github/workflows/firmware.yml` builds C3, C5, C6, H2 and S3 with ESP-IDF 6.1 on every push (files kept as workflow artifacts);
+pushing a tag `v*` also publishes a release with `slink-<chip>.bin` (what OTA installs), `slink-<chip>-factory.bin` (bootloader + partitions +
+application, to flash over USB at address 0: `esptool.py --chip esp32s3 write_flash 0x0 slink-esp32s3-factory.bin`) and `SHA256SUMS.txt`.
+The repository used by `OTA UPDATE` is `SLINK_OTA_GITHUB_REPO` (menuconfig, *S-Link interface*).
 
 ## Tester check (finding the right pin)
 

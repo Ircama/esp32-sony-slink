@@ -11,6 +11,7 @@
 #include "freertos/semphr.h"
 #include "freertos/message_buffer.h"
 #include "net.h"
+#include "ota.h"
 #include "cli.h"
 #include "state.h"
 
@@ -235,7 +236,7 @@ void web_start(void)
     httpd_config_t c = HTTPD_DEFAULT_CONFIG();
     c.max_open_sockets = 6;
     c.lru_purge_enable = true;
-    c.stack_size = 6144;
+    c.stack_size = 8192;                          /* the firmware upload (flash writes) runs in this task */
     c.max_uri_handlers = 24;
     c.close_fn = on_close;
     c.send_wait_timeout = 3;
@@ -251,6 +252,8 @@ void web_start(void)
         { .uri = "/api/stats",    .method = HTTP_GET,  .handler = h_stats },
         { .uri = "/api/favs",     .method = HTTP_GET,  .handler = h_favs },
         { .uri = "/api/cmd",      .method = HTTP_POST, .handler = h_cmd },
+        { .uri = "/api/ota",      .method = HTTP_GET,  .handler = ota_http_info },
+        { .uri = "/api/ota",      .method = HTTP_POST, .handler = ota_http_push },
         { .uri = "/favicon.ico",  .method = HTTP_GET,  .handler = h_nocontent },
     };
     for (size_t i = 0; i < sizeof uris / sizeof uris[0]; i++) httpd_register_uri_handler(s_srv, &uris[i]);

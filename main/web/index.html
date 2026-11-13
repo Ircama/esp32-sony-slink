@@ -70,11 +70,11 @@ header.top::before{content:"";position:absolute;z-index:-1;pointer-events:none;t
   backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
   box-shadow:0 0 0 1px color-mix(in srgb,var(--line2) 40%,transparent),0 14px 34px -14px rgba(0,0,0,.45);opacity:0;transition:opacity .25s ease}
 header.top.scrolled::before{opacity:1}
-.brand{display:flex;flex-direction:column;min-width:0;flex:1}
-.brand h1{margin:0;font-size:17px;font-weight:650;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brand small{color:var(--text2);font-size:12.5px;display:flex;align-items:center;gap:7px;overflow:hidden;transition:opacity .25s}
-.brand small #conn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-header.top.scrolled .brand small{opacity:0}
+.brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1}                   /* the status dot is part of the header, left of the title (its text is the tooltip) */
+.brand h1{margin:0;min-width:0;flex:1 1 0;font-size:17px;font-weight:650;letter-spacing:.01em;white-space:nowrap;overflow:hidden}
+#ampT{display:inline-block;vertical-align:bottom;transform-origin:left center}   /* never cut: when it does not fit it is squeezed in width and, if needed, made smaller (fitTitle) */
+.brand .dot{width:10px;height:10px;cursor:help}
+.brand .dot:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 header.top.scrolled .pwr{box-shadow:none}
 .mini-vol{display:flex;align-items:center;gap:2px;padding:3px;border-radius:99px;background:color-mix(in srgb,var(--surface2) 80%,transparent);
   border:1px solid color-mix(in srgb,var(--line2) 55%,transparent);flex:none;transition:opacity .2s}
@@ -110,8 +110,8 @@ nav.tabs button{flex:1;max-width:120px;display:flex;flex-direction:column;align-
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-selected="true"]{color:var(--accent);background:var(--accent-soft)}
 @media(max-width:430px){nav.tabs{padding:0 2px env(safe-area-inset-bottom,0px);gap:0}nav.tabs button{font-size:10px;letter-spacing:-.01em}}
-nav.tabs button:hover{color:var(--text)}
-nav.tabs button[aria-selected="true"]:hover{color:var(--accent)}
+@media(hover:hover){nav.tabs button:hover{color:var(--text)}nav.tabs button[aria-selected="true"]:hover{color:var(--accent)}}   /* hover only with a real pointer: on a touch screen it stayed "white" after a tap */
+nav.tabs button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 main{padding:6px 0 28px}
 section.tab{display:none;animation:fade .25s ease}
@@ -159,6 +159,7 @@ body.off .needs-on{opacity:.45;filter:saturate(.4)}
 .btn.danger:hover{border-color:var(--err);color:var(--err)}
 .btn.sm{height:34px;padding:0 12px;font-size:13px}
 .btn.icon{width:42px;padding:0}
+.btn.sm.icon{width:34px}
 .btn[disabled]{opacity:.45;pointer-events:none}
 .seg{display:inline-flex;background:var(--surface2);border:1px solid var(--line2);border-radius:var(--r-sm);padding:3px;gap:2px}
 .seg button{height:34px;padding:0 14px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--text2)}
@@ -335,7 +336,7 @@ svg.eq circle.drag{fill:var(--accent)}
 
 /* console */
 .log{height:min(52dvh,460px);overflow:auto;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;
-  font:12.5px/1.55 var(--mono);overscroll-behavior:contain}
+  font:12.5px/1.55 var(--mono);overscroll-behavior-y:auto}   /* at the end of the log the scroll goes on with the page (not "contain": on a phone the log fills the screen) */
 .log div{white-space:pre-wrap;word-break:break-word}
 .log .rx{color:var(--text)} .log .rx i{color:var(--text3);font-style:normal}
 .log .tx{color:var(--accent)} .log .ok{color:var(--ok)} .log .err{color:var(--err)} .log .info{color:var(--text2)} .log .me{color:var(--accent);font-weight:600}
@@ -407,6 +408,14 @@ dialog .row{justify-content:flex-end}
 .jb-row.cur{background:var(--accent-soft);border-radius:8px}
 .jb-title{font-size:20px;font-weight:600;margin:4px 0;overflow-wrap:anywhere}
 .calbar-wrap{margin:8px 0}
+.otabar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
+.otabar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.otabar.ind i{width:35%;animation:calbar 1.1s ease-in-out infinite alternate}
+.ota-sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.ota-sec h3{margin:0 0 4px;font-size:15px}
+#otaCard .bk-opt{margin-top:16px}
+#otaCard input[type=file]{display:flex;align-items:center;width:100%;box-sizing:border-box;padding:6px 10px;min-height:44px;line-height:1.4;font-size:inherit;color:var(--muted,inherit);cursor:pointer}
+#otaCard input[type=file]::file-selector-button{margin:0 12px 0 0;padding:6px 14px;border:1px solid var(--line,#8886);border-radius:8px;background:var(--accent,#2d6cdf);color:#fff;font:inherit;cursor:pointer;vertical-align:middle}
 .bk-opt{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
 .bk-opt input{margin-top:3px;width:18px;height:18px;flex:none}
 .hx-host{position:relative}
@@ -466,8 +475,9 @@ body.hxon .hx{display:block}
 <div class="app">
   <header class="top" id="top">
     <div class="brand">
-      <h1 id="ampName">Sony S-Link</h1>
-      <small><span class="dot wait" id="dot"></span><span id="conn">Connessione…</span></small>
+      <span class="dot wait" id="dot" role="img" tabindex="0" title="Connessione…" aria-label="Connessione…"></span>
+      <h1 id="ampName"><span id="ampT">Sony S-Link</span></h1>
+      <span class="sr" id="conn" role="status">Connessione…</span>
     </div>
     <div class="mini-vol offline" id="miniVol" inert role="group" aria-label="Volume">
       <button class="mv-b" id="mvDn" aria-label="Volume giù"><svg class="i"><use href="#i-minus"/></svg></button>
@@ -501,7 +511,7 @@ body.hxon .hx{display:block}
           <h2>Volume</h2>
           <div class="vol-top">
             <div class="vol-num" aria-live="off"><span class="approx" id="volApprox">≈</span><span id="volNum">--</span><small>/ 10</small></div>
-            <button class="btn sm" id="volCal" hidden>Calibra</button>
+            <button class="btn sm" id="volCal">Calibra</button>
           </div>
           <div class="vol-ctl">
             <button class="rbtn" id="volDn" aria-label="Volume giù"><svg class="i"><use href="#i-minus"/></svg></button>
@@ -820,6 +830,48 @@ body.hxon .hx{display:block}
         </div>
 
 
+        <div class="card span2" id="otaCard">
+          <h2>Aggiornamento del firmware</h2>
+          <dl class="kv" id="otaKv"></dl>
+          <div class="calbar-wrap" id="otaProg" hidden><span id="otaProgT" class="hint"></span><div class="otabar"><i id="otaFill"></i></div></div>
+
+          <div class="ota-sec">
+            <h3>Aggiorna da internet</h3>
+            <p class="hint" style="margin-top:0">Il dispositivo scarica da solo il file e si riavvia. Sorgente predefinita: l'ultima release su GitHub.</p>
+            <form class="form" id="otaSrcForm" autocomplete="off">
+              <label>Indirizzo del file (facoltativo)<input id="otaUrl" maxlength="127" placeholder="vuoto = ultima release su GitHub"></label>
+              <label>Token di accesso (facoltativo)<input id="otaTok" type="password" maxlength="63" placeholder="inviato al server come «Bearer»; per un server proprio" autocomplete="new-password"></label>
+              <div class="row"><button class="btn sm" type="submit">Salva</button><button class="btn sm" type="button" id="otaSrcDef">Predefinito</button></div>
+            </form>
+            <label class="bk-opt"><input type="checkbox" id="otaForce"> Installa anche se la versione è la stessa</label>
+            <div class="row" style="margin-top:10px"><button class="btn primary" id="otaGo">Cerca e installa</button></div>
+          </div>
+
+          <div class="ota-sec">
+            <h3>Invia un file dal computer</h3>
+            <p class="hint" style="margin-top:0">Scegli il file .bin del firmware per questo chip (slink-&lt;chip&gt;.bin): viene scritto nell'altro slot e il dispositivo si riavvia. Da un computer si può anche usare tools/ota_push.py.</p>
+            <div class="form">
+              <input type="file" id="otaFile" accept=".bin,application/octet-stream" aria-label="File .bin">
+              <label id="otaPwRow" hidden>Password di invio<input id="otaPw" type="password" maxlength="32" placeholder="richiesta dal dispositivo" autocomplete="off"></label>
+              <div class="row"><button class="btn primary" id="otaSend">Invia</button></div>
+            </div>
+          </div>
+
+          <div class="ota-sec">
+            <h3>Protezione dell'invio</h3>
+            <p class="hint" style="margin-top:0">Password facoltativa per l'invio del firmware (dal portale o con tools/ota_push.py). Senza password chiunque nella rete locale può caricare un firmware.</p>
+            <form class="form" id="otaPwForm" autocomplete="off">
+              <label>Nuova password<input id="otaNewPw" type="password" maxlength="32" autocomplete="new-password"></label>
+              <div class="row"><button class="btn sm" type="submit">Imposta</button><button class="btn sm" type="button" id="otaPwOff">Rimuovi</button></div>
+            </form>
+          </div>
+
+          <div class="ota-sec">
+            <p class="hint" style="margin-top:0">Se il nuovo firmware non si conferma entro 30 secondi dall'avvio (o si blocca), il dispositivo torna da solo a quello precedente.</p>
+            <div class="row"><button class="btn sm" id="otaRb">Torna al firmware precedente</button></div>
+          </div>
+        </div>
+
         <div class="card span2" id="bkCard">
           <h2>Backup e ripristino</h2>
           <p class="hint" style="margin-top:0">Salva in un file la configurazione completa: quella dell'amplificatore (nomi degli ingressi, campo sonoro, equalizzatore, livelli, altoparlanti), quella che resta nel dispositivo (impostazioni, rete, MQTT, stazioni e preferiti radio) e le preferenze di questa interfaccia. Il file si può poi ripristinare.</p>
@@ -1134,6 +1186,7 @@ const TRX = [
   ['Colore di avviso', 'Warning colour', "Couleur d'avertissement", 'Warnfarbe', 'Color de aviso'],
   ['Ripristina i colori', 'Reset the colours', 'Rétablir les couleurs', 'Farben zurücksetzen', 'Restablecer los colores'],
   ['Colori ripristinati', 'Colours reset', 'Couleurs rétablies', 'Farben zurückgesetzt', 'Colores restablecidos'],
+  ['Ripeti la calibrazione', 'Repeat the calibration', 'Répéter le calibrage', 'Kalibrierung wiederholen', 'Repetir la calibración'],
   ['Calibra', 'Calibrate', 'Calibrer', 'Kalibrieren', 'Calibrar'],
   ['Volume giù', 'Volume down', 'Baisser le volume', 'Leiser', 'Bajar volumen'],
   ['Volume su', 'Volume up', 'Augmenter le volume', 'Lauter', 'Subir volumen'],
@@ -1291,6 +1344,48 @@ const TRX = [
   ['Inserisci il nome della rete', 'Enter the network name', 'Saisissez le nom du réseau', 'Gib den Netzwerknamen ein', 'Introduce el nombre de la red'],
   ['La password deve avere almeno 8 caratteri', 'The password must be at least 8 characters', 'Le mot de passe doit comporter au moins 8 caractères', 'Das Passwort muss mindestens 8 Zeichen haben', 'La contraseña debe tener al menos 8 caracteres'],
   ['Se cambi rete, la pagina si ricollegherà al nuovo indirizzo', 'If you change network, the page will reconnect at the new address', 'Si vous changez de réseau, la page se reconnectera à la nouvelle adresse', 'Bei einem Netzwechsel verbindet sich die Seite mit der neuen Adresse neu', 'Si cambias de red, la página se reconectará a la nueva dirección'],
+  ['Aggiornamento del firmware', 'Firmware update', 'Mise à jour du firmware', 'Firmware-Update', 'Actualización del firmware'],
+  ['Versione', 'Version', 'Version', 'Version', 'Versión'],
+  ['In uso', 'Running', 'En cours', 'Aktiv', 'En uso'],
+  ['Altro slot', 'Other slot', 'Autre emplacement', 'Anderer Slot', 'Otro slot'],
+  ['Sorgente degli aggiornamenti', 'Update source', 'Source des mises à jour', 'Update-Quelle', 'Origen de las actualizaciones'],
+  ['Password di invio', 'Upload password', 'Mot de passe d\'envoi', 'Upload-Passwort', 'Contraseña de envío'],
+  ['Aggiorna da internet', 'Update from the internet', 'Mettre à jour depuis Internet', 'Aus dem Internet aktualisieren', 'Actualizar desde internet'],
+  ['Il dispositivo scarica da solo il file e si riavvia. Sorgente predefinita: l\'ultima release su GitHub.', 'The device downloads the file by itself and restarts. Default source: the latest release on GitHub.', 'L\'appareil télécharge lui-même le fichier et redémarre. Source par défaut : la dernière release sur GitHub.', 'Das Gerät lädt die Datei selbst herunter und startet neu. Standardquelle: das neueste Release auf GitHub.', 'El dispositivo descarga el archivo por sí mismo y se reinicia. Origen predeterminado: la última release en GitHub.'],
+  ['Cerca e installa', 'Check and install', 'Rechercher et installer', 'Suchen und installieren', 'Buscar e instalar'],
+  ['Installa anche se la versione è la stessa', 'Install even if the version is the same', 'Installer même si la version est la même', 'Auch installieren, wenn die Version gleich ist', 'Instalar aunque la versión sea la misma'],
+  ['Indirizzo del file (facoltativo)', 'File address (optional)', 'Adresse du fichier (facultatif)', 'Adresse der Datei (optional)', 'Dirección del archivo (opcional)'],
+  ['vuoto = ultima release su GitHub', 'empty = latest release on GitHub', 'vide = dernière release sur GitHub', 'leer = neuestes Release auf GitHub', 'vacío = última release en GitHub'],
+  ['Token di accesso (facoltativo)', 'Access token (optional)', 'Jeton d\'accès (facultatif)', 'Zugriffstoken (optional)', 'Token de acceso (opcional)'],
+  ['inviato al server come «Bearer»; per un server proprio', 'sent to the server as “Bearer”; for your own server', 'envoyé au serveur comme « Bearer » ; pour un serveur à vous', 'als „Bearer“ an den Server gesendet; für einen eigenen Server', 'enviado al servidor como «Bearer»; para un servidor propio'],
+  ['Predefinito', 'Default', 'Par défaut', 'Standard', 'Predeterminado'],
+  ['Invia un file dal computer', 'Send a file from this computer', 'Envoyer un fichier depuis cet ordinateur', 'Datei von diesem Computer senden', 'Enviar un archivo desde este equipo'],
+  ['Scegli il file .bin del firmware per questo chip (slink-<chip>.bin): viene scritto nell\'altro slot e il dispositivo si riavvia. Da un computer si può anche usare tools/ota_push.py.', 'Choose the firmware .bin for this chip (slink-<chip>.bin): it is written to the other slot and the device restarts. From a computer you can also use tools/ota_push.py.', 'Choisissez le .bin du firmware pour cette puce (slink-<chip>.bin) : il est écrit dans l\'autre emplacement et l\'appareil redémarre. Depuis un ordinateur, vous pouvez aussi utiliser tools/ota_push.py.', 'Wählen Sie die Firmware-.bin für diesen Chip (slink-<chip>.bin): Sie wird in den anderen Slot geschrieben und das Gerät startet neu. Von einem Computer aus geht auch tools/ota_push.py.', 'Elija el .bin del firmware para este chip (slink-<chip>.bin): se escribe en el otro slot y el dispositivo se reinicia. Desde un ordenador también puede usar tools/ota_push.py.'],
+  ['richiesta dal dispositivo', 'asked by the device', 'demandé par l\'appareil', 'vom Gerät verlangt', 'la pide el dispositivo'],
+  ['Invia', 'Send', 'Envoyer', 'Senden', 'Enviar'],
+  ['Protezione dell\'invio', 'Upload protection', 'Protection de l\'envoi', 'Upload-Schutz', 'Protección del envío'],
+  ['Password facoltativa per l\'invio del firmware (dal portale o con tools/ota_push.py). Senza password chiunque nella rete locale può caricare un firmware.', 'Optional password for uploading firmware (from the portal or with tools/ota_push.py). Without a password anyone on the local network can upload firmware.', 'Mot de passe facultatif pour l\'envoi du firmware (depuis le portail ou avec tools/ota_push.py). Sans mot de passe, n\'importe qui sur le réseau local peut envoyer un firmware.', 'Optionales Passwort für das Hochladen von Firmware (vom Portal oder mit tools/ota_push.py). Ohne Passwort kann jeder im lokalen Netz eine Firmware hochladen.', 'Contraseña opcional para enviar el firmware (desde el portal o con tools/ota_push.py). Sin contraseña, cualquiera de la red local puede cargar un firmware.'],
+  ['Nuova password', 'New password', 'Nouveau mot de passe', 'Neues Passwort', 'Nueva contraseña'],
+  ['Se il nuovo firmware non si conferma entro 30 secondi dall\'avvio (o si blocca), il dispositivo torna da solo a quello precedente.', 'If the new firmware does not confirm itself within 30 seconds of starting (or crashes), the device goes back to the previous one by itself.', 'Si le nouveau firmware ne se confirme pas dans les 30 secondes suivant le démarrage (ou plante), l\'appareil revient tout seul au précédent.', 'Bestätigt sich die neue Firmware nicht innerhalb von 30 Sekunden nach dem Start (oder stürzt ab), kehrt das Gerät selbst zur vorherigen zurück.', 'Si el nuevo firmware no se confirma en 30 segundos desde el arranque (o se bloquea), el dispositivo vuelve solo al anterior.'],
+  ['Torna al firmware precedente', 'Go back to the previous firmware', 'Revenir au firmware précédent', 'Zur vorherigen Firmware zurückkehren', 'Volver al firmware anterior'],
+  ['Conferma il ritorno', 'Confirm going back', 'Confirmer le retour', 'Rückkehr bestätigen', 'Confirmar la vuelta'],
+  ['valido', 'valid', 'valide', 'gültig', 'válido'],
+  ['in prova: non ancora confermato', 'on trial: not confirmed yet', 'à l\'essai : pas encore confirmé', 'auf Probe: noch nicht bestätigt', 'a prueba: aún sin confirmar'],
+  ['vuoto', 'empty', 'vide', 'leer', 'vacío'],
+  ['impostata', 'set', 'définie', 'gesetzt', 'definida'],
+  ['nessuna: chiunque in rete può inviare un firmware', 'none: anyone on the network can send a firmware', 'aucun : n\'importe qui sur le réseau peut envoyer un firmware', 'keines: jeder im Netz kann eine Firmware senden', 'ninguna: cualquiera en la red puede enviar un firmware'],
+  ['Scegli prima il file .bin', 'Choose the .bin file first', 'Choisissez d\'abord le fichier .bin', 'Wählen Sie zuerst die .bin-Datei', 'Elija primero el archivo .bin'],
+  ['Inserisci la password di invio', 'Enter the upload password', 'Saisissez le mot de passe d\'envoi', 'Upload-Passwort eingeben', 'Introduzca la contraseña de envío'],
+  ['Il file è più grande dello slot del dispositivo', 'The file is larger than the device\'s slot', 'Le fichier est plus grand que l\'emplacement de l\'appareil', 'Die Datei ist größer als der Slot des Geräts', 'El archivo es mayor que el slot del dispositivo'],
+  ['Invio in corso…', 'Sending…', 'Envoi en cours…', 'Wird gesendet…', 'Enviando…'],
+  ['Aggiornamento in corso…', 'Updating…', 'Mise à jour en cours…', 'Aktualisierung läuft…', 'Actualizando…'],
+  ['Installato: il dispositivo si riavvia…', 'Installed: the device is restarting…', 'Installé : l\'appareil redémarre…', 'Installiert: das Gerät startet neu…', 'Instalado: el dispositivo se reinicia…'],
+  ['Aggiornamento completato: il dispositivo si riavvia', 'Update complete: the device is restarting', 'Mise à jour terminée : l\'appareil redémarre', 'Update abgeschlossen: das Gerät startet neu', 'Actualización completada: el dispositivo se reinicia'],
+  ['Il dispositivo è di nuovo in linea: versione {v}', 'The device is back online: version {v}', 'L\'appareil est de nouveau en ligne : version {v}', 'Das Gerät ist wieder online: Version {v}', 'El dispositivo vuelve a estar en línea: versión {v}'],
+  ['Il dispositivo non risponde dopo l\'aggiornamento: riprova tra poco', 'The device does not answer after the update: try again shortly', 'L\'appareil ne répond pas après la mise à jour : réessayez dans un instant', 'Das Gerät antwortet nach dem Update nicht: gleich nochmal versuchen', 'El dispositivo no responde tras la actualización: inténtelo de nuevo en breve'],
+  ['Invio non riuscito', 'Upload failed', 'Échec de l\'envoi', 'Upload fehlgeschlagen', 'Envío fallido'],
+  ['L\'indirizzo deve iniziare con http:// o https://', 'The address must start with http:// or https://', 'L\'adresse doit commencer par http:// ou https://', 'Die Adresse muss mit http:// oder https:// beginnen', 'La dirección debe empezar por http:// o https://'],
+  ['Modalità demo: nessun firmware viene installato', 'Demo mode: no firmware is installed', 'Mode démo : aucun firmware n\'est installé', 'Demo-Modus: es wird keine Firmware installiert', 'Modo demo: no se instala ningún firmware'],
   ["L'indirizzo deve iniziare con mqtt://", 'The address must start with mqtt://', "L'adresse doit commencer par mqtt://", 'Die Adresse muss mit mqtt:// beginnen', 'La dirección debe empezar por mqtt://'],
   ['Attivo · client connesso', 'Active · client connected', 'Actif · client connecté', 'Aktiv · Client verbunden', 'Activo · cliente conectado'],
   ['Attivo · visibile come {n}', 'Active · visible as {n}', 'Actif · visible sous {n}', 'Aktiv · sichtbar als {n}', 'Activo · visible como {n}'],
@@ -1313,6 +1408,9 @@ const TRX = [
   ['Tempo di attività', 'Uptime', 'Durée de fonctionnement', 'Laufzeit', 'Tiempo activo'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
+  ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
+  ['Slot firmware', 'Firmware slot', 'Emplacement du firmware', 'Firmware-Slot', 'Ranura del firmware'],
+  ['non disponibile (installato via USB o orologio non sincronizzato)', 'not available (installed over USB, or clock not synchronised)', 'indisponible (installé par USB, ou horloge non synchronisée)', 'nicht verfügbar (per USB installiert oder Uhr nicht synchronisiert)', 'no disponible (instalado por USB o reloj sin sincronizar)'],
   ['Temperatura chip', 'Chip temperature', 'Température de la puce', 'Chip-Temperatur', 'Temperatura del chip'],
   ['Memoria libera', 'Free memory', 'Mémoire libre', 'Freier Speicher', 'Memoria libre'],
   ['Minimo storico', 'Lowest ever', 'Minimum historique', 'Historisches Minimum', 'Mínimo histórico'],
@@ -1539,7 +1637,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 function srcActive(s) { return S.in === s.c || (s.alt && s.alt.includes(S.in)); }
 
 /* ---------------- transport ---------------- */
-const maskLine = t => t.replace(/^(CFG (?:SET )?(?:pass|mqtt_pass) ).*/i, '$1"***"');      /* passwords never reach the console log */
+const maskLine = t => t.replace(/^(CFG (?:SET )?(?:pass|mqtt_pass|ota_pass|ota_token) ).*/i, '$1"***"').replace(/^(OTA (?:PASS|TOKEN) ).*/i, '$1"***"');      /* passwords never reach the console log */
 let ws = null, retry = 0, ackUntil = 0, lastRx = 0, loadedInfo = false, rdsAsked = 0, rdsNone = 0, sfSt = null;
 /* interface options (per browser) */
 const UIDEF = { allOff: 1, codes: 1, quick: 1, kmode: 1, vchips: 1, hx: 0, tabs: { home: 1, radio: 1, sound: 1, stats: 1, console: 1, jukebox: 1 } };
@@ -1557,7 +1655,7 @@ let userAt = 0, userLine = '', busyRetry = 0, infoAt = 0;                       
  * line) plus BUS_GAP for the amplifier's reply; the click is shown as queued meanwhile. Every error reply then belongs to the command sent last.
  * Commands of the device itself (settings, diagnostics) do not touch the bus and go out at once. */
 const BUS_GAP = 600, BUS_MAXWAIT = 4000;
-const LOCAL_CMD = /^(VOLCFG|UITITLE|DECODE|LOOPBACK|PAD|WIFIPWR|CFG|HELP|NET|NAME)\b/i;     /* NAME (RDS) is a slow read that never errors with 0F: it does not hold the queue */
+const LOCAL_CMD = /^(VOLCFG|UITITLE|DECODE|LOOPBACK|PAD|WIFIPWR|CFG|HELP|NET|NAME|OTA)\b/i;     /* NAME (RDS) is a slow read that never errors with 0F: it does not hold the queue */
 let busQ = [], busTimer = null, busAt = 0, busSentAt = 0, busPend = 0, busUser = false;   /* busAt: last completion; busPend: sent, not yet completed */
 function wsSend(line) { ws.send(line); log('me', '> ' + maskLine(line)); }
 /* hourglass in the header from the click until the command has really been transmitted: still in the queue, or sent to the device and not yet
@@ -1610,11 +1708,29 @@ async function seq(lines, gap, soft) { const t = Date.now(); for (const l of lin
 const eqReads = () => ['C3 50 00 00', 'C3 50 00 01', 'C3 50 00 02'].concat(S.sf > 0 ? ['C3 50 02 00', 'C3 50 02 01', 'C3 50 02 02'] : []);
 function eqRead() { seq(eqReads(), 550); }
 
+let connTxt = 'Connessione…';
+function connLabel() { const t = tr(connTxt); $('#conn').textContent = t; $('#dot').title = t; $('#dot').setAttribute('aria-label', t); }
+/* The title is never cut (no ellipsis): on one line, next to the dot, it is squeezed in width down to 78 %, then the font gets smaller (down to 11 px)
+ * and, as a last resort, squeezed further. h1 takes all the room left in the header whatever the text, so the measure does not depend on the previous one. */
+function fitTitle() {
+  const h = $('#ampName'), t = $('#ampT'); if (!h || !t) return;
+  t.style.transform = ''; t.style.fontSize = '';
+  const avail = h.clientWidth; if (!avail) return;
+  let w = t.offsetWidth, fs = 17;
+  if (w <= avail) return;
+  if (avail / w >= 0.78) { t.style.transform = 'scaleX(' + (avail / w).toFixed(3) + ')'; return; }
+  while (fs > 11) { fs--; t.style.fontSize = fs + 'px'; w = t.offsetWidth; if (w * 0.78 <= avail) break; }
+  const k = Math.min(1, avail / w); if (k < 1) t.style.transform = 'scaleX(' + Math.max(0.4, k).toFixed(3) + ')';
+}
+addEventListener('resize', fitTitle);
+if (window.ResizeObserver) new ResizeObserver(fitTitle).observe($('#ampName'));      /* the room changes with the volume box, the language, the fonts */
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
+$('#dot').onclick = () => toast(connTxt);                 /* touch screens have no hover: a tap shows the status */
 let linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
 function setConn(ok, txt) {
   S.connected = ok; if (!ok) linkReady = false;
   const live = ok && linkReady;
-  $('#dot').className = 'dot ' + (live ? 'live' : 'wait'); $('#conn').textContent = tr(ok && !linkReady ? 'Connessione…' : txt);
+  $('#dot').className = 'dot ' + (live ? 'live' : 'wait'); connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel();
   /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
   ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the page, the header's volume buttons and the power button */
 }
@@ -1673,6 +1789,7 @@ function handleLine(d) {
   if (dl) { const k = dl[1].toLowerCase() === 'decode' ? 'dgDec' : 'dgLoop', on = dl[2].toLowerCase() === 'on'; $('#' + k + 'On').setAttribute('aria-pressed', on); $('#' + k + 'Off').setAttribute('aria-pressed', !on); }
   /* a unit answered "error" (0F) to something the user just did: say it (background reads do not count) */
   if (/^RX (C8|C9|CB|B8|98|99|9A) 0F\b/.test(d) && busUser && Date.now() - Math.max(busAt, busSentAt) < 2500) toast('Comando non supportato da questo apparecchio', 'err');
+  const otm = /^OTA: (.*)/.exec(d); if (otm) otaLine(otm[1]);
   if (/^NAME: no RDS name/.test(d)) rdsNone = rdsAsked;            /* a station without RDS: stop asking while it stays tuned (the device is busy ~15 s on each ask) */
   const ln = /^LINE (\d)/.exec(d); if (ln) toast(tr('Livello linea: {v}', { v: tr(ln[1] === '1' ? 'a riposo (alta)' : 'bassa') }));
   const vcm = /^VOLCFG up=(\d+) down=(\d+) margin=(\d+)/.exec(d);
@@ -1751,7 +1868,7 @@ function render() {
   const on = S.power === 1;
   document.body.classList.toggle('off', !on);
   $('#pwr').classList.toggle('on', on);
-  $('#ampName').innerHTML = TITLE.app ? esc(TITLE.app) : '<span class="mk">Sony </span>' + (S.name ? esc(S.name) : 'S-Link');   /* "Sony" is dropped on narrow screens: the model name matters more */
+  $('#ampName').innerHTML = '<span id="ampT">' + (TITLE.app ? esc(TITLE.app) : '<span class="mk">Sony </span>' + (S.name ? esc(S.name) : 'S-Link')) + '</span>'; connLabel(); fitTitle();   /* "Sony" is dropped on narrow screens: the model name matters more */
   const sb = $('#standby'); sb.classList.toggle('show', !on);
   if (S.power === -1) { $('#sbTitle').textContent = tr('Stato sconosciuto'); $('#sbText').textContent = tr("Non ho ancora ricevuto lo stato dell'amplificatore."); $('#sbBtn').textContent = tr('Leggi stato'); }
   else { $('#sbTitle').textContent = tr('Amplificatore in standby'); $('#sbText').textContent = tr('Accendilo per usare i controlli.'); $('#sbBtn').textContent = tr('Accendi'); }
@@ -1906,6 +2023,7 @@ function buildKnob() {
   const up = () => { if (!drag) return; drag = false; vr._drag = false; setVol(Math.round(last * 100) / 10); };   /* percent, 0.1 % resolution (~0.4 motor step) */
   k.onpointerup = up; k.onpointercancel = up;
   k.onkeydown = e => {
+    if (S.power !== 1) return;
     if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { e.preventDefault(); cmd('VOL UP ' + volStep()); }
     else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { e.preventDefault(); cmd('VOL DOWN ' + volStep()); }
   };
@@ -1934,10 +2052,17 @@ function renderVol() {
   const cal = volCalUntil > Date.now();
   $('#knob').classList.toggle('cal', cal);
   const ut = $('#kUnkTxt'); if (ut) ut.textContent = tr(cal ? 'calibrazione…' : 'non calibrato').toUpperCase();
-  const cb = $('#volCal'); cb.disabled = cal; cb.textContent = tr(cal ? 'Calibrazione in corso…' : 'Calibra');
+  const cb = $('#volCal');
   let cbar = $('#calBar'); if (cal && !cbar) { cbar = document.createElement('div'); cbar.id = 'calBar'; cbar.className = 'calbar'; $('#volNote').after(cbar); } else if (!cal && cbar) cbar.remove();
   const v = S.vol; $('#volNum').textContent = v >= 0 ? (r._drag ? (+r.value).toFixed(1) : fmtVol(v)) : (cal ? '…' : '--'); $('#volApprox').style.display = v >= 0 ? '' : 'none';
-  $('#volCal').hidden = v >= 0 ? !cal : false;
+  /* amplifier off (or state unknown): the volume cannot be changed at all - knob, + / -, preset buttons, the header's + / - and the keys */
+  const vOn = S.power === 1;
+  $('.vol-ctl').inert = !vOn; $('#volChips').inert = !vOn; $('#mvUp').inert = !vOn; $('#mvDn').inert = !vOn; $('#knob').setAttribute('aria-disabled', !vOn);
+  /* the button that repeats the calibration is always there: a small icon once the position is known, the word "Calibra" while it is not */
+  const known = v >= 0 && !cal;
+  cb.classList.toggle('icon', known); cb.hidden = false; cb.disabled = cal || !vOn;
+  cb.innerHTML = known ? '<svg class="i"><use href="#i-refresh"/></svg>' : esc(tr(cal ? 'Calibrazione in corso…' : 'Calibra'));
+  cb.title = tr(known ? 'Ripeti la calibrazione' : 'Calibra'); cb.setAttribute('aria-label', cb.title);
   $('#volNote').textContent = v >= 0 ? tr('Stima (0 = minimo, 10 = massimo) · limite di sicurezza {v}', { v: fmtVol(volLimit) }) : tr(cal ? 'Calibrazione in corso: la manopola motorizzata sta andando al minimo…' : 'Posizione sconosciuta: calibra portando la manopola al minimo.');
   $('#mvNum').textContent = v >= 0 ? fmtVol(v) : '--'; $('#mvFill').style.width = (v >= 0 ? v : 0) + '%';
 }
@@ -1962,6 +2087,7 @@ function limTxt() { $('#limTxt').textContent = tr("L'interfaccia non supera ques
 /* master volume scale of the amp: 0 = fully counter-clockwise (min), 10 = fully clockwise (max); the firmware speaks percent */
 function fmtVol(pct) { return (pct / 10).toFixed(pct < 10 ? 2 : 1); }       /* two decimals below 1: that is where every step counts */
 function setVol(p) {
+  if (S.power !== 1) return;                       /* amplifier off: the volume cannot be changed */
   if (p > volLimit) { p = volLimit; toast(tr('Limite di sicurezza: {v}', { v: fmtVol(volLimit) }), ''); }
   cmd('VOL SET ' + (+p).toFixed(1));
 }
@@ -2152,11 +2278,13 @@ let statsTimer = null;
 const fmtUp = s => { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60, p = v => String(v).padStart(2, '0');
   return (d ? d + 'd ' : '') + p(h) + ':' + p(m) + ':' + p(x); };
 const fmtKb = n => (n / 1024).toFixed(1) + ' kB';
+const fmtInst = t => t ? new Date(t * 1000).toLocaleString() : tr('non disponibile (installato via USB o orologio non sincronizzato)');
+const otaStateName = st => ({ valid: tr('valido'), pending: tr('in prova: non ancora confermato') })[st] || st || '—';
 function kvRows(sel, rows) { $(sel).innerHTML = rows.map(r => '<dt>' + tr(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join(''); }
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
   kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
-    ['Firmware', j.fw], ['Compilato', j.built], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
+    ['Firmware', j.fw], ['Compilato', j.built], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['Memoria libera', fmtKb(j.heap) + ' / ' + fmtKb(j.heapTotal)], ['Minimo storico', fmtKb(j.heapMin)], ['Blocco più grande', fmtKb(j.heapBlock)], ['Task attivi', j.tasks]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);
@@ -2224,6 +2352,7 @@ function wire() {
     let t = null;
     const step = () => {
       if (S.vol >= 0 && dir > 0 && S.vol >= volLimit) { toast(tr('Limite di sicurezza: {v}', { v: fmtVol(volLimit) })); stop(); return false; }
+      if (S.power !== 1) { stop(); return false; }
       cmd('VOL ' + (dir > 0 ? 'UP' : 'DOWN') + ' ' + volStep()); return true;
     };
     const stop = () => { clearTimeout(t); t = null; };
@@ -2328,7 +2457,13 @@ function wire() {
   $('#colReset').onclick = () => { COLS = { light: {}, dark: {} }; SKIN = 'amber'; store.set('cols', '{}'); store.set('skin', 'amber'); applySkin(); buildSkins(); buildColors(); toast('Colori ripristinati', 'ok'); };
   $('#colDet').addEventListener('toggle', buildColors);
   /* tabs + keyboard */
-  $$('nav.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  /* The tab is switched on pointerup as well as on click: a touch browser may treat the first tap as a "hover" and not send the click at all when the page
+   * changes under the finger (the Console log keeps receiving lines), so the tab needed a second tap. Both call the same idempotent function. */
+  let navUp = 0;
+  $$('nav.tabs button').forEach(b => {
+    b.onpointerup = e => { if (e.button > 0 || !b.contains(document.elementFromPoint(e.clientX, e.clientY))) return; navUp = Date.now(); showTab(b.dataset.tab); };
+    b.onclick = () => { if (Date.now() - navUp > 600) showTab(b.dataset.tab); };      /* keyboard, or a click that came without pointer events */
+  });
   /* hysteresis (on above 16 px, off below 4 px) and one update per frame: no flip-flopping around a single threshold */
   let scrolledOn = false, scrollTick = false;
   addEventListener('scroll', () => {
@@ -2338,7 +2473,7 @@ function wire() {
   addEventListener('keydown', e => {
     if (!S.connected || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'm' || e.key === 'M') $('#mute').click();
-    else if (e.key === 'ArrowUp') { e.preventDefault(); cmd('VOL UP ' + volStep()); } else if (e.key === 'ArrowDown') { e.preventDefault(); cmd('VOL DOWN ' + volStep()); }
+    else if (S.power === 1 && e.key === 'ArrowUp') { e.preventDefault(); cmd('VOL UP ' + volStep()); } else if (S.power === 1 && e.key === 'ArrowDown') { e.preventDefault(); cmd('VOL DOWN ' + volStep()); }
     else if (e.key >= '1' && e.key <= '6') showTab(['home', 'radio', 'sound', 'stats', 'console', 'set'][+e.key - 1]);
   });
 }
@@ -2349,6 +2484,7 @@ function showTab(n) {
   clearInterval(statsTimer); statsTimer = null;
   if (n === 'stats') { pollStats(); statsTimer = setInterval(() => { if (!document.hidden) pollStats(); }, 3000); }
   if (n === 'sound' && !S.eq[0].every(Boolean) && S.power === 1) eqRead();
+  if (n === 'set') otaLoad();
   if (n === 'radio' && !S.stations.length) fetchJson('/api/stations');
   if (n === 'radio' && !S.presets.length) fetchJson('/api/presets');
   if (n === 'radio') fetchJson('/api/favs');
@@ -2763,6 +2899,7 @@ function demoStart() {
 }
 let DEMO_PW = 'AUTO AUTO AUTO', DEMO_VC = '420 445 10', DEMO_T = { app: '', page: '' };
 let DEMO_PAD = 0, DEMO_DG = { DECODE: 'on', LOOPBACK: 'off' };
+const DEMO_OTA = { url: '', pass: 0, token: 0 };
 function demoCmd(line) {
   if (JB.demo && /^\s*[9B][0-9A-F]\s/i.test(line) && jbDemo(line)) return;
   const c = line.trim().toUpperCase().split(/\s+/); const a = c[0], b = c[1];
@@ -2773,6 +2910,21 @@ function demoCmd(line) {
   else if (a === 'INPUT' && b === 'AV') { const au = SOURCES.find(x => x.c === parseInt(c[2], 16)), vi = SOURCES.find(x => x.n === c[3]); if (au && vi) { S.in = au.c; S.video = vi.c; } }
   else if (a === 'INPUT') { const s = SOURCES.find(x => x.n === b); if (s) { S.in = s.c; if (s.c >= 0x10) S.video = s.c; } }
   else if (a === 'VOL') { if (b === 'SET') S.vol = +c[2]; else if (b === 'UP') S.vol = Math.min(100, S.vol + Math.round((+c[2] || 1) / 4.2)); else if (b === 'DOWN') S.vol = Math.max(0, S.vol - Math.round((+c[2] || 1) / 4.2)); else if (b === 'MIN' || b === 'QMIN') { S.vol = 0; return say('OK volume MIN' + (b === 'QMIN' ? ' quick' : '') + ' (demo)'); } }
+  else if (a === 'OTA') {
+    const raw = line.trim().split(/\s+/), D = DEMO_OTA;
+    if (b === 'UPDATE') {
+      say('OK ota started');
+      ['downloading ' + (D.url || 'https://github.com/Ircama/esp32-sony-slink/releases/latest/download/slink-demo.bin'), '25%', '50%', '75%', 'failed - demo mode, nothing is installed'].forEach((t, i) => setTimeout(() => say('OTA: ' + t), 700 * (i + 1)));
+      return;
+    }
+    if (b === 'URL' && raw[2]) D.url = /^DEFAULT$/i.test(raw[2]) ? '' : raw[2];
+    if ((b === 'PASS' || b === 'TOKEN') && raw[2]) D[b.toLowerCase()] = /^OFF$/i.test(raw[2]) ? 0 : 1;
+    if (b === 'ROLLBACK') return say('ERR ota: no previous firmware to go back to');
+    if (b && b !== 'STATUS') return say('OK ota ' + b.toLowerCase());
+    ['fw demo built Jan  1 2026 12:00:00 target demo', 'running ota_0 state valid', 'other ota_1 empty', 'source ' + (D.url || 'https://github.com/Ircama/esp32-sony-slink/releases/latest/download/slink-demo.bin'),
+     'url "' + D.url + '"', 'pass ' + D.pass, 'token ' + D.token, 'busy 0'].forEach(l => say('OTA ' + l));
+    return say('OK ota');
+  }
   else if (a === 'DECODE' || a === 'LOOPBACK') { if (b === 'ON' || b === 'OFF') DEMO_DG[a] = b.toLowerCase(); return say((b ? 'OK ' : '') + a.toLowerCase() + ' ' + DEMO_DG[a]); }
   else if (a === 'CFG') { if (b === 'SET' || b === 'APPLY') return say('OK cfg'); ['ble 0', 'web 1', 'app 0', 'eco 1', 'pad 0', 'host "slink"', 'ssid "demo"', 'title_app ""'].forEach(l => say('CFG ' + l)); return say('OK cfg end'); }
   else if (a === 'STATION' || (a === 'FAV' && (b === 'CLEAR' || b === 'PUT'))) return say('OK demo');
@@ -3158,7 +3310,7 @@ async function bkCollect(withPass) {
                 tunerPresets: pre || [] };
   const browser = {}; BK_BROWSER.forEach(k => { const v = store.get(k, null); if (v !== null) browser[k] = v; });
   bkProgress('');
-  return { format: 'slink-backup', version: 1, created: new Date().toISOString(), firmware: fw || '', passwords: !!withPass && ('pass' in cfg || 'mqtt_pass' in cfg),
+  return { format: 'slink-backup', version: 1, created: new Date().toISOString(), firmware: fw || '', passwords: !!withPass && ('pass' in cfg || 'mqtt_pass' in cfg || 'ota_pass' in cfg),
            amp, device: { settings: cfg, stations: sta || [], favs: fav || [] }, browser };
 }
 async function bkDownload(obj, handle) {
@@ -3187,7 +3339,7 @@ function bkPlan(b, o) {                           /* the list of commands a rest
   }
   if (o.dev && b.device && b.device.settings) {
     const cs = b.device.settings;
-    Object.keys(cs).forEach(k => { if ((k === 'pass' || k === 'mqtt_pass') && !o.pass) return; plan.push(['cfg', 'CFG SET ' + k + ' ' + (typeof cs[k] === 'string' ? q(cs[k]) : cs[k]), 350]); });
+    Object.keys(cs).forEach(k => { if ((k === 'pass' || k === 'mqtt_pass' || k === 'ota_pass' || k === 'ota_token') && !o.pass) return; plan.push(['cfg', 'CFG SET ' + k + ' ' + (typeof cs[k] === 'string' ? q(cs[k]) : cs[k]), 350]); });
     plan.push(['cfg', 'CFG APPLY', 1500]);
   }
   return plan;
@@ -3214,7 +3366,7 @@ function bkSummary(b) {
     ['browser', !!b.browser, tr("Preferenze dell'interfaccia di questo browser")]];
   $('#bkSum').innerHTML = '<p class="hint">' + esc(tr('File del {d} · firmware {f}', { d: (b.created || '').replace('T', ' ').slice(0, 16), f: b.firmware || '?' })) + '</p>' +
     items.map(i => '<label class="bk-opt"><input type="checkbox" data-o="' + i[0] + '"' + (i[1] ? ' checked' : ' disabled') + '> ' + esc(i[2]) + '</label>').join('') +
-    ((c.pass !== undefined || c.mqtt_pass !== undefined) ? '<label class="bk-opt"><input type="checkbox" data-o="pass"> ' + esc(tr('Ripristina anche le password (WiFi, MQTT)')) + '</label>' : '') +
+    ((c.pass !== undefined || c.mqtt_pass !== undefined || c.ota_pass !== undefined) ? '<label class="bk-opt"><input type="checkbox" data-o="pass"> ' + esc(tr('Ripristina anche le password (WiFi, MQTT)')) + '</label>' : '') +
     '<p class="hint">' + esc(tr("Il volume, l'ingresso e lo stato di accensione non vengono toccati. I nomi degli ingressi, le impostazioni degli altoparlanti e i preset del sintonizzatore dell'amplificatore non sono scrivibili via S-Link sullo STR-DA50ES: restano nel file come riferimento.")) + '</p>' +
     '<div class="row"><button class="btn primary" id="bkGo">' + esc(tr('Ripristina selezionati')) + '</button><button class="btn" id="bkCancel">' + esc(tr('Annulla')) + '</button></div>';
   $('#bkSum').hidden = false;
@@ -3342,6 +3494,125 @@ function initUiOptions() {
   new MutationObserver(scheduleHide).observe(document.body, { childList: true, subtree: true });
   applyUI(); applyHide(); applyTitles();
 }
+/* ---------------- firmware update (Settings) ---------------- */
+function sha256hex(str) {                          /* the page is plain http: no crypto.subtle; the device checks sha256("nonce:password") */
+  const m = new TextEncoder().encode(str), l = m.length, n = ((l + 9 + 63) >> 6) << 6, b = new Uint8Array(n);
+  b.set(m); b[l] = 128;
+  const dv = new DataView(b.buffer); dv.setUint32(n - 4, (l * 8) >>> 0); dv.setUint32(n - 8, Math.floor(l * 8 / 4294967296));
+  const K = [], P = []; let H = [];
+  for (let c = 2; P.length < 64; c++) if (P.every(p => c % p)) P.push(c);
+  P.forEach((p, i) => { K[i] = Math.floor((Math.cbrt(p) % 1) * 4294967296); if (i < 8) H[i] = Math.floor((Math.sqrt(p) % 1) * 4294967296); });
+  const R = (x, k) => (x >>> k) | (x << (32 - k));
+  for (let o = 0; o < n; o += 64) {
+    const w = new Array(64);
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+    for (let i = 16; i < 64; i++) { const s0 = R(w[i - 15], 7) ^ R(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = R(w[i - 2], 17) ^ R(w[i - 2], 19) ^ (w[i - 2] >>> 10); w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0; }
+    let [a, b2, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (R(e, 6) ^ R(e, 11) ^ R(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0, t2 = ((R(a, 2) ^ R(a, 13) ^ R(a, 22)) + ((a & b2) ^ (a & c) ^ (b2 & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b2; b2 = a; a = (t1 + t2) | 0;
+    }
+    H = [a, b2, c, d, e, f, g, h].map((x, i) => (H[i] + x) | 0);
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+const OTA = { info: {}, xhr: false, booting: false, rbAt: 0, at: 0 };
+function otaProg(txt, pct) {
+  $('#otaProg').hidden = !txt; $('#otaProgT').textContent = txt || '';
+  const f = $('#otaFill'); f.style.width = pct == null ? '' : pct + '%'; f.parentNode.classList.toggle('ind', pct == null);
+}
+function otaRender() {
+  const o = OTA.info, st = { valid: tr('valido'), pending: tr('in prova: non ancora confermato') }[o.state] || o.state || '—';
+  const row = (k, v) => '<dt>' + esc(tr(k)) + '</dt><dd>' + esc(v) + '</dd>';
+  $('#otaKv').innerHTML = row('Versione', (o.fw || '—') + (o.target ? ' · ' + o.target : '')) + row('Compilato', o.built || '—') + row('Installato', fmtInst(o.inst)) + row('In uso', (o.run || '—') + ' · ' + st) +
+    row('Altro slot', (o.other || '—') + ' · ' + (o.ofw ? o.ofw : tr('vuoto'))) + row('Sorgente degli aggiornamenti', o.source || '—') +
+    row('Password di invio', o.pass ? tr('impostata') : tr('nessuna: chiunque in rete può inviare un firmware'));
+  const act = document.activeElement;
+  if (act !== $('#otaUrl')) $('#otaUrl').value = o.url || '';
+  $('#otaPwRow').hidden = !o.pass; $('#otaGo').disabled = !!o.busy; $('#otaSend').disabled = !!o.busy || OTA.xhr;
+}
+async function otaLoad() {
+  if (!DEMO && !(ws && ws.readyState === 1 && linkReady)) { clearTimeout(OTA.t); if ($('#tab-set').classList.contains('active')) OTA.t = setTimeout(otaLoad, 1200); return; }   /* not connected yet: try again shortly */
+  if (Date.now() - OTA.at < 1500) return; OTA.at = Date.now();
+  const lines = await capture('OTA', /^OTA /, /^(OK ota\b|ERR)/, 4000), o = {};
+  lines.forEach(l => { let m;
+    if ((m = /^OTA fw (\S+) built (.+?) target (\S+)/.exec(l))) { o.fw = m[1]; o.built = m[2]; o.target = m[3]; }
+    else if ((m = /^OTA installed (\d+)/.exec(l))) o.inst = +m[1];
+    else if ((m = /^OTA running (\S+) state (\S+)/.exec(l))) { o.run = m[1]; o.state = m[2]; }
+    else if ((m = /^OTA other (\S+) fw (\S+)/.exec(l))) { o.other = m[1]; o.ofw = m[2]; }
+    else if ((m = /^OTA other (\S+) empty/.exec(l))) { o.other = m[1]; o.ofw = ''; }
+    else if ((m = /^OTA source (\S+)/.exec(l))) o.source = m[1];
+    else if ((m = /^OTA url "(.*)"/.exec(l))) o.url = m[1];
+    else if ((m = /^OTA pass (\d)/.exec(l))) o.pass = m[1] === '1';
+    else if ((m = /^OTA token (\d)/.exec(l))) o.token = m[1] === '1';
+    else if ((m = /^OTA busy (\d)/.exec(l))) o.busy = m[1] === '1';
+  });
+  if (lines.length) { OTA.info = o; otaRender(); }
+}
+/* the lines "OTA: ..." the device prints while it downloads or receives a firmware */
+function otaLine(m) {
+  if (OTA.xhr) return;                             /* an upload from this page reports through its own request */
+  let p;
+  if ((p = /^(\d+)%$/.exec(m))) otaProg(tr('Aggiornamento in corso…') + ' ' + p[1] + '%', +p[1]);
+  else if (/^(downloading|receiving|new firmware)/.test(m)) otaProg(m, null);
+  else if (/^done/.test(m)) { otaProg(tr('Installato: il dispositivo si riavvia…'), 100); toast('Aggiornamento completato: il dispositivo si riavvia', 'ok'); otaWaitBoot(); }
+  else if (/^(failed|push rejected|already|not the)/.test(m)) { otaProg(''); toast('OTA: ' + m, 'err'); otaLoad(); }
+  else if (/confirmed/.test(m)) { OTA.at = 0; otaLoad(); }
+}
+async function otaWaitBoot() {                     /* the device restarts: wait until it answers again and show the new version */
+  if (OTA.booting) return; OTA.booting = true;
+  await sleep(6000);
+  for (let i = 0; i < 40; i++) {
+    try { const r = await fetch('/api/ota', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); OTA.booting = false; otaProg(''); toast(tr('Il dispositivo è di nuovo in linea: versione {v}', { v: j.fw }), 'ok'); OTA.at = 0; setTimeout(otaLoad, 2500); return; } } catch (e) {}
+    await sleep(2000);
+  }
+  OTA.booting = false; otaProg(''); toast("Il dispositivo non risponde dopo l'aggiornamento: riprova tra poco", 'err');
+}
+async function otaSend() {
+  const f = $('#otaFile').files[0];
+  if (!f) { toast('Scegli prima il file .bin', 'err'); return; }
+  if (DEMO) { toast('Modalità demo: nessun firmware viene installato'); return; }
+  let info;
+  try { const r = await fetch('/api/ota', { cache: 'no-store' }); info = await r.json(); } catch (e) { toast('Invio non riuscito', 'err'); return; }
+  if (f.size > info.max) { toast('Il file è più grande dello slot del dispositivo', 'err'); return; }
+  const h = {};
+  if (info.auth) {
+    const pw = $('#otaPw').value; if (!pw) { toast('Inserisci la password di invio', 'err'); return; }
+    h['X-OTA-Nonce'] = info.nonce; h['X-OTA-Auth'] = sha256hex(info.nonce + ':' + pw);
+  }
+  if ($('#otaForce').checked) h['X-OTA-Force'] = '1';
+  h['X-OTA-Time'] = String(Math.floor(Date.now() / 1000));
+  const x = new XMLHttpRequest(); OTA.xhr = true; otaRender();
+  const end = () => { OTA.xhr = false; otaRender(); };
+  x.open('POST', '/api/ota'); x.timeout = 300000;
+  Object.keys(h).forEach(k => x.setRequestHeader(k, h[k]));
+  x.upload.onprogress = e => { if (e.lengthComputable) otaProg(tr('Invio in corso…') + ' ' + Math.round(e.loaded * 100 / e.total) + '%', Math.round(e.loaded * 100 / e.total)); };
+  x.onload = () => {
+    end();
+    if (x.status === 200) { otaProg(tr('Installato: il dispositivo si riavvia…'), 100); toast('Aggiornamento completato: il dispositivo si riavvia', 'ok'); $('#otaPw').value = ''; otaWaitBoot(); }
+    else { otaProg(''); toast((x.responseText || ('HTTP ' + x.status)).slice(0, 160), 'err'); }
+  };
+  x.onerror = x.ontimeout = () => { end(); otaProg(''); toast('Invio non riuscito', 'err'); };
+  otaProg(tr('Invio in corso…'), 0);
+  x.send(f);
+}
+$('#otaGo').onclick = () => { otaProg(tr('Aggiornamento in corso…'), null); cmd('OTA UPDATE' + ($('#otaForce').checked ? ' FORCE' : ''), { ack: true }); setTimeout(() => { OTA.at = 0; otaLoad(); }, 1500); };
+$('#otaSrcForm').onsubmit = e => {
+  e.preventDefault(); const u = $('#otaUrl').value.trim(), t = $('#otaTok').value.trim();
+  if (u && !/^https?:\/\/\S+$/.test(u)) { toast("L'indirizzo deve iniziare con http:// o https://", 'err'); return; }
+  cmd('OTA URL ' + (u || 'DEFAULT'), { ack: true }); if (t || !$('#otaTok').value) setTimeout(() => cmd('OTA TOKEN ' + (t ? qt(t) : 'OFF')), 400);
+  $('#otaTok').value = ''; setTimeout(() => { OTA.at = 0; otaLoad(); }, 900);
+};
+$('#otaSrcDef').onclick = () => { $('#otaUrl').value = ''; $('#otaTok').value = ''; $('#otaSrcForm').requestSubmit(); };
+$('#otaPwForm').onsubmit = e => { e.preventDefault(); const p = $('#otaNewPw').value; if (!p) return; cmd('OTA PASS ' + qt(p), { ack: true }); $('#otaNewPw').value = ''; setTimeout(() => { OTA.at = 0; otaLoad(); }, 600); };
+$('#otaPwOff').onclick = () => { cmd('OTA PASS OFF', { ack: true }); setTimeout(() => { OTA.at = 0; otaLoad(); }, 600); };
+$('#otaSend').onclick = otaSend;
+$('#otaRb').onclick = () => {                      /* two clicks: no confirm() dialogs in the page */
+  const b = $('#otaRb'), t = tr('Torna al firmware precedente');
+  if (Date.now() - OTA.rbAt > 4000) { OTA.rbAt = Date.now(); b.textContent = tr('Conferma il ritorno'); setTimeout(() => { b.textContent = t; }, 4000); return; }
+  OTA.rbAt = 0; b.textContent = t; cmd('OTA ROLLBACK', { ack: true }); otaWaitBoot();
+};
+
 showTab((t => t === 'jukebox' ? 'home' : t)(QP('tab') || store.get('tab', 'home'))); render(); renderPresets(); renderStations(); initUiOptions(); initJukebox(); initBackup(); if (JB.demo) setTimeout(jbProbe, 800); connect();
 document.body.dataset.ready = '1';
 

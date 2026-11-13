@@ -15,6 +15,7 @@
 #include "esp_pm.h"
 #include "esp_rom_sys.h"
 #include "esp_app_desc.h"
+#include "ota.h"
 #include "driver/temperature_sensor.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -78,8 +79,9 @@ size_t stats_json(char *b, size_t sz)
     bool pm_ok = esp_pm_get_configuration(&pm) == ESP_OK;
     float t = 0; bool t_ok = read_temp(&t);
 
-    P("{\"t\":\"stats\",\"up\":%lld,\"reset\":\"%s\",\"chip\":\"%s\",\"rev\":%d,\"cores\":%d,\"fw\":\"%s\",\"built\":\"%s\",\"idf\":\"%s\",",
-      (long long)(esp_timer_get_time() / 1000000), reset_reason(), CONFIG_IDF_TARGET, ci.revision, ci.cores, fw, built, idf);
+    char slot[20]; const char *ost; ota_slot_info(slot, sizeof slot, &ost);
+    P("{\"t\":\"stats\",\"inst\":%lld,\"slot\":\"%s\",\"ostate\":\"%s\",\"up\":%lld,\"reset\":\"%s\",\"chip\":\"%s\",\"rev\":%d,\"cores\":%d,\"fw\":\"%s\",\"built\":\"%s\",\"idf\":\"%s\",",
+      (long long)ota_installed(), slot, ost, (long long)(esp_timer_get_time() / 1000000), reset_reason(), CONFIG_IDF_TARGET, ci.revision, ci.cores, fw, built, idf);
     if (t_ok) P("\"temp\":%.1f,", (double)t); else P("\"temp\":null,");
     P("\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,",
       (unsigned)esp_get_free_heap_size(), (unsigned)esp_get_minimum_free_heap_size(),

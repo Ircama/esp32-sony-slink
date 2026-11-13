@@ -22,6 +22,9 @@ typedef struct {
     unsigned char lis;      /* WiFi listen interval in beacons (1-10), 0 = automatic (3 in eco, DTIM otherwise) */
     char title_app[33];     /* web interface: header title (empty = amplifier name) */
     char title_page[33];    /* web interface: page title (tabs, bookmarks) */
+    char ota_url[128];      /* firmware update: custom URL of the .bin (empty = latest GitHub release) */
+    char ota_token[64];     /* firmware update: optional Bearer token sent to the download server (empty = none) */
+    char ota_pass[33];      /* firmware update: optional password for the push upload (POST /api/ota); empty = no password */
 } settings_t;
 
 extern settings_t g_set;
