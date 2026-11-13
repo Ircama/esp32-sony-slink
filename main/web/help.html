@@ -34,7 +34,7 @@
 
     <!-- GitHub Markdown CSS -->
     <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+        id="md-style" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown-light.min.css">
     <!-- Highlight.js CSS per GitHub theme -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
         id="highlight-style">
@@ -70,9 +70,10 @@
 
         /* Resize handle on the right edge of the sidebar */
         .resize-handle {
-            width: 5px;
+            width: 9px;
             cursor: col-resize;
-            background: rgba(0, 0, 0, .08);
+            touch-action: none;
+            background: linear-gradient(90deg, transparent 3px, rgba(128, 128, 128, .45) 3px, rgba(128, 128, 128, .45) 5px, transparent 5px);
             flex-shrink: 0;
             position: relative;
             z-index: 1001;
@@ -81,7 +82,7 @@
 
         .resize-handle:hover,
         .resize-handle.active {
-            background: rgba(13, 14, 17, .3);
+            background: linear-gradient(90deg, rgba(128, 128, 128, .15) 0, rgba(128, 128, 128, .15) 3px, var(--va, #e1b66a) 3px, var(--va, #e1b66a) 6px, rgba(128, 128, 128, .15) 6px);
         }
 
         /* Search stays pinned at the top */
@@ -129,7 +130,7 @@
         #toc-nav a.nav-link:hover,
         #toc-nav a.nav-link:focus {
             color: rgba(0, 0, 0, .9) !important;
-            background-color: rgba(121, 82, 179, .1) !important;
+            background-color: rgba(225, 182, 106, .1) !important;
         }
 
         #toc-nav a.nav-link.active {
@@ -330,7 +331,7 @@
             align-items: center;
             padding: 10px 20px;
             gap: 16px;
-            border-bottom: 2px solid #e1b66a;
+            border-bottom: 2px solid var(--va, #e1b66a);
             box-shadow: 0 2px 12px rgba(13, 14, 17, .35);
             width: 100%;
         }
@@ -339,7 +340,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            color: #e1b66a;
+            color: var(--va, #e1b66a);
             text-decoration: none;
             font-size: .85em;
             font-weight: 600;
@@ -352,7 +353,7 @@
 
         .doc-topbar-back:hover {
             background: rgba(225, 182, 106, .12);
-            color: #e1b66a;
+            color: var(--va, #e1b66a);
         }
 
         .doc-topbar-logo img {
@@ -383,7 +384,7 @@
             border-radius: 20px;
             background: rgba(225, 182, 106, .1);
             border: 1px solid rgba(225, 182, 106, .3);
-            color: #e1b66a;
+            color: var(--va, #e1b66a);
             white-space: nowrap;
         }
 
@@ -499,7 +500,7 @@
 
         .markdown-body code:not([class]) {
             background: rgba(13, 14, 17, .06) !important;
-            color: #5c0d8a !important;
+            color: #8a5a00 !important;
             border-radius: 5px !important;
             padding: .15em .45em !important;
             font-size: .88em !important;
@@ -538,7 +539,7 @@
 
         /* Blockquotes */
         .markdown-body blockquote {
-            border-left: 4px solid #e1b66a !important;
+            border-left: 4px solid var(--va, #e1b66a) !important;
             background: rgba(225, 182, 106, .06) !important;
             border-radius: 0 8px 8px 0 !important;
             padding: .75em 1.2em !important;
@@ -669,7 +670,7 @@
         }
 
         .fab-btn:hover {
-            background: #2d008a;
+            background: #3a3c44;
             transform: scale(1.1);
         }
 
@@ -688,7 +689,7 @@
         .settings-hamburger-btn {
             background: transparent;
             border: 1px solid rgba(225, 182, 106, .35);
-            color: #e1b66a;
+            color: var(--va, #e1b66a);
             font-size: 1.3rem;
             width: 38px;
             height: 38px;
@@ -800,7 +801,7 @@
         }
 
         .toggle-switch input:checked+.toggle-slider {
-            background: #e1b66a;
+            background: var(--va, #e1b66a);
         }
 
         .toggle-switch input:checked+.toggle-slider::before {
@@ -941,6 +942,41 @@
             .fm-http-meta-footer {
                 display: none !important;
             }
+        }
+
+        /* ── Theme of the app (sent by the page that embeds this one) ── */
+        body.vdark { background: #0c0d10; color: #ecebe6; }
+        .vdark .bd-sidebar { background: #121317 !important; border-right-color: #262a31 !important; }
+        .vdark .bd-sidebar a, .vdark #toc-nav a.nav-link { color: #a6a396 !important; }
+        .vdark .bd-sidebar a:hover { background: rgba(225, 182, 106, .1) !important; color: var(--va, #e1b66a) !important; }
+        .vdark .bd-sidebar a.active, .vdark #toc-nav a.nav-link.active { color: var(--va, #e1b66a) !important; background: rgba(225, 182, 106, .13) !important; border-color: var(--va, #e1b66a) !important; }
+        .vdark .bd-sidebar #toc-search { background: #17191e; color: #ecebe6; border-color: #333843; }
+        .vdark .markdown-body { background: transparent !important; color: #ecebe6 !important; }
+        .vdark .markdown-body h1, .vdark .markdown-body h2, .vdark .markdown-body h3 { color: #ecebe6 !important; }
+        .vdark .markdown-body h2 { border-bottom-color: #262a31; }
+        .vdark .markdown-body h4, .vdark .fm-subtitle { color: #a6a396 !important; }
+        .vdark .markdown-body a { color: var(--va, #e1b66a); }
+        .vdark .markdown-body pre { background: #17191e !important; border-color: #262a31 !important; }
+        .vdark .markdown-body code:not([class]) { background: rgba(255, 255, 255, .08) !important; color: var(--va, #e1b66a) !important; }
+        .vdark .markdown-body table { border-color: #262a31 !important; }
+        .vdark .markdown-body table th { background: #262a31 !important; color: #ecebe6 !important; }
+        .vdark .markdown-body table td { background: #17191e !important; color: #ecebe6 !important; border-top-color: #262a31 !important; }
+        .vdark .markdown-body tr:nth-child(even) td { background: #1d2026 !important; }
+        .vdark .markdown-body hr { border-top-color: #262a31 !important; }
+        .vdark .markdown-body blockquote { color: #a6a396 !important; }
+        .vdark .fm-tag { background: rgba(255, 255, 255, .08); color: #ecebe6; }
+        .vdark .error-message { background: #2a1513; color: #ef7468; border-color: #ef7468; }
+        .vdark .error-message h3 { color: #ef7468; }
+        .vdark .fab-btn { background: var(--va, #e1b66a); color: #1a1303; }
+
+        /* ── Phone, portrait: the text uses the whole width, square corners ── */
+        @media (max-width: 600px) {
+            #doc-topbar { padding: 6px 10px; gap: 8px; }
+            .bd-content { padding: .25rem 0 !important; }
+            .markdown-body, .no-content-padding .markdown-body { padding: .5rem .65rem !important; }
+            .fm-banner, .markdown-body pre, .markdown-body table, .markdown-body blockquote { border-radius: 0 !important; }
+            .fab-btn { opacity: .85; }
+            #_html .anchor { display: none; }
         }
     </style>
 </head>
@@ -1091,15 +1127,19 @@
         const taskLists = taskListsModule.default || taskListsModule;
         const anchor = anchorModule.default || anchorModule;
 
-        // Gestione Tema per l'evidenziazione sintattica
-        function updateHighlightTheme() {
-            const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.getElementById('highlight-style').href = isDark
-                ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
-                : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+        // Tema: lo decide l'app che incorpora questa pagina (?theme=dark|light, poi messaggi postMessage)
+        const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/';
+        function applyTheme(dark, accent) {
+            window.__dark = !!dark;
+            document.body.classList.toggle('vdark', !!dark);
+            document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+            if (accent) document.documentElement.style.setProperty('--va', accent);
+            document.getElementById('md-style').href = CDN + 'github-markdown-css/5.5.1/github-markdown-' + (dark ? 'dark' : 'light') + '.min.css';
+            document.getElementById('highlight-style').href = CDN + 'highlight.js/11.9.0/styles/github' + (dark ? '-dark' : '') + '.min.css';
         }
-        updateHighlightTheme();
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateHighlightTheme);
+        applyTheme(new URLSearchParams(location.search).get('theme') === 'dark');
+        window.addEventListener('message', e => { const d = e.data; if (d && d.slink === 'theme') applyTheme(d.dark, d.accent); });
+        try { parent.postMessage({ slink: 'ready' }, '*'); } catch (e) { }
 
         // Utilities per gli ID CSS safe dello ScrollSpy
         function sanitizeId(id) {
@@ -1396,7 +1436,7 @@
                     // Mermaid e MathJax sono pesanti: vengono scaricati solo se servono davvero.
                     await loadLazyLibrary('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js', () => Boolean(window.mermaid));
                     if (window.mermaid) {
-                        window.mermaid.initialize({ startOnLoad: false, theme: 'default' });
+                        window.mermaid.initialize({ startOnLoad: false, theme: window.__dark ? 'dark' : 'default' });
                         await window.mermaid.run();
                     }
                 }
@@ -1688,32 +1728,21 @@
             const handle = document.getElementById('sidebar-resize');
             const sidebar = document.querySelector('.bd-sidebar');
             if (!handle || !sidebar) return;
-
-            let dragging = false;
-
-            handle.addEventListener('mousedown', function (e) {
+            const setW = x => document.documentElement.style.setProperty('--sidebar-w', Math.max(150, Math.min(window.innerWidth * 0.6, x)) + 'px');
+            handle.addEventListener('pointerdown', e => {
                 e.preventDefault();
-                dragging = true;
+                handle.setPointerCapture(e.pointerId);
                 handle.classList.add('active');
-                document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
             });
-
-            document.addEventListener('mousemove', function (e) {
-                if (!dragging) return;
-                let newWidth = e.clientX;
-                if (newWidth < 150) newWidth = 150;
-                if (newWidth > window.innerWidth * 0.5) newWidth = window.innerWidth * 0.5;
-                document.documentElement.style.setProperty('--sidebar-w', newWidth + 'px');
+            handle.addEventListener('pointermove', e => {
+                if (!handle.hasPointerCapture(e.pointerId)) return;
+                setW(e.clientX - handle.offsetWidth / 2);
             });
-
-            document.addEventListener('mouseup', function () {
-                if (!dragging) return;
-                dragging = false;
-                handle.classList.remove('active');
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-            });
+            const end = e => { handle.classList.remove('active'); document.body.style.userSelect = ''; };
+            handle.addEventListener('pointerup', end);
+            handle.addEventListener('pointercancel', end);
+            handle.addEventListener('dblclick', () => document.documentElement.style.removeProperty('--sidebar-w'));
         })();
 
         // ── Settings hamburger menu ──────────────────────────────
