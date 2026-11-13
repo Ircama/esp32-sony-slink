@@ -255,6 +255,7 @@ input[type=range].bipolar::-webkit-slider-runnable-track{background:linear-gradi
 .freq{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums}
 .freq .n{font-size:clamp(38px,9vw,54px);font-weight:250;letter-spacing:-.03em;line-height:1}
 .freq .u{font-size:15px;color:var(--text3);font-weight:500}
+.rdsrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .rds{font-size:22px;font-weight:600;margin-top:4px;min-height:30px;letter-spacing:.04em;color:var(--accent)}
 .badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
 .badge{height:24px;padding:0 10px;border-radius:99px;font-size:11.5px;font-weight:700;letter-spacing:.06em;display:inline-flex;align-items:center;gap:6px;
@@ -562,7 +563,7 @@ body.hxon .hx{display:block}
           <div class="row sb" style="align-items:flex-start">
             <div>
               <div class="freq"><span class="n" id="rF">--.--</span><span class="u" id="rU">MHz</span></div>
-              <div class="rds" id="rN">&nbsp;</div>
+              <div class="rdsrow"><div class="rds" id="rN">&nbsp;</div><button class="btn sm" id="rdsRef" type="button" title="Rileggi il nome RDS dalla stazione" aria-label="Rileggi il nome RDS">&#x21BB; RDS</button></div>
               <button class="btn sm favstar" id="favStar" aria-pressed="false"><svg class="i"><use href="#i-star"/></svg><span>Memorizza come preset</span></button>
             </div>
             <div class="seg" role="group" aria-label="Banda"><button id="bFM" aria-pressed="true">FM</button><button id="bAM" aria-pressed="false">AM</button></div>
@@ -1430,6 +1431,9 @@ const TRX = [
   ['Spento per impostazione predefinita: finché è spento nessuno può inviare un firmware al dispositivo dalla rete. Accendilo solo mentre usi «Invia un file» o tools/ota_push.py.', 'Off by default: while it is off nobody can send a firmware to the device over the network. Turn it on only while you use "Send a file" or tools/ota_push.py.', "Désactivé par défaut : tant qu'il l'est, personne ne peut envoyer un firmware à l'appareil par le réseau. Activez-le seulement pendant l'envoi d'un fichier ou de tools/ota_push.py.", 'Standardmäßig aus: solange er aus ist, kann niemand über das Netz eine Firmware an das Gerät senden. Nur einschalten, während Sie »Datei senden« oder tools/ota_push.py benutzen.', 'Apagado por defecto: mientras esté apagado nadie puede enviar un firmware al dispositivo por la red. Enciéndalo solo mientras use «Enviar un archivo» o tools/ota_push.py.'],
   ['Consenti il download da internet (pull)', 'Allow download from the internet (pull)', "Autoriser le téléchargement depuis Internet (pull)", 'Download aus dem Internet erlauben (Pull)', 'Permitir la descarga desde internet (pull)'],
   ['Il dispositivo scarica un firmware solo quando lo chiedi tu («Cerca e installa» o il comando OTA UPDATE), mai da solo.', 'The device downloads a firmware only when you ask ("Check and install" or the OTA UPDATE command), never on its own.', "L'appareil ne télécharge un firmware que sur votre demande (« Rechercher et installer » ou la commande OTA UPDATE), jamais seul.", 'Das Gerät lädt eine Firmware nur auf Ihre Anforderung (»Suchen und installieren« oder der Befehl OTA UPDATE), nie von selbst.', 'El dispositivo descarga un firmware solo cuando usted lo pide («Buscar e instalar» o el comando OTA UPDATE), nunca por sí solo.'],
+  ['Rileggi il nome RDS dalla stazione', 'Read the RDS name from the station again', 'Relire le nom RDS de la station', 'RDS-Namen vom Sender neu lesen', 'Volver a leer el nombre RDS de la emisora'],
+  ['Rileggi il nome RDS', 'Read the RDS name again', 'Relire le nom RDS', 'RDS-Namen neu lesen', 'Volver a leer el nombre RDS'],
+  ['Lettura del nome RDS in corso…', 'Reading the RDS name…', 'Lecture du nom RDS en cours…', 'RDS-Name wird gelesen…', 'Leyendo el nombre RDS…'],
   ['Controlla aggiornamenti', 'Check for updates', 'Rechercher des mises à jour', 'Nach Updates suchen', 'Buscar actualizaciones'],
   ['Controllo in corso…', 'Checking…', 'Vérification…', 'Prüfung läuft…', 'Comprobando…'],
   ['Dettagli', 'Details', 'Détails', 'Details', 'Detalles'],
@@ -1683,7 +1687,17 @@ let UI = (() => { let o = {}; try { o = JSON.parse(store.get('ui', '{}')) || {};
 let HID = (() => { try { const a = JSON.parse(store.get('hid', '[]')); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
 let TITLE = { app: store.get('t_app', ''), page: store.get('t_page', '') };
 const codeTxt = c => (UI.codes ? ' (' + c + ')' : '');
-let rdsAt = 0;                             /* last time the RDS name was asked (asked again every 20 s while it is still missing) */
+let rdsAt = 0, rdsLastF = 0, rdsFAt = 0;
+/* RDS name: the tuner never pushes it, ask (NAME retries for a few seconds) once per tuned FM frequency, but only when the tuner has stopped on
+ * the station (not while scanning, and not in the first 1.5 s after the frequency changed): each ask is interrupted by the next command. */
+function rdsMaybe(force) {
+  const tu = S.tuner; if (DEMO || !tu) return;
+  if (tu.f !== rdsLastF) { rdsLastF = tu.f; rdsFAt = Date.now(); }
+  if (S.power === 1 && S.in === 0 && tu.band === 'FM' && !tu.name && tu.f && !tu.scan && rdsNone !== tu.f && Date.now() - rdsFAt > 1500 && (rdsAsked !== tu.f || Date.now() - rdsAt > 20000)) {
+    rdsAsked = tu.f; rdsAt = Date.now(); cmd('NAME', { auto: true });
+  }
+}
+setInterval(rdsMaybe, 1000);                             /* last time the RDS name was asked (asked again every 20 s while it is still missing) */
 let volCalUntil = 0;                       /* volume calibration (VOL MIN) in progress until this time, or until the device answers */
 let userAt = 0, userLine = '', busyRetry = 0, infoAt = 0;                            /* time of the last command the USER caused (automatic reads don't count) */
 /* Bus scheduler. The device runs the commands one by one (a backlog can build up) and the amplifier answers on the bus a few hundred ms AFTER each
@@ -1800,8 +1814,7 @@ function onMsg(d) {
         cc: j.cc ?? -1, itype: j.itype ?? -1, snd: j.snd ?? -1, idev: j.idev ?? -1, sfp: j.sfp ?? -1, spk: j.spk ?? -1, info: j.info || {} }); render();
       /* the amp name and the source labels are only sent on request: ask once when the amp is on and they are missing */
       /* RDS name: the tuner never pushes it, ask (NAME retries for a few seconds) once per tuned FM frequency */
-      const tu = S.tuner;
-      if (!DEMO && S.power === 1 && S.in === 0 && tu && tu.band === 'FM' && !tu.name && tu.f && rdsNone !== tu.f && (rdsAsked !== tu.f || Date.now() - rdsAt > 20000)) { rdsAsked = tu.f; rdsAt = Date.now(); cmd('NAME', { auto: true }); }
+      rdsMaybe();
       if (!DEMO && S.power === 1 && loadedInfo && !S.name && Date.now() - infoAt > 20000 && nameTry++ < 6) { infoAt = Date.now(); cmd('AMPNAME', { auto: true }); }
       if (!DEMO && S.power === 1 && !loadedInfo && (!S.name || !Object.keys(S.labels).length)) { loadedInfo = true; infoAt = Date.now(); seq(['AMPNAME', 'C0 22', 'C1 22', 'C3 22', 'C3 0F', 'C3 46', 'C3 47'].concat(eqReads(), ['INPUTS']), 900, true).then(() => S.sf > 0 && seq(['C3 40', 'C3 42', 'C3 43'], 600, true)); }
       /* the sound field changed: what the amp can read (EQ values, rear levels) changes with it */
@@ -2140,6 +2153,7 @@ function renderRadio() {
   if (t && t.f > 0) lastF[fm ? 'FM' : 'AM'] = t.f;
   $('#rF').textContent = t ? (fm ? fmtF(t.f) : t.f) : '--.--'; $('#rU').textContent = fm ? 'MHz' : 'kHz';
   $('#rN').textContent = t && t.name ? t.name : (t && t.f ? ' ' : ' ');
+  $('#rdsRef').disabled = !(t && t.band === 'FM');
   $('#bFM').setAttribute('aria-pressed', fm); $('#bAM').setAttribute('aria-pressed', !fm);
   $('#bgLock').classList.toggle('on', !!(t && t.locked)); $('#bgSt').classList.toggle('on', !!(t && t.stereo && !t.mono));
   $('#bgSt').textContent = t && t.mono ? 'MONO' : tr('STEREO'); $('#bgScan').style.display = t && t.scan ? '' : 'none';
@@ -3705,6 +3719,13 @@ $('#otaChk').onclick = async () => {
     else say(tr('Nuova versione disponibile: {v} ({d}). In uso: {f}. Premi «Cerca e installa» per installarla.', { v: tag, d: d, f: fw || '—' }), j.html_url);
   } catch (e) { say(tr('Controllo non riuscito: {e}', { e: e.message })); }
   finally { b.disabled = false; }
+};
+/* forces a new read of the RDS station name: forgets that the station was marked "no RDS" and asks again now */
+$('#rdsRef').onclick = () => {
+  const t = S.tuner; if (!t || t.band !== 'FM') return;
+  rdsNone = 0; rdsAsked = t.f; rdsAt = Date.now();
+  toast('Lettura del nome RDS in corso…');
+  cmd('NAME');
 };
 $('#otaPushSw').onclick = () => { cmd('OTA PUSH ' + ($('#otaPushSw').getAttribute('aria-checked') === 'true' ? 'OFF' : 'ON'), { ack: true }); setTimeout(() => { OTA.at = 0; otaLoad(); }, 500); };
 $('#otaPullSw').onclick = () => { cmd('OTA PULL ' + ($('#otaPullSw').getAttribute('aria-checked') === 'true' ? 'OFF' : 'ON'), { ack: true }); setTimeout(() => { OTA.at = 0; otaLoad(); }, 500); };
