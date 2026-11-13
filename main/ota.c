@@ -24,6 +24,7 @@
 #include "cli.h"
 #include "net.h"
 #include "ota.h"
+#include "web_page.h"
 
 #ifndef CONFIG_SLINK_OTA_GITHUB_REPO
 #define CONFIG_SLINK_OTA_GITHUB_REPO "Ircama/esp32-sony-slink"
@@ -306,12 +307,12 @@ esp_err_t ota_http_info(httpd_req_t *r)
 {
     const esp_app_desc_t *d = esp_app_get_description();
     const esp_partition_t *run = esp_ota_get_running_partition(), *oth = esp_ota_get_next_update_partition(NULL);
-    char b[460], nonce[48] = "";
+    char b[520], nonce[48] = "";
     bool auth = g_set.ota_pass[0] != 0;
     if (auth) { new_nonce(); snprintf(nonce, sizeof nonce, ",\"nonce\":\"%s\"", s_nonce); }
-    int n = snprintf(b, sizeof b, "{\"fw\":\"%.31s\",\"target\":\"%s\",\"running\":\"%s\",\"state\":\"%s\",\"max\":%u,\"push\":%s,\"pull\":%s,\"auth\":%s,\"busy\":%s%s}",
+    int n = snprintf(b, sizeof b, "{\"fw\":\"%.31s\",\"target\":\"%s\",\"running\":\"%s\",\"state\":\"%s\",\"max\":%u,\"push\":%s,\"pull\":%s,\"auth\":%s,\"busy\":%s,\"web\":\"%s\"%s}",
                      d->version, CONFIG_IDF_TARGET, run ? run->label : "", state_name(run), oth ? (unsigned)oth->size : 0,
-                     g_set.ota_push ? "true" : "false", g_set.ota_pull ? "true" : "false", auth ? "true" : "false", s_busy ? "true" : "false", nonce);
+                     g_set.ota_push ? "true" : "false", g_set.ota_pull ? "true" : "false", auth ? "true" : "false", s_busy ? "true" : "false", web_build, nonce);
     httpd_resp_set_type(r, "application/json");
     httpd_resp_set_hdr(r, "Cache-Control", "no-store");
     return httpd_resp_send(r, b, n);

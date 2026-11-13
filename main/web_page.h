@@ -11,3 +11,4 @@ typedef struct {
 
 extern const web_asset_t web_assets[];
 extern const size_t web_assets_n;
+extern const char web_build[];             /* id of the embedded index.html (also in the page as window.SLINK_BUILD) */

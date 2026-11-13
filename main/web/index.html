@@ -3753,6 +3753,13 @@ document.body.dataset.ready = '1';
  * it only on a secure context (https or localhost), so on plain http://<device> it is simply skipped. The Settings row appears when the browser offers the install. */
 let pwaEv = null;
 const pwaInstalled = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+/* stale page: the device says which build of this page it serves; when it is not the one running here (a browser kept an old copy), reload once with a new URL */
+if (window.SLINK_BUILD && !DEMO) fetch('/api/ota', { cache: 'no-store' }).then(r => r.json()).then(j => {
+  if (!j.web || j.web === window.SLINK_BUILD) return;
+  const k = 'reload-' + j.web;
+  try { if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); location.replace(location.pathname + '?r=' + j.web + location.hash); return; } } catch (e) {}
+  toast('Questa pagina non è aggiornata: ricarica forzando (Ctrl+F5) o svuota la cache del browser', 'err');
+}).catch(() => {});
 if ('serviceWorker' in navigator && window.isSecureContext && !DEMO) navigator.serviceWorker.register('/sw.js').catch(() => {});
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaEv = e; if (!pwaInstalled()) $('#pwaRow').hidden = false; });
 window.addEventListener('appinstalled', () => { pwaEv = null; $('#pwaRow').hidden = true; toast('App installata', 'ok'); });
