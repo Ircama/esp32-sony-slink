@@ -340,6 +340,10 @@ svg.eq circle.drag{fill:var(--accent)}
 @media(max-width:520px){.band{grid-template-columns:58px 1fr 58px}.band select{grid-column:2/4}.lv{grid-template-columns:78px 1fr 56px}}
 
 /* console */
+.logwrap{position:relative}
+.logfab{position:absolute;right:20px;bottom:10px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.logfab button{pointer-events:auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;line-height:1;color:var(--text2);background:var(--surface);border:1px solid var(--line2);opacity:.5;transition:opacity .15s}
+.logfab button:hover,.logfab button:focus-visible{opacity:1}
 .log{height:min(52dvh,460px);overflow:auto;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;
   font:12.5px/1.55 var(--mono);overscroll-behavior-y:auto}   /* at the end of the log the scroll goes on with the page (not "contain": on a phone the log fills the screen) */
 .log div{white-space:pre-wrap;word-break:break-word}
@@ -685,7 +689,8 @@ body.hxon .hx{display:block}
     <section class="tab" id="tab-console" role="tabpanel">
       <div class="card">
         <h2>Console <span class="sp"></span><button id="logCopy">Copia</button><button id="logPause">Pausa</button><button id="logClear">Pulisci</button></h2>
-        <div class="log" id="log" role="log" aria-live="off"></div>
+        <div class="logwrap"><div class="log" id="log" role="log" aria-live="off"></div>
+          <div class="logfab"><button type="button" id="logTop" title="Vai all'inizio" aria-label="Vai all'inizio" hidden>&#x2191;</button><button type="button" id="logBot" title="Vai alla fine" aria-label="Vai alla fine" hidden>&#x2193;</button></div></div>
         <form class="cmdline" id="cmdForm"><input id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Comando, es. STATUS · VOL SET 30 · C0 2E" aria-label="Comando"><button class="btn primary" type="submit" aria-label="Invia"><svg class="i"><use href="#i-send"/></svg></button></form>
         <div class="chips" id="quick"></div>
       </div>
@@ -2481,7 +2486,14 @@ function wire() {
   $('#cmdForm').onsubmit = e => { e.preventDefault(); const v = $('#cmdIn').value.trim(); if (!v) return; hist.unshift(v); hi = -1; cmd(v, { ack: true }); $('#cmdIn').value = ''; };
   $('#cmdIn').onkeydown = e => { if (e.key === 'ArrowUp' && hist.length) { hi = Math.min(hi + 1, hist.length - 1); e.target.value = hist[hi]; e.preventDefault(); }
     else if (e.key === 'ArrowDown') { hi = Math.max(hi - 1, -1); e.target.value = hi < 0 ? '' : hist[hi]; e.preventDefault(); } };
-  $('#logClear').onclick = () => { $('#log').innerHTML = ''; };
+  $('#logClear').onclick = () => { $('#log').innerHTML = ''; logFab(); };
+  /* small buttons over the log: to its first / last line; each one shows only when there is somewhere to go */
+  const logFab = () => { const L = $('#log'); $('#logTop').hidden = L.scrollTop < 40; $('#logBot').hidden = L.scrollHeight - L.scrollTop - L.clientHeight < 40; };
+  $('#log').addEventListener('scroll', logFab, { passive: true });
+  new MutationObserver(logFab).observe($('#log'), { childList: true });
+  $('#logTop').onclick = () => { $('#log').scrollTop = 0; };
+  $('#logBot').onclick = () => { const L = $('#log'); L.scrollTop = L.scrollHeight; };
+  addEventListener('resize', logFab);
   $('#logPause').onclick = e => { paused = !paused; e.target.textContent = tr(paused ? 'Riprendi' : 'Pausa'); };
   /* settings */
   const toggle = (id, name, label, risky) => $(id).onclick = async () => {
