@@ -24,6 +24,8 @@ typedef struct {
     char title_page[33];    /* web interface: page title (tabs, bookmarks) */
     char ota_url[128];      /* firmware update: custom URL of the .bin (empty = latest GitHub release) */
     char ota_token[64];     /* firmware update: optional Bearer token sent to the download server (empty = none) */
+    bool ota_push;          /* firmware update: accept images sent from outside (POST /api/ota). OFF by default: nothing is installed unattended */
+    bool ota_pull;          /* firmware update: allow the device to download an image, only when the user asks (OTA UPDATE / portal button). ON by default */
     char ota_pass[33];      /* firmware update: optional password for the push upload (POST /api/ota); empty = no password */
 } settings_t;
 

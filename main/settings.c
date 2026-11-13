@@ -15,6 +15,7 @@ void settings_load(void)
 {
     memset(&g_set, 0, sizeof g_set);
     g_set.eco = true;
+    g_set.ota_pull = true;              /* downloads on request: allowed; pushes from outside: off until the user enables them */
 #if !SOC_WIFI_SUPPORTED
     g_set.ble = true;                   /* no WiFi on this chip: BLE is the only wireless interface, on by default */
 #endif
@@ -45,6 +46,8 @@ void settings_load(void)
     get_str(h, "ourl", g_set.ota_url, sizeof g_set.ota_url, "");
     get_str(h, "otok", g_set.ota_token, sizeof g_set.ota_token, "");
     get_str(h, "opw", g_set.ota_pass, sizeof g_set.ota_pass, "");
+    if (nvs_get_u8(h, "opush", &v) == ESP_OK) g_set.ota_push = v;
+    if (nvs_get_u8(h, "opull", &v) == ESP_OK) g_set.ota_pull = v;
     nvs_close(h);
 }
 
@@ -74,6 +77,8 @@ void settings_save(void)
     nvs_set_str(h, "ourl", g_set.ota_url);
     nvs_set_str(h, "otok", g_set.ota_token);
     nvs_set_str(h, "opw", g_set.ota_pass);
+    nvs_set_u8(h, "opush", g_set.ota_push);
+    nvs_set_u8(h, "opull", g_set.ota_pull);
     nvs_commit(h);
     nvs_close(h);
 }

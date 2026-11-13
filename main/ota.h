@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include "esp_http_server.h"
 
-/* Over-the-air firmware update (WiFi chips only; the ESP32-H2 has no WiFi).
+/* Nothing is installed unattended: pushes from outside are refused unless the user enables them (OTA PUSH ON, default off), and downloads
+ * happen only when the user asks (OTA UPDATE or the portal button) and only if OTA PULL is on (default on).
+ * Over-the-air firmware update (WiFi chips only; the ESP32-H2 has no WiFi).
  *   pull: the device downloads the .bin itself, from the GitHub release (default) or from the URL set in the settings / given to OTA UPDATE
  *   push: an external tool (tools/ota_push.py) or the web portal sends the .bin with POST /api/ota; when a password is set the request
  *         carries sha256("nonce:password") of a nonce taken from GET /api/ota, so the password itself never travels on the network

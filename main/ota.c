@@ -254,6 +254,7 @@ static void pull_task(void *arg)
     const esp_partition_t *tgt = esp_ota_get_next_update_partition(NULL);
     e = esp_https_ota_finish(h);
     if (e != ESP_OK) { cli_out("OTA: failed - %s\r\n", e == ESP_ERR_OTA_VALIDATE_FAILED ? "the image is not valid" : esp_err_to_name(e)); goto fail; }
+    stamp(tgt, 0);
     cli_out("OTA: 100%%\r\nOTA: done - restarting into the new firmware\r\n");
     reboot_soon();
     free(a); vTaskDelete(NULL);                /* s_busy stays set: the device is about to restart */
@@ -265,6 +266,7 @@ fail:
 
 static bool pull_start(const char *url, bool force)
 {
+    if (!g_set.ota_pull) { cli_out("ERR ota: downloading is disabled (OTA PULL ON enables it)\r\n"); return false; }
     if (!net_have_ip()) { cli_out("ERR ota: no network connection\r\n"); return false; }
     if (!busy_take()) { cli_out("ERR ota: an update is already running\r\n"); return false; }
     pull_arg_t *a = calloc(1, sizeof *a);
@@ -293,7 +295,7 @@ static void drain(httpd_req_t *r)             /* read and drop the body, so that
 
 static esp_err_t reject(httpd_req_t *r, int code, const char *msg)
 {
-    static const struct { int c; const char *s; } st[] = { {400, "400 Bad Request"}, {401, "401 Unauthorized"}, {409, "409 Conflict"}, {413, "413 Payload Too Large"}, {500, "500 Internal Server Error"} };
+    static const struct { int c; const char *s; } st[] = { {400, "400 Bad Request"}, {401, "401 Unauthorized"}, {409, "409 Conflict"}, {403, "403 Forbidden"}, {413, "413 Payload Too Large"}, {500, "500 Internal Server Error"} };
     for (size_t i = 0; i < sizeof st / sizeof st[0]; i++) if (st[i].c == code) httpd_resp_set_status(r, st[i].s);
     httpd_resp_set_type(r, "text/plain");
     cli_out("OTA: push rejected - %s\r\n", msg);
@@ -304,12 +306,12 @@ esp_err_t ota_http_info(httpd_req_t *r)
 {
     const esp_app_desc_t *d = esp_app_get_description();
     const esp_partition_t *run = esp_ota_get_running_partition(), *oth = esp_ota_get_next_update_partition(NULL);
-    char b[420], nonce[48] = "";
+    char b[460], nonce[48] = "";
     bool auth = g_set.ota_pass[0] != 0;
     if (auth) { new_nonce(); snprintf(nonce, sizeof nonce, ",\"nonce\":\"%s\"", s_nonce); }
-    int n = snprintf(b, sizeof b, "{\"fw\":\"%.31s\",\"target\":\"%s\",\"running\":\"%s\",\"state\":\"%s\",\"max\":%u,\"auth\":%s,\"busy\":%s%s}",
+    int n = snprintf(b, sizeof b, "{\"fw\":\"%.31s\",\"target\":\"%s\",\"running\":\"%s\",\"state\":\"%s\",\"max\":%u,\"push\":%s,\"pull\":%s,\"auth\":%s,\"busy\":%s%s}",
                      d->version, CONFIG_IDF_TARGET, run ? run->label : "", state_name(run), oth ? (unsigned)oth->size : 0,
-                     auth ? "true" : "false", s_busy ? "true" : "false", nonce);
+                     g_set.ota_push ? "true" : "false", g_set.ota_pull ? "true" : "false", auth ? "true" : "false", s_busy ? "true" : "false", nonce);
     httpd_resp_set_type(r, "application/json");
     httpd_resp_set_hdr(r, "Cache-Control", "no-store");
     return httpd_resp_send(r, b, n);
@@ -318,6 +320,7 @@ esp_err_t ota_http_info(httpd_req_t *r)
 esp_err_t ota_http_push(httpd_req_t *r)
 {
     char hv[8];
+    if (!g_set.ota_push) { drain(r); return reject(r, 403, "firmware upload is disabled on this device (enable it in Settings > Firmware update, or with OTA PUSH ON)"); }
     bool force = httpd_req_get_hdr_value_str(r, "X-OTA-Force", hv, sizeof hv) == ESP_OK && hv[0] == '1';
     if (g_set.ota_pass[0]) {
         char nonce[40] = "", auth[72] = "", want[65];
@@ -420,7 +423,7 @@ static void status(void)
     if (oth && esp_ota_get_partition_description(oth, &od) == ESP_OK) cli_out("OTA other %s fw %s built %s %s\r\n", oth->label, od.version, od.date, od.time);
     else cli_out("OTA other %s empty\r\n", oth ? oth->label : "?");
     if (g_set.ota_url[0]) snprintf(u, sizeof u, "%s", g_set.ota_url); else default_url(u, sizeof u);
-    cli_out("OTA source %s\r\nOTA url \"%s\"\r\nOTA pass %d\r\nOTA token %d\r\nOTA busy %d\r\n", u, g_set.ota_url, g_set.ota_pass[0] != 0, g_set.ota_token[0] != 0, s_busy);
+    cli_out("OTA source %s\r\nOTA url \"%s\"\r\nOTA pass %d\r\nOTA token %d\r\nOTA push %d\r\nOTA pull %d\r\nOTA busy %d\r\n", u, g_set.ota_url, g_set.ota_pass[0] != 0, g_set.ota_token[0] != 0, g_set.ota_push, g_set.ota_pull, s_busy);
     cli_out("OK ota\r\n");
 }
 
@@ -457,11 +460,21 @@ void ota_cli(char **av, int na)
         }
         cli_out("OK ota %s %s\r\n", tok ? "token" : "password", dst[0] ? "set" : "off");
     }
+    else if (!strcasecmp(sub, "PUSH") || !strcasecmp(sub, "PULL")) {
+        bool push = !strcasecmp(sub, "PUSH"); bool *flag = push ? &g_set.ota_push : &g_set.ota_pull;
+        if (na > 2) {
+            if (!strcasecmp(av[2], "ON") || !strcmp(av[2], "1")) *flag = true;
+            else if (!strcasecmp(av[2], "OFF") || !strcmp(av[2], "0")) *flag = false;
+            else { cli_out("ERR usage: OTA %s [ON|OFF]\r\n", push ? "PUSH" : "PULL"); return; }
+            settings_save();
+        }
+        cli_out("OK ota %s %s\r\n", push ? "push" : "pull", *flag ? "on" : "off");
+    }
     else if (!strcasecmp(sub, "ROLLBACK")) {
         if (!esp_ota_check_rollback_is_possible()) { cli_out("ERR ota: no previous firmware to go back to\r\n"); return; }
         cli_out("OK ota rolling back to the previous firmware, restarting\r\n");
         vTaskDelay(pdMS_TO_TICKS(500));
         esp_ota_mark_app_invalid_rollback_and_reboot();
     }
-    else cli_out("ERR usage: OTA [STATUS] | UPDATE [url] [FORCE] | URL [url|DEFAULT] | TOKEN [text|OFF] | PASS [text|OFF] | ROLLBACK\r\n");
+    else cli_out("ERR usage: OTA [STATUS] | UPDATE [url] [FORCE] | URL [url|DEFAULT] | TOKEN [text|OFF] | PASS [text|OFF] | PUSH [ON|OFF] | PULL [ON|OFF] | ROLLBACK\r\n");
 }

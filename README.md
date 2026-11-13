@@ -170,12 +170,19 @@ Every WiFi chip (C3, C5, C6, S3; the H2 has none) keeps two firmware slots, so i
 the previous firmware by itself when the new one does not work. **The first installation, and the one that introduces this partition table,
 must be done over USB**; the settings (WiFi, stations, ...) are kept.
 
+**Nothing is installed unattended.** The device never checks for or downloads updates by itself. Two switches (*Settings > Firmware update*, or the CLI) decide what is allowed:
+
+| Switch | CLI | Default | Meaning |
+|---|---|---|---|
+| Push from outside | `OTA PUSH ON\|OFF` | **off** | accept a `.bin` sent to `POST /api/ota` (`tools/ota_push.py`, portal upload); while off the request is refused with `403` |
+| Download (pull) | `OTA PULL ON\|OFF` | on | allow `OTA UPDATE` / the *Check and install* button to download; it only ever runs when the user asks |
+
 - **From the device (pull)**: *Settings > Firmware update > Check and install*, or the CLI command `OTA UPDATE`. The device downloads
   `slink-<chip>.bin` from the latest GitHub release of this repository (https, certificates checked) and restarts. Another source can be
   set in the same card or with `OTA URL https://example.org/slink-esp32s3.bin` (`OTA URL DEFAULT` goes back to GitHub; http:// works for a
   server on the local network). An optional access token (`OTA TOKEN <text>`, sent as `Authorization: Bearer`) is meant for a server of your own.
   `OTA UPDATE FORCE` installs even when the version is the same.
-- **From a computer (push)**: `python tools/ota_push.py slink.local .pio/build/esp32s3/firmware.bin` (or `--build esp32s3` to build and send;
+- **From a computer (push)**, after `OTA PUSH ON`: `python tools/ota_push.py slink.local .pio/build/esp32s3/firmware.bin` (or `--build esp32s3` to build and send;
   `--password` if one is set). The *Settings* card can also send a `.bin` chosen in the browser.
 - **Upload password (optional, off by default)**: `OTA PASS <text>` or the Settings card; `OTA PASS OFF` removes it. When set, the device gives a
   one-time nonce (`GET /api/ota`) and the sender proves the password with `sha256("<nonce>:<password>")` (header `X-OTA-Auth`), so the password

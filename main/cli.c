@@ -1145,6 +1145,8 @@ static void handle_net(char *raw, char **tok, int nt)
             else if (!strcmp(k, "mqtt_pass") && strlen(vv) < sizeof g_set.mqtt_pass) strcpy(g_set.mqtt_pass, vv);
             else if (!strcmp(k, "title_app") && strlen(vv) < sizeof g_set.title_app) strcpy(g_set.title_app, vv);
             else if (!strcmp(k, "title_page") && strlen(vv) < sizeof g_set.title_page) strcpy(g_set.title_page, vv);
+            else if (!strcmp(k, "ota_push")) g_set.ota_push = n != 0;
+            else if (!strcmp(k, "ota_pull")) g_set.ota_pull = n != 0;
             else if (!strcmp(k, "ota_url") && strlen(vv) < sizeof g_set.ota_url) strcpy(g_set.ota_url, vv);
             else if (!strcmp(k, "ota_token") && strlen(vv) < sizeof g_set.ota_token) strcpy(g_set.ota_token, vv);
             else if (!strcmp(k, "ota_pass") && strlen(vv) < sizeof g_set.ota_pass) strcpy(g_set.ota_pass, vv);
@@ -1162,7 +1164,7 @@ static void handle_net(char *raw, char **tok, int nt)
             out("CFG vol_up %d" CRLF "CFG vol_down %d" CRLF "CFG vol_margin %d" CRLF, (int)g_set.vol_up, (int)g_set.vol_down, (int)g_set.vol_margin);
             out("CFG host \"%s\"" CRLF "CFG ssid \"%s\"" CRLF "CFG mqtt_uri \"%s\"" CRLF "CFG mqtt_user \"%s\"" CRLF, g_set.host, g_set.ssid, g_set.mqtt_uri, g_set.mqtt_user);
             out("CFG title_app \"%s\"" CRLF "CFG title_page \"%s\"" CRLF, g_set.title_app, g_set.title_page);
-            out("CFG ota_url \"%s\"" CRLF, g_set.ota_url);
+            out("CFG ota_url \"%s\"" CRLF "CFG ota_push %d" CRLF "CFG ota_pull %d" CRLF, g_set.ota_url, g_set.ota_push, g_set.ota_pull);
             if (pw) out("CFG pass \"%s\"" CRLF "CFG mqtt_pass \"%s\"" CRLF "CFG ota_pass \"%s\"" CRLF "CFG ota_token \"%s\"" CRLF, g_set.pass, g_set.mqtt_pass, g_set.ota_pass, g_set.ota_token);
             out("OK cfg end%s" CRLF, pw ? " (with passwords)" : "");
         }

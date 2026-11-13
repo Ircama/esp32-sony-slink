@@ -53,6 +53,8 @@ def main():
     except (OSError, ValueError) as e:
         die('cannot reach %s: %s' % (a.host, e))
     print('device: %s, firmware %s, running from %s (%s); update slot %d bytes' % (info['target'], info['fw'], info['running'], info['state'], info['max']))
+    if info.get('push') is False:
+        die('uploads are disabled on the device: enable them first (Settings > Firmware update > "Consenti l\'invio dall\'esterno", or the CLI command OTA PUSH ON)')
     if len(data) > info['max']:
         die('the image (%d bytes) does not fit the update slot (%d bytes)' % (len(data), info['max']))
     if info.get('busy'):
