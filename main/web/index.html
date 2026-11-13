@@ -780,7 +780,7 @@ body.hxon .hx{display:block}
           <h2>Rete</h2>
           <dl class="kv" id="netKv"></dl>
           <form class="form" id="wifiForm" autocomplete="off">
-            <label>Rete WiFi (SSID)<input id="fSsid" maxlength="32" placeholder="Nome della rete"></label>
+            <label>Rete WiFi (SSID)<input id="fSsid" maxlength="32" placeholder="Nome della rete" autocomplete="off"></label>
             <label>Password<input id="fPass" type="password" maxlength="63" placeholder="Lascia vuoto per rete aperta" autocomplete="new-password"></label>
             <label>Nome host<input id="fHost" maxlength="30" placeholder="slink"></label>
             <div class="row"><button class="btn primary" type="submit">Salva e connetti</button></div>
@@ -849,7 +849,7 @@ body.hxon .hx{display:block}
             <h3>Aggiorna da internet</h3>
             <p class="hint" style="margin-top:0">Il dispositivo scarica da solo il file e si riavvia. Sorgente predefinita: l'ultima release su GitHub.</p>
             <form class="form" id="otaSrcForm" autocomplete="off">
-              <label>Indirizzo del file (facoltativo)<input id="otaUrl" maxlength="127" placeholder="vuoto = ultima release su GitHub"></label>
+              <label>Indirizzo del file (facoltativo)<input id="otaUrl" maxlength="127" placeholder="vuoto = ultima release su GitHub" autocomplete="off"></label>
               <label>Token di accesso (facoltativo)<input id="otaTok" type="password" maxlength="63" placeholder="inviato al server come «Bearer»; per un server proprio" autocomplete="new-password"></label>
               <div class="row"><button class="btn sm" type="submit">Salva</button><button class="btn sm" type="button" id="otaSrcDef">Predefinito</button></div>
             </form>
@@ -861,17 +861,19 @@ body.hxon .hx{display:block}
           <div class="ota-sec" id="otaUpSec">
             <h3>Invia un file dal computer</h3>
             <p class="hint" style="margin-top:0">Scegli il file .bin del firmware per questo chip (slink-&lt;chip&gt;.bin): viene scritto nell'altro slot e il dispositivo si riavvia. Da un computer si può anche usare tools/ota_push.py.</p>
-            <div class="form">
+            <form class="form" id="otaUpForm" autocomplete="off" onsubmit="return false">
+              <input type="text" autocomplete="username" value="ota" hidden aria-hidden="true" tabindex="-1">
               <input type="file" id="otaFile" accept=".bin,application/octet-stream" aria-label="File .bin">
               <label id="otaPwRow" hidden>Password di invio<input id="otaPw" type="password" maxlength="32" placeholder="richiesta dal dispositivo" autocomplete="off"></label>
-              <div class="row"><button class="btn primary" id="otaSend">Invia</button></div>
-            </div>
+              <div class="row"><button class="btn primary" id="otaSend" type="button">Invia</button></div>
+            </form>
           </div>
 
           <div class="ota-sec">
             <h3>Protezione dell'invio</h3>
             <p class="hint" style="margin-top:0">Password facoltativa per l'invio del firmware (dal portale o con tools/ota_push.py). Senza password chiunque nella rete locale può caricare un firmware.</p>
             <form class="form" id="otaPwForm" autocomplete="off">
+              <input type="text" autocomplete="username" value="ota" hidden aria-hidden="true" tabindex="-1">
               <label>Nuova password<input id="otaNewPw" type="password" maxlength="32" autocomplete="new-password"></label>
               <div class="row"><button class="btn sm" type="submit">Imposta</button><button class="btn sm" type="button" id="otaPwOff">Rimuovi</button></div>
             </form>
@@ -951,7 +953,27 @@ body.hxon .hx{display:block}
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
-                set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+                set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} if (PREFS.keys.includes(k)) prefsPush(); } };
+/* Interface preferences are kept IN THE DEVICE (GET/POST /api/prefs), so every browser and phone sees the same ones; localStorage is only the local copy
+ * the rest of the page reads. At start the device's values replace the local ones (when the device has none yet, this browser's are sent to it). */
+const PREFS = { keys: ['ui', 'hid', 'vlim', 'kmode', 'kc', 'kthr', 'kthron', 'skin', 'cols'], on: false, t: 0 };
+function prefsPush() {
+  if (!PREFS.on) return;
+  clearTimeout(PREFS.t);
+  PREFS.t = setTimeout(() => {
+    const o = {}; PREFS.keys.forEach(k => { try { const v = localStorage.getItem(k); if (v !== null) o[k] = v; } catch (e) {} });
+    fetch('/api/prefs', { method: 'POST', body: JSON.stringify(o), keepalive: true }).then(r => { if (!r.ok) toast('Preferenze non salvate nel dispositivo (troppo grandi)', 'err'); }).catch(() => {});
+  }, 600);
+}
+(function () {
+  if (/[?&]demo\b/.test(location.search) || location.protocol === 'file:' || window.SLINK_DEMO === true) return;
+  let dev = null;
+  try { const x = new XMLHttpRequest(); x.open('GET', '/api/prefs', false); x.send(); if (x.status === 200) dev = JSON.parse(x.responseText); } catch (e) {}
+  if (!dev || typeof dev !== 'object') return;                          /* device unreachable or older firmware: browser values only */
+  PREFS.on = true;
+  if (Object.keys(dev).length) PREFS.keys.forEach(k => { try { if (typeof dev[k] === 'string') localStorage.setItem(k, dev[k]); else localStorage.removeItem(k); } catch (e) {} });
+  else setTimeout(prefsPush, 3000);                                     /* first time: this browser's preferences become the device's */
+})();
 /* demo mode (simulated amplifier, nothing is sent anywhere): only on request - "?demo" in the URL, a file:// copy, or the public demo copy on GitHub Pages
  * (the Pages workflow sets window.SLINK_DEMO). Served by the device, the page is always in real mode unless "?demo" is added. */
 const DEMO = /[?&]demo\b/.test(location.search) || location.protocol === 'file:' || window.SLINK_DEMO === true;

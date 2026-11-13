@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "esp_http_server.h"
+#include "nvs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -161,6 +162,39 @@ static size_t j_state(char *b, size_t n) { return state_json(b, n, cli_vol_pct()
 static esp_err_t h_state(httpd_req_t *r) { return send_json(r, j_state); }
 static esp_err_t h_stats(httpd_req_t *r) { return send_json(r, stats_json); }
 static esp_err_t h_favs(httpd_req_t *r) { return send_json(r, cli_favs_json); }
+
+/* The interface preferences (knob curvature, safety limit, visible tabs, colours, hidden items ...) live in the device, not in each browser:
+ * every browser and phone that opens the portal sees the same ones. A JSON object of strings, kept as it is in the NVS. */
+#define PREFS_MAX 1536
+static esp_err_t h_prefs_get(httpd_req_t *r)
+{
+    char *b = calloc(1, PREFS_MAX + 1); nvs_handle_t h;
+    if (!b) { httpd_resp_send_500(r); return ESP_FAIL; }
+    size_t n = PREFS_MAX + 1;
+    if (nvs_open("slink", NVS_READONLY, &h) == ESP_OK) { if (nvs_get_str(h, "prefs", b, &n) != ESP_OK) b[0] = 0; nvs_close(h); }
+    httpd_resp_set_type(r, "application/json");
+    httpd_resp_set_hdr(r, "Cache-Control", "no-store");
+    esp_err_t e = httpd_resp_sendstr(r, b[0] ? b : "{}");
+    free(b);
+    return e;
+}
+static esp_err_t h_prefs_post(httpd_req_t *r)
+{
+    if (r->content_len < 2 || r->content_len > PREFS_MAX) { httpd_resp_set_status(r, "413 Payload Too Large"); return httpd_resp_sendstr(r, "too large"); }
+    char *b = calloc(1, r->content_len + 1); size_t got = 0;
+    if (!b) { httpd_resp_send_500(r); return ESP_FAIL; }
+    while (got < r->content_len) {
+        int n = httpd_req_recv(r, b + got, r->content_len - got);
+        if (n == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        if (n <= 0) { free(b); return ESP_FAIL; }
+        got += (size_t)n;
+    }
+    nvs_handle_t h; bool ok = b[0] == '{' && b[got - 1] == '}';
+    if (ok) { ok = nvs_open("slink", NVS_READWRITE, &h) == ESP_OK; if (ok) { ok = nvs_set_str(h, "prefs", b) == ESP_OK && nvs_commit(h) == ESP_OK; nvs_close(h); } }
+    free(b);
+    if (!ok) { httpd_resp_set_status(r, "400 Bad Request"); return httpd_resp_sendstr(r, "not a JSON object"); }
+    return httpd_resp_sendstr(r, "OK");
+}
 static esp_err_t h_presets(httpd_req_t *r) { return send_json(r, state_presets_json); }
 static esp_err_t h_stations(httpd_req_t *r) { return send_json(r, cli_stations_json); }
 
@@ -251,6 +285,8 @@ void web_start(void)
         { .uri = "/api/dbg",      .method = HTTP_GET,  .handler = h_dbg },
         { .uri = "/api/stats",    .method = HTTP_GET,  .handler = h_stats },
         { .uri = "/api/favs",     .method = HTTP_GET,  .handler = h_favs },
+        { .uri = "/api/prefs",    .method = HTTP_GET,  .handler = h_prefs_get },
+        { .uri = "/api/prefs",    .method = HTTP_POST, .handler = h_prefs_post },
         { .uri = "/api/cmd",      .method = HTTP_POST, .handler = h_cmd },
         { .uri = "/api/ota",      .method = HTTP_GET,  .handler = ota_http_info },
         { .uri = "/api/ota",      .method = HTTP_POST, .handler = ota_http_push },

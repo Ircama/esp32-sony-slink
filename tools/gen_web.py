@@ -10,6 +10,12 @@ try:
 except NameError:
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+if "env" in globals():          # PlatformIO: esp_app_desc.c holds __DATE__/__TIME__ (the "built" date); SCons would keep its old object: rebuild it every time
+    try:
+        _o = os.path.join(env.subst("$BUILD_DIR"), "esp_app_format", "esp_app_desc.c.o")   # noqa: F821
+        if os.path.exists(_o): os.remove(_o)
+    except OSError: pass
+
 src = os.path.join(root, "main", "web", "index.html")
 dst = os.path.join(root, "main", "web_page.c")
 
