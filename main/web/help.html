@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
     <title>Manuale</title>
+    <style>html.vdark, html.vdark body { background: #0c0d10; color: #ecebe6; color-scheme: dark; }</style>
+    <script>
+        /* theme chosen by the app (?theme=dark|light): set before the first paint, so there is no light flash */
+        (function () {
+            var dark = /[?&]theme=dark/.test(location.search);
+            if (dark) document.documentElement.classList.add('vdark');
+            document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+            window.__darkInit = dark;
+        })();
+    </script>
 
     <!-- Preconnessioni: riducono la latenza verso le CDN usate dal viewer -->
     <link rel="preconnect" href="https://esm.sh" crossorigin>
@@ -35,9 +45,11 @@
     <!-- GitHub Markdown CSS -->
     <link rel="stylesheet"
         id="md-style" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown-light.min.css">
+    <script>if (window.__darkInit) document.getElementById("md-style").href = document.getElementById("md-style").href.replace("-light", "-dark");</script>
     <!-- Highlight.js CSS per GitHub theme -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
         id="highlight-style">
+    <script>if (window.__darkInit) document.getElementById("highlight-style").href = document.getElementById("highlight-style").href.replace("github.min", "github-dark.min");</script>
 
     <!-- Google Fonts -->
     <style>
@@ -537,6 +549,10 @@
             background: #fafbfc !important;
         }
 
+        /* wide tables scroll sideways inside their own box */
+        #_html .table-wrap { overflow-x: auto; max-width: 100%; margin: 1.25rem 0; border-radius: 10px; -webkit-overflow-scrolling: touch; box-shadow: 0 1px 4px rgba(0, 0, 0, .05); }
+        #_html .table-wrap > table { width: 100% !important; min-width: min-content; max-width: none !important; margin: 0 !important; display: table !important; box-shadow: none !important; }
+
         /* Blockquotes */
         .markdown-body blockquote {
             border-left: 4px solid var(--va, #e1b66a) !important;
@@ -945,7 +961,7 @@
         }
 
         /* ── Theme of the app (sent by the page that embeds this one) ── */
-        body.vdark { background: #0c0d10; color: #ecebe6; }
+        .vdark body, body.vdark { background: #0c0d10; color: #ecebe6; }
         .vdark .bd-sidebar { background: #121317 !important; border-right-color: #262a31 !important; }
         .vdark .bd-sidebar a, .vdark #toc-nav a.nav-link { color: #a6a396 !important; }
         .vdark .bd-sidebar a:hover { background: rgba(225, 182, 106, .1) !important; color: var(--va, #e1b66a) !important; }
@@ -968,6 +984,17 @@
         .vdark .error-message { background: #2a1513; color: #ef7468; border-color: #ef7468; }
         .vdark .error-message h3 { color: #ef7468; }
         .vdark .fab-btn { background: var(--va, #e1b66a); color: #1a1303; }
+
+        /* ── Phone: the index opens as an overlay from the left edge ── */
+        #toc-edge, #toc-backdrop { display: none; }
+        @media (max-width: 767.98px) {
+            #toc-edge { display: block; position: fixed; left: 0; top: 52px; bottom: 0; width: 24px; z-index: 900; touch-action: pan-y; }
+            #toc-edge::after { content: ''; position: absolute; left: 0; top: 50%; width: 5px; height: 56px; margin-top: -28px; border-radius: 0 4px 4px 0; background: var(--va, #e1b66a); opacity: .55; }
+            #toc-backdrop { position: fixed; inset: 0; z-index: 1100; background: rgba(0, 0, 0, .4); }
+            body.toc-open #toc-backdrop { display: block; }
+            body.toc-open #toc-edge { display: none; }
+            body.toc-open .bd-sidebar { display: flex !important; position: fixed; left: 0; top: 0; bottom: 0; height: 100% !important; width: min(82vw, 320px) !important; flex: none !important; z-index: 1200; box-shadow: 4px 0 24px rgba(0, 0, 0, .35); padding-top: 56px !important; }
+        }
 
         /* ── Phone, portrait: the text uses the whole width, square corners ── */
         @media (max-width: 600px) {
@@ -1017,13 +1044,6 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <div class="settings-item">
-                    <span class="settings-label">Aggiornamento dinamico</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="toggle-autoreload">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
             </div>
         </div>
     </div>
@@ -1051,6 +1071,10 @@
             </div>
         </main>
     </div>
+
+    <!-- Phone: edge zone that opens the index as an overlay -->
+    <div id="toc-edge" aria-hidden="true"></div>
+    <div id="toc-backdrop"></div>
 
     <!-- Floating navigation buttons (body-level so position:fixed works correctly) -->
     <button class="fab-btn" id="fab-top" title="Torna in cima">↑</button>
@@ -1132,6 +1156,7 @@
         function applyTheme(dark, accent) {
             window.__dark = !!dark;
             document.body.classList.toggle('vdark', !!dark);
+            document.documentElement.classList.toggle('vdark', !!dark);
             document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
             if (accent) document.documentElement.style.setProperty('--va', accent);
             document.getElementById('md-style').href = CDN + 'github-markdown-css/5.5.1/github-markdown-' + (dark ? 'dark' : 'light') + '.min.css';
@@ -1238,25 +1263,6 @@
             return html;
         }
 
-        // Variabili per Auto-Reload
-        let lastModifiedTime = null;
-        let currentFileUrl = null;
-        let autoReloadEnabled = false; // default: disattivato
-
-        async function checkAutoReload() {
-            if (!autoReloadEnabled || !currentFileUrl) return;
-            try {
-                const res = await fetch(currentFileUrl, { method: 'HEAD', cache: 'no-cache' });
-                if (res.ok) {
-                    const modified = res.headers.get('Last-Modified');
-                    if (lastModifiedTime && modified && lastModifiedTime !== modified) {
-                        window.location.reload();
-                    }
-                }
-            } catch (e) { }
-        }
-        setInterval(checkAutoReload, 3000); // 3 seconds autoreload poll
-
         // The manual lives in the repository: the README is fetched from GitHub and its relative links/images are resolved there
         const DEFAULT_MANUAL = 'https://raw.githubusercontent.com/Ircama/esp32-sony-slink/refs/heads/main/README.md';
         const REPO_BLOB = 'https://github.com/Ircama/esp32-sony-slink/blob/main/';
@@ -1275,7 +1281,6 @@
         async function loadMarkdown() {
             const urlParams = new URLSearchParams(window.location.search);
             const file = urlParams.get('file') || DEFAULT_MANUAL;
-            currentFileUrl = file;
 
             // Estrai il nome base senza path e senza estensione .md
             const fileBaseName = file.split('/').pop().split('\\').pop().replace(/\.md$/i, '');
@@ -1288,7 +1293,7 @@
                 }
 
                 // Estrai header HTTP di interesse
-                lastModifiedTime = response.headers.get('Last-Modified');
+                const lastModifiedTime = response.headers.get('Last-Modified');
                 const contentLength = response.headers.get('Content-Length');
                 const amzVersion = response.headers.get('x-amz-version-id');
 
@@ -1370,6 +1375,7 @@
 
                 // Inietta nel content
                 document.getElementById('_html').innerHTML = cleanHtml;
+                document.querySelectorAll('#_html table').forEach(t => { const w = document.createElement('div'); w.className = 'table-wrap'; t.parentNode.insertBefore(w, t); w.appendChild(t); });
                 fixLinks(document.getElementById('_html'), /^https?:/i.test(file) ? file : new URL(file, location.href).href);
 
                 // Inietta il banner frontmatter sotto il primo H1
@@ -1745,6 +1751,17 @@
             handle.addEventListener('dblclick', () => document.documentElement.style.removeProperty('--sidebar-w'));
         })();
 
+        // ── Phone: index overlay, opened by pressing (or swiping) near the left edge ──
+        (function () {
+            const edge = document.getElementById('toc-edge'), back = document.getElementById('toc-backdrop');
+            const open = () => document.body.classList.add('toc-open'), close = () => document.body.classList.remove('toc-open');
+            edge.addEventListener('pointerdown', e => { e.preventDefault(); open(); });
+            back.addEventListener('pointerdown', e => { e.preventDefault(); close(); });
+            document.getElementById('toc-nav').addEventListener('click', e => { if (e.target.closest('a')) close(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+            matchMedia('(min-width: 768px)').addEventListener('change', e => { if (e.matches) close(); });
+        })();
+
         // ── Settings hamburger menu ──────────────────────────────
         (function () {
             const btn = document.getElementById('settings-btn');
@@ -1780,11 +1797,6 @@
                 document.body.classList.toggle('no-content-padding', !this.checked);
             });
 
-            // Toggle: Auto-reload
-            const toggleAutoReload = document.getElementById('toggle-autoreload');
-            toggleAutoReload.addEventListener('change', function () {
-                autoReloadEnabled = this.checked;
-            });
         })();
 
     </script>
