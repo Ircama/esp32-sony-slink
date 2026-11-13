@@ -1008,8 +1008,7 @@
     </style>
 </head>
 
-<body class="_theme-github _color-light _toc-left" data-bs-spy="scroll" data-bs-target="#toc-nav"
-    data-bs-smooth-scroll="true" tabindex="0">
+<body class="_theme-github _color-light _toc-left" tabindex="0">
 
     <!-- Top bar -->
     <div id="doc-topbar">
@@ -1628,7 +1627,7 @@
                 link.className = `nav-link toc-h${level}`;
 
                 container.appendChild(link);
-                tocLinks.push({ element: link, text: link.innerText.toLowerCase() });
+                tocLinks.push({ element: link, text: link.innerText.toLowerCase(), heading: heading });
             });
 
             // Fix inline links in the document body that point to renamed (sanitized) IDs.
@@ -1676,36 +1675,36 @@
                 history.pushState(null, '', '#' + targetId);
             });
 
-            // Inizializza Bootstrap ScrollSpy per l'evidenziazione automatica
-            const scrollSpyObj = bootstrap.ScrollSpy.getInstance(document.body);
-            if (scrollSpyObj) {
-                scrollSpyObj.refresh();
-            } else {
-                new bootstrap.ScrollSpy(document.body, {
-                    target: "#toc-nav"
-                });
+            // Evidenziazione dell'indice: la voce attiva e' quella dell'ultimo titolo che ha superato il bordo alto, anche quando
+            // quel titolo e' ormai fuori dallo schermo (Bootstrap ScrollSpy evidenzia solo i titoli visibili e si "perde" nei paragrafi lunghi).
+            let spyTick = false, activeLink = null;
+            function updateSpy() {
+                spyTick = false;
+                if (!tocLinks.length) return;
+                const line = TOPBAR_OFFSET + 16;
+                let idx = -1;
+                for (let i = 0; i < tocLinks.length; i++) {
+                    if (tocLinks[i].heading.getBoundingClientRect().top <= line) idx = i; else break;
+                }
+                const atEnd = window.innerHeight + (window.scrollY || document.documentElement.scrollTop) >= document.documentElement.scrollHeight - 2;
+                if (atEnd) idx = tocLinks.length - 1;
+                const link = idx >= 0 ? tocLinks[idx].element : null;
+                if (link === activeLink) return;
+                if (activeLink) activeLink.classList.remove('active');
+                activeLink = link;
+                if (!link) return;
+                link.classList.add('active');
+                // keep the active entry inside the index column, scrolling it only when needed (no jitter)
+                const nav = document.getElementById('toc-nav');
+                const lr = link.getBoundingClientRect(), nr = nav.getBoundingClientRect(), M = 40;
+                if (lr.bottom > nr.bottom - M) nav.scrollTop += lr.bottom - nr.bottom + M;
+                else if (lr.top < nr.top + M) nav.scrollTop -= nr.top - lr.top + M;
             }
-
-            // Auto-scroll #toc-nav to keep the active TOC link in view.
-            // NOTE: after the flex refactor .bd-sidebar has overflow:hidden — only #toc-nav scrolls.
-            document.body.addEventListener('activate.bs.scrollspy', function (e) {
-                const activeItem = e.relatedTarget; // the <a> in #toc-nav that became active
-                const tocNav = document.getElementById('toc-nav');
-                if (!activeItem || !tocNav) return;
-
-                const itemRect = activeItem.getBoundingClientRect();
-                const containerRect = tocNav.getBoundingClientRect();
-                const MARGIN = 80; // px of context to keep above/below the active item
-
-                // Below visible area → scroll down
-                if (itemRect.bottom > containerRect.bottom - MARGIN) {
-                    tocNav.scrollTop += itemRect.bottom - containerRect.bottom + MARGIN;
-                }
-                // Above visible area → scroll up
-                else if (itemRect.top < containerRect.top + MARGIN) {
-                    tocNav.scrollTop -= containerRect.top - itemRect.top + MARGIN;
-                }
-            });
+            const requestSpy = () => { if (!spyTick) { spyTick = true; setTimeout(updateSpy, 50); } };       /* a timer, not requestAnimationFrame: it also runs when the frame is not the one being painted */
+            window.addEventListener('scroll', requestSpy, { passive: true });
+            window.addEventListener('resize', requestSpy);
+            window.__spyRefresh = requestSpy;
+            requestSpy();
         }
 
         // Avvio procedura on load
@@ -1798,9 +1797,7 @@
             // Toggle: Navbar (sidebar)
             toggleNavbar.addEventListener('change', function () {
                 document.body.classList.toggle('sidebar-hidden', !this.checked);
-                // Refresh ScrollSpy when sidebar toggled
-                const spy = bootstrap.ScrollSpy.getInstance(document.body);
-                if (spy) spy.refresh();
+                if (window.__spyRefresh) window.__spyRefresh();
             });
 
             // Toggle: Content side padding
