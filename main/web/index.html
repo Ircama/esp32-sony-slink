@@ -844,7 +844,8 @@ body.hxon .hx{display:block}
               <div class="row"><button class="btn sm" type="submit">Salva</button><button class="btn sm" type="button" id="otaSrcDef">Predefinito</button></div>
             </form>
             <label class="bk-opt"><input type="checkbox" id="otaForce"> Installa anche se la versione è la stessa</label>
-            <div class="row" style="margin-top:10px"><button class="btn primary" id="otaGo">Cerca e installa</button></div>
+            <div class="row" style="margin-top:10px"><button class="btn" id="otaChk">Controlla aggiornamenti</button><button class="btn primary" id="otaGo">Cerca e installa</button></div>
+            <p class="hint" id="otaChkR" aria-live="polite" hidden></p>
           </div>
 
           <div class="ota-sec">
@@ -1409,6 +1410,15 @@ const TRX = [
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
+  ['Controlla aggiornamenti', 'Check for updates', 'Rechercher des mises à jour', 'Nach Updates suchen', 'Buscar actualizaciones'],
+  ['Controllo in corso…', 'Checking…', 'Vérification…', 'Prüfung läuft…', 'Comprobando…'],
+  ['Dettagli', 'Details', 'Détails', 'Details', 'Detalles'],
+  ['Nessuna release pubblicata su GitHub', 'No release published on GitHub', 'Aucune version publiée sur GitHub', 'Kein Release auf GitHub veröffentlicht', 'Ninguna versión publicada en GitHub'],
+  ['La sorgente non è GitHub: il controllo non è disponibile', 'The source is not GitHub: the check is not available', "La source n'est pas GitHub : vérification indisponible", 'Die Quelle ist nicht GitHub: Prüfung nicht verfügbar', 'El origen no es GitHub: comprobación no disponible'],
+  ['Aggiornato: il firmware in uso è la release {v}', 'Up to date: the running firmware is release {v}', 'À jour : le firmware en cours est la version {v}', 'Aktuell: die laufende Firmware ist Release {v}', 'Actualizado: el firmware en uso es la versión {v}'],
+  ["Il firmware in uso ({f}) è successivo all'ultima release {v}", 'The running firmware ({f}) is newer than the latest release {v}', 'Le firmware en cours ({f}) est plus récent que la dernière version {v}', 'Die laufende Firmware ({f}) ist neuer als das letzte Release {v}', 'El firmware en uso ({f}) es posterior a la última versión {v}'],
+  ['Nuova versione disponibile: {v} ({d}). In uso: {f}. Premi «Cerca e installa» per installarla.', 'New version available: {v} ({d}). Running: {f}. Press "Check and install" to install it.', "Nouvelle version disponible : {v} ({d}). En cours : {f}. Utilisez le bouton d'installation.", 'Neue Version verfügbar: {v} ({d}). Läuft: {f}. Mit der Schaltfläche zum Installieren aktualisieren.', 'Nueva versión disponible: {v} ({d}). En uso: {f}. Use el botón de instalar.'],
+  ['Controllo non riuscito: {e}', 'Check failed: {e}', 'Échec de la vérification : {e}', 'Prüfung fehlgeschlagen: {e}', 'Comprobación fallida: {e}'],
   ['Dimensione firmware', 'Firmware size', 'Taille du firmware', 'Firmware-Größe', 'Tamaño del firmware'],
   ['dello slot', 'of the slot', "de l'emplacement", 'des Slots', 'de la ranura'],
   ['flash', 'flash', 'flash', 'Flash', 'flash'],
@@ -3602,6 +3612,23 @@ async function otaSend() {
   otaProg(tr('Invio in corso…'), 0);
   x.send(f);
 }
+$('#otaChk').onclick = async () => {
+  const out = $('#otaChkR'), b = $('#otaChk'), src = OTA.info.source || '';
+  const m = /github\.com\/([^/]+\/[^/]+)\//.exec(src), repo = m ? m[1] : (src ? '' : 'Ircama/esp32-sony-slink');
+  const say = (t, url) => { out.hidden = false; out.textContent = t; if (url) { out.append(' '); const l = document.createElement('a'); l.href = url; l.target = '_blank'; l.rel = 'noopener'; l.textContent = tr('Dettagli'); out.append(l); } };
+  if (!repo) { say(tr('La sorgente non è GitHub: il controllo non è disponibile')); return; }
+  b.disabled = true; say(tr('Controllo in corso…'));
+  try {
+    const r = await fetch('https://api.github.com/repos/' + repo + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+    if (r.status === 404) { say(tr('Nessuna release pubblicata su GitHub')); return; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json(), tag = j.tag_name || '', fw = OTA.info.fw || '', d = j.published_at ? new Date(j.published_at).toLocaleDateString() : '';
+    if (fw === tag) say(tr('Aggiornato: il firmware in uso è la release {v}', { v: tag }), j.html_url);
+    else if (fw.startsWith(tag + '-')) say(tr("Il firmware in uso ({f}) è successivo all'ultima release {v}", { f: fw, v: tag }), j.html_url);
+    else say(tr('Nuova versione disponibile: {v} ({d}). In uso: {f}. Premi «Cerca e installa» per installarla.', { v: tag, d: d, f: fw || '—' }), j.html_url);
+  } catch (e) { say(tr('Controllo non riuscito: {e}', { e: e.message })); }
+  finally { b.disabled = false; }
+};
 $('#otaGo').onclick = () => { otaProg(tr('Aggiornamento in corso…'), null); cmd('OTA UPDATE' + ($('#otaForce').checked ? ' FORCE' : ''), { ack: true }); setTimeout(() => { OTA.at = 0; otaLoad(); }, 1500); };
 $('#otaSrcForm').onsubmit = e => {
   e.preventDefault(); const u = $('#otaUrl').value.trim(), t = $('#otaTok').value.trim();

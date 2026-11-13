@@ -414,6 +414,7 @@ static void status(void)
     const esp_partition_t *run = esp_ota_get_running_partition(), *oth = esp_ota_get_next_update_partition(NULL);
     char u[256];
     cli_out("OTA fw %s built %s %s target %s\r\n", d->version, d->date, d->time, CONFIG_IDF_TARGET);
+    cli_out("OTA installed %lld\r\n", (long long)ota_installed());
     cli_out("OTA running %s state %s\r\n", run ? run->label : "?", state_name(run));
     esp_app_desc_t od;
     if (oth && esp_ota_get_partition_description(oth, &od) == ESP_OK) cli_out("OTA other %s fw %s built %s %s\r\n", oth->label, od.version, od.date, od.time);
