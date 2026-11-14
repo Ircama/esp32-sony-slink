@@ -340,6 +340,13 @@ svg.eq circle.drag{fill:var(--accent)}
 @media(max-width:520px){.band{grid-template-columns:58px 1fr 58px}.band select{grid-column:2/4}.lv{grid-template-columns:78px 1fr 56px}}
 
 /* console */
+/* maximised console: the card covers the window; the log takes all the room left between the title and the command line */
+#tab-console .card.logmax{position:fixed;inset:0;z-index:1000;margin:0;border-radius:0;border:0;display:flex;flex-direction:column;overflow:hidden;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(12px + env(safe-area-inset-bottom,0px))}
+#tab-console .card.logmax .logwrap{flex:1;min-height:0;display:flex}
+#tab-console .card.logmax .log{flex:1;height:auto;min-height:0;margin:0;border:1px solid var(--line);border-radius:var(--r-sm)}
+#tab-console .card.logmax .chips{display:none}
+body.logmax{overflow:hidden}
 .logwrap{position:relative}
 .logfab{position:absolute;right:20px;bottom:10px;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .logfab button{pointer-events:auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;line-height:1;color:var(--text2);background:var(--surface);border:1px solid var(--line2);opacity:.5;transition:opacity .15s}
@@ -687,8 +694,8 @@ body.hxon .hx{display:block}
 
     <!-- ========== CONSOLE ========== -->
     <section class="tab" id="tab-console" role="tabpanel">
-      <div class="card">
-        <h2>Console <span class="sp"></span><button id="logCopy">Copia</button><button id="logPause">Pausa</button><button id="logClear">Pulisci</button></h2>
+      <div class="card" id="consoleCard">
+        <h2>Console <span class="sp"></span><button id="logMax" aria-pressed="false">Massimizza</button><button id="logCopy">Copia</button><button id="logPause">Pausa</button><button id="logClear">Pulisci</button></h2>
         <div class="logwrap"><div class="log" id="log" role="log" aria-live="off"></div>
           <div class="logfab"><button type="button" id="logTop" title="Vai all'inizio" aria-label="Vai all'inizio" hidden>&#x2191;</button><button type="button" id="logBot" title="Vai alla fine" aria-label="Vai alla fine" hidden>&#x2193;</button></div></div>
         <form class="cmdline" id="cmdForm"><input id="cmdIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Comando, es. STATUS · VOL SET 30 · C0 2E" aria-label="Comando"><button class="btn primary" type="submit" aria-label="Invia"><svg class="i"><use href="#i-send"/></svg></button></form>
@@ -1461,6 +1468,8 @@ const TRX = [
   ['Rileggi il nome RDS dalla stazione', 'Read the RDS name from the station again', 'Relire le nom RDS de la station', 'RDS-Namen vom Sender neu lesen', 'Volver a leer el nombre RDS de la emisora'],
   ['Rileggi il nome RDS', 'Read the RDS name again', 'Relire le nom RDS', 'RDS-Namen neu lesen', 'Volver a leer el nombre RDS'],
   ['Lettura del nome RDS in corso…', 'Reading the RDS name…', 'Lecture du nom RDS en cours…', 'RDS-Name wird gelesen…', 'Leyendo el nombre RDS…'],
+  ['Massimizza', 'Maximise', 'Agrandir', 'Maximieren', 'Maximizar'],
+  ['Riduci', 'Restore', 'Réduire', 'Verkleinern', 'Reducir'],
   ['Controlla aggiornamenti', 'Check for updates', 'Rechercher des mises à jour', 'Nach Updates suchen', 'Buscar actualizaciones'],
   ['Controllo in corso…', 'Checking…', 'Vérification…', 'Prüfung läuft…', 'Comprobando…'],
   ['Dettagli', 'Details', 'Détails', 'Details', 'Detalles'],
@@ -2486,6 +2495,14 @@ function wire() {
   $('#cmdForm').onsubmit = e => { e.preventDefault(); const v = $('#cmdIn').value.trim(); if (!v) return; hist.unshift(v); hi = -1; cmd(v, { ack: true }); $('#cmdIn').value = ''; };
   $('#cmdIn').onkeydown = e => { if (e.key === 'ArrowUp' && hist.length) { hi = Math.min(hi + 1, hist.length - 1); e.target.value = hist[hi]; e.preventDefault(); }
     else if (e.key === 'ArrowDown') { hi = Math.max(hi - 1, -1); e.target.value = hi < 0 ? '' : hist[hi]; e.preventDefault(); } };
+  const logMax = on => {
+    $('#consoleCard').classList.toggle('logmax', on); document.body.classList.toggle('logmax', on);
+    const b = $('#logMax'); b.setAttribute('aria-pressed', on); b.textContent = tr(on ? 'Riduci' : 'Massimizza');
+    const L = $('#log'); L.scrollTop = L.scrollHeight; setTimeout(logFab, 50);
+  };
+  $('#logMax').onclick = () => logMax(!$('#consoleCard').classList.contains('logmax'));
+  addEventListener('keydown', e => { if (e.key === 'Escape' && $('#consoleCard').classList.contains('logmax')) logMax(false); });
+  window.logMaxOff = () => { if ($('#consoleCard').classList.contains('logmax')) logMax(false); };
   $('#logClear').onclick = () => { $('#log').innerHTML = ''; logFab(); };
   /* small buttons over the log: to its first / last line; each one shows only when there is somewhere to go */
   const logFab = () => { const L = $('#log'); $('#logTop').hidden = L.scrollTop < 40; $('#logBot').hidden = L.scrollHeight - L.scrollTop - L.clientHeight < 40; };
@@ -2611,6 +2628,7 @@ function helpTheme() {
   f.contentWindow.postMessage({ slink: 'theme', dark: helpDark(), accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() }, '*');
 }
 function showTab(n) {
+  if (n !== 'console' && window.logMaxOff) window.logMaxOff();
   if (n !== 'help' && document.body.classList.contains('helpfs')) helpFs(false);
   $$('section.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + n));
   $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === n));
