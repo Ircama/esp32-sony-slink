@@ -993,7 +993,8 @@
             #toc-backdrop { position: fixed; inset: 0; z-index: 1100; background: rgba(0, 0, 0, .4); }
             body.toc-open #toc-backdrop { display: block; }
             body.toc-open #toc-edge { display: none; }
-            body.toc-open .bd-sidebar { display: flex !important; position: fixed; left: 0; top: 0; bottom: 0; height: 100% !important; width: min(82vw, 320px) !important; flex: none !important; z-index: 1200; box-shadow: 4px 0 24px rgba(0, 0, 0, .35); padding-top: 56px !important; }
+            body.toc-open .bd-sidebar { display: flex !important; position: fixed; left: 0; top: 0; bottom: 0; height: 100% !important; width: min(82vw, 320px) !important; flex: none !important; z-index: 1200; box-shadow: 4px 0 24px rgba(0, 0, 0, .35); padding-top: 0 !important; }
+            body.toc-open .bd-sidebar-search { padding: 10px 12px 8px; }   /* the overlay covers the top bar: no gap above the search box */
         }
 
         /* ── Phone, portrait: the text uses the whole width, square corners ── */
