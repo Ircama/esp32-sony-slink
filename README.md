@@ -4,7 +4,7 @@ Control and monitor Sony Hi-Fi gear (such as the STR-DA50ES) from your phone, PC
 
 Written in C with ESP-IDF, this firmware interfaces with the Sony S-Link / Control-A1 bus, decodes bus traffic in real time, and exposes your devices through multiple interfaces:
 
-- **Web Portal:** A modern, embedded web app for full device control, inspired by the Sony RM-TP501 remote.
+- **Web Portal:** A modern, embedded web app for full device control, inspired by the Sony RM-TP501 remote (reference remotes: RM-TP501, RM-TP501E, RM-TP502, RM-TP503, RM-TP504 and RM-TP1).
 - **REST & WebSocket API:** For custom integrations and real-time state updates.
 - **MQTT:** Native integration with automatic Home Assistant discovery.
 - **Bluetooth LE:** Wireless control via the Nordic UART Service.
@@ -226,7 +226,7 @@ outgoing frames.
 - [`docs/en/WIRING.md`](docs/en/WIRING.md): hookup (MOSFET or direct), first test.
 - [`docs/en/ESP32-H2.md`](docs/en/ESP32-H2.md): the ESP32-H2 (no WiFi: USB serial + BLE only), what was checked about its power use, how to build it.
 - [`docs/en/INPUTS_AND_FRAMES.md`](docs/en/INPUTS_AND_FRAMES.md): inputs, format of all measured frames (radio, EQ, sound field, volume, power, mute), FM station list, calibration of the knob.
-- [`docs/en/RM-TP501.md`](docs/en/RM-TP501.md): the Sony RM-TP501 touch remote (two-way infrared link, same messages as Control-A1) function by function against this bridge, the other sites on the protocol, and the decoding added from them.
+- [`docs/en/RM-TP501.md`](docs/en/RM-TP501.md): the Sony RM-TP501 touch remote (the reference remote; RM-TP501E, RM-TP502, RM-TP503, RM-TP504 and RM-TP1 are the other reference remotes) (two-way infrared link, same messages as Control-A1) function by function against this bridge, the other sites on the protocol, and the decoding added from them.
 - [`docs/en/WEB_COVERAGE.md`](docs/en/WEB_COVERAGE.md): what the web interface covers: every documented command, every firmware command, every S-Link reply (generated).
 - [`docs/en/CODES_TO_TRY.md`](docs/en/CODES_TO_TRY.md): codes found online and not yet tried (already decoded by the firmware), with the sources.
 - News: `C1 0E` = FM signal level; sound fields 0–29 are shown with their name (from the hifi-remote table, to be confirmed by ear).

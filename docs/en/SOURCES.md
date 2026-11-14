@@ -28,3 +28,20 @@ Other sources are listed in `RM-TP501.md`.
 | SIRCS (Control-S) and LANC pages | other Sony protocols: not S-Link, nothing to add |
 
 What changed in the software: the decoder now reads the CD/MD `70` status as defined by those tables (it applied the CD layout to MD and mixed up the program numbers), decodes the CD Text, memo, group, artist, bar code and deck-capacity replies, and the catalogue grew by 19 rows (245 commands).
+
+## Third review: the original Control-A1 notes and the ESP8266 port (14 November 2026)
+
+Four more sources were read in full (the three Internet Archive pages were reachable this time; earlier notes in `CODES_TO_TRY.md` say they were not).
+The decoder and the command catalogue already contained almost everything in them (the same material reached them through the pages listed above), so
+the review was a line-by-line comparison; what was missing was added.
+
+| Source | What it is | Result |
+|---|---|---|
+| [Control-A1 page of the Jukebox project, Univ. of Wisconsin](https://web.archive.org/web/20030414231523/http://www.upl.cs.wisc.edu/~orn/jukebox/controla1.html) (`controla1.html`) | the earliest write-up: oscilloscope notes (bus idles at 4.72 V, bit time about 600 µs), the "count the zeros" decoding of the captured bit streams, then the CD changer messages seen for address 3 (`9A ..`) and a command table `00`–`5F` | all commands and replies were already decoded. Added: `45 DD 00` = length of the track being played (track 00 is the current one, not a track number), pause-cue wording for `03`, wording of `52` and `0F` |
+| [Slink Send and Receive Commands for Sony MiniDisc Recorders](https://web.archive.org/web/20030419100153/http://web2.airmail.net/will/mdslink.txt) (William Hollingworth, 11 April 1999, MDS-JB920 driven with a Slink-e) | every MD (`B0`) command the deck answers and every message it sends, with the bit layout of the `70` mode message | all known commands and replies were already decoded, including the `70` layout. Added to the decoder and to the Console catalogue: the commands that answer but have no known function (`29`–`2D`, `5C 00 01` answered by `4C`, `B2`), and the reply `05` now reads "eject / ignored" (this source says *eject*, `caelor/sony-a1-hass` says *ignored*) |
+| [Reverse Engineered Control-A1 codes, CDP-CX250](https://web.archive.org/web/19981202175957/http://www.cc.gatech.edu/people/home/bigdave/cdplayer/control-a1.txt) (BigDave, 19 February 1998) | CD changer addresses (`98`/`99`/`9A` replies, `90`/`91`/`92` commands), disc number coding (BCD to 99, then hex minus 54), the bit fields of the `70` status, the `61` capacity message, power-up message sequences | already decoded (disc numbers, `70`, `61`). Added: capacity codes `50`/`51` shown as "50(+1) discs (speculated)", the wording BigDave gives |
+| [fgoulding/ESP8266_Slink](https://github.com/fgoulding/ESP8266_Slink) (Tyler Goulding, 2020, CC-BY-SA 4.0) | an Arduino/ESP8266 sender built from Ircama's `Sony_SLink` library, timer driven | no new sequences: its device IDs (amplifier `C0`/`70`, tuner `C1`, surround `C3`, CD `90`–`95` and `97` for all players, MD `B0`) and command numbers are the ones already decoded. Its timings (sync 2400 µs, one 1200, zero 600, delimiter 600, 30 ms between frames) are the same as `main/slink.h`. BigDave's 2500/1240/650/625 µs are second-hand figures he had not measured. No code was copied. One thing to know if you reuse it: in `sendCommand`, the fourth byte is filled with `commandId2` instead of `commandId3`, so three-parameter commands go out wrong |
+
+Everything taken from these pages is marked as *not verified here* in the code, like the rest of the CD/MD decoding: no CD changer or MD deck is on the bus
+used for the tests.
+

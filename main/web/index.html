@@ -2874,7 +2874,7 @@ CD|41|Query delete file (disc)|bcd|x
 CD|42|Query group memo (group)|hex|x
 CD|43|Query group's discs (group)|hex|x
 CD|44|Query disc info (disc)|bcd|x
-CD|45|Query track info (disc; track)|bcd;num(1..99)|x
+CD|45|Query track info (disc; track; 0 = the track being played)|bcd;num(0..99)|x
 CD|46|Query slave disc memo (disc)|bcd|x
 CD|47|Unknown||x
 CD|48|Query enhanced disc memo (disc)|bcd|x
@@ -2927,6 +2927,11 @@ MD|24|Auto pause on||x
 MD|25|Time update on||x
 MD|26|Time update off||x
 MD|28|Variable-length disc info (unknown parameters; pclk-mn10: 28 00)|raw|x
+MD|29|Unknown (mdslink: no reply)||x
+MD|2A|Unknown (mdslink)||x
+MD|2B|Unknown (mdslink)||x
+MD|2C|Unknown (mdslink)||x
+MD|2D|Unknown (mdslink)||x
 MD|2E|Power on||x
 MD|2F|Power off||x
 MD|32|Divide||x!
@@ -2949,6 +2954,7 @@ MD|54|Remaining time of disc (disc)|num(1..99)|x
 MD|57|Unknown info request (pclk-mn10: 57 00 00)|raw|x
 MD|58|Query disc name (disc)|num(1..99);lit(00)|x
 MD|5A|Query track name (track)|num(1..99);lit(00)|x
+MD|5C|Unknown (mdslink: 5C 00 01 is answered by 4C)|raw|x
 MD|6A|Query device name||x
 MD|72|Query record date (track)|num(1..99)|x
 MD|76|Combine track a+b (disc; track, unidentified)|num(1..99);num(1..99)|x!
@@ -2963,6 +2969,7 @@ MD|98|Write disc text (disc; 14 chars, padded with 00)|num(1..99);lit(00);lit(00
 MD|99|Write disc text, more (block > 1; 16 chars)|num(2..255);txt(16)|x!
 MD|9A|Write track text (track; 14 chars)|num(1..99);lit(00);lit(00);txt(14)|x!
 MD|9B|Write track text, more (block > 1; 16 chars)|num(2..255);txt(16)|x!
+MD|B2|Unknown (mdslink: no reply)|raw|x
 MD|C0|Forced remote-control mode (pclk-mn10): locks the deck into the given function until reboot|hex|x!
 `;
 const CAT_DEV = { AMP: ['C0', 'Amplifier'], TUN: ['C1', 'Tuner'], SUR: ['C3', 'Surround / sound field'], CD: ['90', 'CD player / changer'], MD: ['B0', 'MD recorder'] };

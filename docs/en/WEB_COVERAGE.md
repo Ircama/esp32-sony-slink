@@ -12,8 +12,8 @@ What was compared: the command tables published at [hifi-remote.com](https://www
 | Tuner (`C1`) | 19 | 13 | 4 | 2 | 0 | 9 |
 | Surround / sound field (`C3`) | 62 | 23 | 17 | 22 | 0 | 25 |
 | CD player / changer (`90..92`) | 62 | 0 | 0 | 0 | 62 | 0 |
-| MD recorder (`B0`) | 60 | 0 | 0 | 0 | 60 | 0 |
-| **Total** | **245** | **50** | **40** | **33** | **122** | **48** |
+| MD recorder (`B0`) | 67 | 0 | 0 | 0 | 67 | 0 |
+| **Total** | **252** | **50** | **40** | **33** | **129** | **48** |
 
 - **Every documented command can be sent from the web interface** (*Console › Documented commands*: parameter widgets, a live frame preview, filter; destructive or audible ones, and those for units not on the bus, ask for confirmation). 48 of them also have a dedicated control in the main tabs.
 - **Every command of the firmware command line** is reachable: see the table further down (two groups of pin-test/terminal commands are console-only on purpose).
@@ -194,7 +194,7 @@ What was compared: the command tables published at [hifi-remote.com](https://www
 | `42` | Query group memo (group) | hex | ○ no unit on the bus | – |
 | `43` | Query group's discs (group) | hex | ○ no unit on the bus | – |
 | `44` | Query disc info (disc) | bcd | ○ no unit on the bus | – |
-| `45` | Query track info (disc; track) | bcd, num(1..99) | ○ no unit on the bus | – |
+| `45` | Query track info (disc; track; 0 = the track being played) | bcd, num(0..99) | ○ no unit on the bus | – |
 | `46` | Query slave disc memo (disc) | bcd | ○ no unit on the bus | – |
 | `47` | Unknown | – | ○ no unit on the bus | – |
 | `48` | Query enhanced disc memo (disc) | bcd | ○ no unit on the bus | – |
@@ -252,6 +252,11 @@ What was compared: the command tables published at [hifi-remote.com](https://www
 | `25` | Time update on | – | ○ no unit on the bus | – |
 | `26` | Time update off | – | ○ no unit on the bus | – |
 | `28` | Variable-length disc info (unknown parameters; pclk-mn10: 28 00) | raw | ○ no unit on the bus | – |
+| `29` | Unknown (mdslink: no reply) | – | ○ no unit on the bus | – |
+| `2A` | Unknown (mdslink) | – | ○ no unit on the bus | – |
+| `2B` | Unknown (mdslink) | – | ○ no unit on the bus | – |
+| `2C` | Unknown (mdslink) | – | ○ no unit on the bus | – |
+| `2D` | Unknown (mdslink) | – | ○ no unit on the bus | – |
 | `2E` | Power on | – | ○ no unit on the bus | – |
 | `2F` | Power off | – | ○ no unit on the bus | – |
 | `32` | Divide | – | ○ no unit on the bus ⚠ | – |
@@ -274,6 +279,7 @@ What was compared: the command tables published at [hifi-remote.com](https://www
 | `57` | Unknown info request (pclk-mn10: 57 00 00) | raw | ○ no unit on the bus | – |
 | `58` | Query disc name (disc) | num(1..99), lit(00) | ○ no unit on the bus | – |
 | `5A` | Query track name (track) | num(1..99), lit(00) | ○ no unit on the bus | – |
+| `5C` | Unknown (mdslink: 5C 00 01 is answered by 4C) | raw | ○ no unit on the bus | – |
 | `6A` | Query device name | – | ○ no unit on the bus | – |
 | `72` | Query record date (track) | num(1..99) | ○ no unit on the bus | – |
 | `76` | Combine track a+b (disc; track, unidentified) | num(1..99), num(1..99) | ○ no unit on the bus ⚠ | – |
@@ -288,6 +294,7 @@ What was compared: the command tables published at [hifi-remote.com](https://www
 | `99` | Write disc text, more (block > 1; 16 chars) | num(2..255), txt(16) | ○ no unit on the bus ⚠ | – |
 | `9A` | Write track text (track; 14 chars) | num(1..99), lit(00), lit(00), txt(14) | ○ no unit on the bus ⚠ | – |
 | `9B` | Write track text, more (block > 1; 16 chars) | num(2..255), txt(16) | ○ no unit on the bus ⚠ | – |
+| `B2` | Unknown (mdslink: no reply) | raw | ○ no unit on the bus | – |
 | `C0` | Forced remote-control mode (pclk-mn10): locks the deck into the given function until reboot | hex | ○ no unit on the bus ⚠ | – |
 
 ⚠ = audible, destructive or changes the setup of the system: the interface asks for confirmation.

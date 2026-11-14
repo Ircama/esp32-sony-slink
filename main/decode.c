@@ -422,7 +422,7 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x00: n = snprintf(bd, sizeof bd, "play"); break;
             case 0x01: n = snprintf(bd, sizeof bd, "stop"); break;
             case 0x02: n = snprintf(bd, sizeof bd, "pause"); break;
-            case 0x03: n = snprintf(bd, sizeof bd, "toggle pause"); break;
+            case 0x03: n = snprintf(bd, sizeof bd, "toggle pause (pause cue: the first press pauses, the second plays the track)"); break;
             case 0x04: n = md ? snprintf(bd, sizeof bd, "eject") : 0; break;
             case 0x07: n = md ? snprintf(bd, sizeof bd, "record") : 0; break;
             case 0x08: n = snprintf(bd, sizeof bd, "next track"); break;
@@ -442,6 +442,10 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x24: n = md ? snprintf(bd, sizeof bd, "auto pause ON") : snprintf(bd, sizeof bd, "report start of tracks"); break;
             case 0x25: n = snprintf(bd, sizeof bd, "verbose status ON (every second)"); break;
             case 0x26: n = snprintf(bd, sizeof bd, "verbose status OFF"); break;
+            /* Sony MD recorders (William Hollingworth, MDS-JB920): commands that answer but whose function is unknown */
+            case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: n = md ? snprintf(bd, sizeof bd, "unknown MD command (mdslink: no reply)") : 0; break;
+            case 0x5C: n = md ? snprintf(bd, sizeof bd, "unknown MD command (mdslink: 5C 00 01 is answered by 4C)") : 0; break;
+            case 0xB2: n = md ? snprintf(bd, sizeof bd, "unknown MD command (mdslink: no reply)") : 0; break;
             case 0x2E: n = snprintf(bd, sizeof bd, "power ON"); break;
             case 0x2F: n = snprintf(bd, sizeof bd, "power OFF"); break;
             case 0x40: n = md ? snprintf(bd, sizeof bd, "erase track") : (len > 2 ? snprintf(bd, sizeof bd, "get memo of disc %u", cd_disc(d[2])) : 0); break;
@@ -482,7 +486,7 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0xE0: case 0xE1: case 0xE2: case 0xE3: case 0xE4: case 0xE5: case 0xE6: case 0xE7: case 0xE8:
                 n = md ? 0 : snprintf(bd, sizeof bd, "IR remote code over the bus (legacy Linux driver flag)"); break;
             case 0x44: n = len > 2 ? snprintf(bd, sizeof bd, "get info of disc %u (201 = current)", cd_disc(d[2])) : 0; break;
-            case 0x45: n = len > 3 ? snprintf(bd, sizeof bd, "get length of disc %u track %u", cd_disc(d[2]), bcd(d[3])) : 0; break;
+            case 0x45: n = len > 3 ? (d[3] == 0 ? snprintf(bd, sizeof bd, "get length of the current track of disc %u (track 00 = the one playing)", cd_disc(d[2])) : snprintf(bd, sizeof bd, "get length of disc %u track %u", cd_disc(d[2]), bcd(d[3]))) : 0; break;
             case 0x48: n = len > 2 ? snprintf(bd, sizeof bd, "get memo2 of disc %u", cd_disc(d[2])) : 0; break;
             case 0x50: n = len > 2 ? snprintf(bd, sizeof bd, "play disc %u track %u", cd_disc(d[2]), len > 3 ? bcd(d[3]) : 1) : 0; break;
             case 0x51: n = len > 2 ? snprintf(bd, sizeof bd, "cue disc %u track %u", cd_disc(d[2]), len > 3 ? bcd(d[3]) : 1) : 0; break;
@@ -506,14 +510,14 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x02: n = snprintf(bd, sizeof bd, "paused"); break;
             case 0x04: n = md ? snprintf(bd, sizeof bd, "recording") : 0; break;
             case 0x03: n = snprintf(bd, sizeof bd, "TOC updated (also after eject)"); break;
-            case 0x05: n = md ? snprintf(bd, sizeof bd, "ignored") : snprintf(bd, sizeof bd, "no disc (or disc loaded backwards)"); break;
+            case 0x05: n = md ? snprintf(bd, sizeof bd, "eject / ignored") : snprintf(bd, sizeof bd, "no disc (or disc loaded backwards)"); break;
             case 0x06: n = snprintf(bd, sizeof bd, md ? "moving" : "unloading disc"); break;
             case 0x07: n = md ? snprintf(bd, sizeof bd, "record pause") : 0; break;
             case 0x08: n = snprintf(bd, sizeof bd, "ready (TOC read)"); break;
             case 0x09: n = snprintf(bd, sizeof bd, "start of track"); break;
             case 0x0C: n = snprintf(bd, sizeof bd, "about 30 s left on track"); break;
             case 0x0E: n = snprintf(bd, sizeof bd, "already done / unavailable"); break;
-            case 0x0F: n = snprintf(bd, sizeof bd, "error"); break;
+            case 0x0F: n = snprintf(bd, sizeof bd, "error (bad command)"); break;
             case 0x10: n = snprintf(bd, sizeof bd, "no memo"); break;
             case 0x11: n = snprintf(bd, sizeof bd, "no delete file"); break;
             case 0x12: case 0x13: n = snprintf(bd, sizeof bd, "no group"); break;
@@ -544,10 +548,11 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x48: if (len > 5) { ascii(d + 5, len - 5, t, sizeof t); n = snprintf(bd, sizeof bd, "%s of disc %u: \"%s\"", d[4] == 0 ? "memo" : "CD Text", cd_disc(d[2]), t); } break;
             case 0x49: if (len > 3) { ascii(d + 3, len - 3, t, sizeof t); n = snprintf(bd, sizeof bd, "memo/CD Text part %u: \"%s\"", d[2], t); } break;
             case 0x4A: if (len > 5 && !md) { ascii(d + 5, len - 5, t, sizeof t); n = snprintf(bd, sizeof bd, "CD Text title of track %u: \"%s\"", bcd(d[2]), t); } break;
+            case 0x4C: n = md ? snprintf(bd, sizeof bd, "answer to 5C (unknown, mdslink)") : 0; break;
             case 0x4B: if (len > 3 && !md) { ascii(d + 3, len - 3, t, sizeof t); n = snprintf(bd, sizeof bd, "CD Text title part %u: \"%s\"", d[2], t); } break;
             case 0x50: n = len > 5 ? snprintf(bd, sizeof bd, "track info: disc %u track %u (%u:%02u)", cd_disc(d[2]), md ? d[3] : bcd(d[3]), bcd(d[4]), bcd(d[5])) : 0; break;
             case 0x51: n = len > 5 ? snprintf(bd, sizeof bd, "status: track %u index %u time %u:%02u", bcd(d[2]), d[3], bcd(d[4]), bcd(d[5])) : 0; break;
-            case 0x52: n = len > 2 ? snprintf(bd, sizeof bd, "TOC read for disc %u", cd_disc(d[2])) : 0; break;
+            case 0x52: n = len > 2 ? snprintf(bd, sizeof bd, "TOC read for disc %u (the front panel shows its track/time/memo)", cd_disc(d[2])) : 0; break;
             case 0x53: n = len > 2 ? snprintf(bd, sizeof bd, "no such disc %u", cd_disc(d[2])) : 0; break;
             case 0x54: n = md ? (len > 4 ? snprintf(bd, sizeof bd, "remaining time of disc %u: %u:%02u", d[2], bcd(d[3]), bcd(d[4])) : 0) : (len > 2 ? snprintf(bd, sizeof bd, "loading disc %u", cd_disc(d[2])) : 0); break;
             case 0x55: n = md ? 0 : (len > 2 ? snprintf(bd, sizeof bd, "disc %u has no memo", cd_disc(d[2])) : 0); break;
@@ -560,7 +565,7 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x61:
                 if (len > 3 && md) n = snprintf(bd, sizeof bd, "capacity %u disc(s), model id %02X", d[2], d[3]);
                 else if (len > 3) n = snprintf(bd, sizeof bd, "capacity: %s (%02X), features %02X", d[2] == 0x01 ? "1 disc" : d[2] == 0x05 ? "5 discs" : d[2] == 0x64 ? "300 discs" :
-                                               d[2] == 0xC8 ? "400 discs" : d[2] == 0xFE ? "200 discs" : d[2] == 0 ? "100 discs" : "?", d[2], d[3]);
+                                               d[2] == 0x50 || d[2] == 0x51 ? "50(+1) discs (BigDave: speculated)" : d[2] == 0xC8 ? "400 discs" : d[2] == 0xFE ? "200 discs" : d[2] == 0 ? "100 discs" : "?", d[2], d[3]);
                 else if (len > 2) n = snprintf(bd, sizeof bd, "capacity code %02X", d[2]);
                 break;
             case 0x62: n = len > 5 ? snprintf(bd, sizeof bd, "track length: disc %u track %u = %u:%02u", cd_disc(d[2]), bcd(d[3]), bcd(d[4]), bcd(d[5])) : 0; break;

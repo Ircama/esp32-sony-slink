@@ -4,6 +4,10 @@ This compares the control the Sony **RM-TP501** touch-panel remote has over the 
 infrared codes for other brands (its second job) are out of scope. Sources: the RM-TP501 operating instructions (3-864-784-11(1), 1998;
 a local copy is kept outside the repository: it is Sony's copyrighted document), the public Sony DSP/Control-A1 tables and the other sites listed at the end.
 
+**Reference remotes.** The Sony touch-panel remotes taken as the reference for the functions of this software are the **RM-TP501**, the 
+**RM-TP501E**, the **RM-TP502**, the **RM-TP503**, the **RM-TP504** and the **RM-TP1**. Only the RM-TP501 manual was available and analysed for this
+comparison; for the others nothing is claimed here beyond their being remotes of the same kind, so every function listed below is the RM-TP501's.
+
 ## How the RM-TP501 talks to the amplifier
 
 - The manual (p. 4): *"This unit is a bidirectional remote commander. Not only does it transmit infrared rays for operation of the receiver,
