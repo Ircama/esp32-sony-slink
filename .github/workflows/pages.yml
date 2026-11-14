@@ -1,6 +1,6 @@
 # Publishes the web portal in demo mode (simulated amplifier, no device needed) on GitHub Pages:
 #   https://<owner>.github.io/<repo>/
-# The files of main/web/ are copied as they are; only a one-line script is added to index.html to switch the demo on.
+# The files of main/web/ are copied as they are; only a one-line script is added to index.html to switch the demo on (with the emulated CD changer / MD recorder: Jukebox tab).
 name: Demo on GitHub Pages
 
 on:
@@ -30,8 +30,8 @@ jobs:
         run: |
           mkdir _site
           cp main/web/* _site/
-          sed -i '0,/<head>/s//<head>\n<script>window.SLINK_DEMO = true;<\/script>/' _site/index.html
-          grep -q 'SLINK_DEMO' _site/index.html
+          sed -i '0,/<head>/s//<head>\n<script>window.SLINK_DEMO = true; window.SLINK_DEMO_JB = true;<\/script>/' _site/index.html
+          grep -q 'SLINK_DEMO_JB' _site/index.html
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
