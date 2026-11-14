@@ -47,10 +47,11 @@ used for the tests.
 
 ## Fourth review: the S-Link gateway document, Crestron, the CDP-CX450 service manual, hifi-remote, Parallax, ginge (14 November 2026)
 
-Same method: every page read in full and compared with the decoder and the catalogue. **Not reachable:** the SourceForge message
-[398382](https://sourceforge.net/p/jukebox-control/mailman/message/398382/) (403 from the site, no copy in the Internet Archive); a summary of it was
-supplied (tools `rawslink`, `/dev/slink-a1`, `transl`, Perl scripts; `C8 2F`/`C8 2E`; `C8 62 15 80 00 00 33`; reverse engineering of the answer to `C0 0F`), but it was
-not checked against the original. The facts it carries were already in the project through the other messages of the same list (see `CODES_TO_TRY.md`).
+Same method: every page read in full and compared with the decoder and the catalogue. The SourceForge message
+[398382](https://sourceforge.net/p/jukebox-control/mailman/message/398382/) (Tramm Hudson, "Guide to Reverse Engineering Slink devices", 30 May 2000) answered 403 from the site, but its full text was later
+pasted by the user and checked: address byte `type(4) | direction(1) | id(3)` (9 CD, B MD, C amplifier), `C8 2F`/`C8 2E` power off/on, `C8 61`/`C9 61`/`CB 61` model information,
+`C8 62 15 80 00 00 33`, `C8 70 AA AV CC FF` (status requested with `C0 0F`), `CB 70` sound field / speakers, and the scan technique (`0F` = error, `0E` = already done).
+Everything is already decoded or documented (see `CODES_TO_TRY.md`); nothing to add to the firmware.
 
 | Source | What it is | Result |
 |---|---|---|
