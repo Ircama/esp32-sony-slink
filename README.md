@@ -84,7 +84,9 @@ Host → ESP (one line per command, case-insensitive):
 | `BLE ON\|OFF` | enable/disable **UART over BLE** (Nordic UART Service). **Saved in flash**: it persists after a reboot. Without an argument it shows the state |
 | `WEB ON\|OFF` | enable/disable the **web portal** (saved) |
 | `APP ON\|OFF` | enable/disable the **WiFi application interface**: TCP console (port 2323) and MQTT bridge with Home Assistant discovery (saved) |
-| `WIFI <ssid> [password]` / `WIFI CLEAR` | WiFi network (saved). With blanks use quotes: `WIFI "My home" "the password"`. WiFi turns on only if `WEB` or `APP` is ON |
+| `SLINKE ON\|OFF` | enable/disable the **Slink-e serial protocol on TCP** (port 2325, see [Slink-e protocol over TCP](#slink-e-protocol-over-tcp)); **off** by default (saved) |
+| `SLINKETX ON\|OFF` | let a connected Slink-e program **send** to the bus; **off** by default: the connection is then a read-only monitor (saved) |
+| `WIFI <ssid> [password]` / `WIFI CLEAR` | WiFi network (saved). With blanks use quotes: `WIFI "My home" "the password"`. WiFi turns on only if `WEB`, `APP` or `SLINKE` is ON |
 | `MQTT <mqtt://host[:port]> [user] [password]` / `MQTT CLEAR` | MQTT broker (saved; plain TCP only, no TLS) |
 | `HOSTNAME <name>` | host name and mDNS (`<name>.local`, default `slink`) |
 | `ECO ON\|OFF` | low-power profile (default **ON**, saved): WiFi in *max modem sleep* (wakes every 3 beacons, ~0.3 s), 20 MHz channel, 11 dBm TX power, CPU 40–80 MHz with automatic scaling. With OFF: minimum modem sleep, 20 dBm, CPU 160/240 MHz. No light sleep: the S-Link receiver needs interrupt latency in the microseconds. On ESP32-C6 (WiFi 6) an individual Target Wake Time agreement (500 ms interval) is also requested when the router supports it; not tried on a real board yet |
@@ -101,7 +103,7 @@ ESP → host:
 ## Interfaces: USB, BLE, WiFi, web portal
 
 A single command core (`cli.c`) and several transports: every interface sends text lines identical to those of the
-USB port and receives all the output (`RX ..`, `TX ..`, `OK`, `ERR ..`). The settings (`BLE`, `WEB`, `APP`, `ECO`, WiFi, MQTT,
+USB port and receives all the output (`RX ..`, `TX ..`, `OK`, `ERR ..`). The settings (`BLE`, `WEB`, `APP`, `SLINKE`, `SLINKETX`, `ECO`, WiFi, MQTT,
 host name) are stored in NVS and **persist**.
 
 | Interface | How to use it |
@@ -112,6 +114,7 @@ host name) are stored in NVS and **persist**.
 | **Jukebox tab** | appears only while a CD changer (`90`/`91`/`92`) or an MD recorder (`B0`) answers the probe `90 22` / `B0 22`: transport, disc and track lists, memos / CD Text / MD titles, groups and artists. Reading and transport are free; every write (memo, MD titles, artist names, erase track, power off) asks for confirmation. Untested on real units: none is attached to the author's bus. Open `?demo&jb` to see it with an emulated changer and recorder |
 | **Backup / restore** | Settings › Backup and restore saves one JSON file with the amplifier's configuration (input names, sound field, EQ, surround levels, speaker set-up, 2nd audio, 5.1; its tuner presets are stored for reference only, S-Link cannot write them), what the ESP32 keeps (settings, FM stations, favourites; passwords only if asked) and this browser's interface preferences; the file can be restored selectively. Volume, input and power state are never touched. Only writes verified on the STR-DA50ES are used (sound field, EQ, surround levels, 5.1); input names (`C0 88`), speaker sizes (`C3 53`) and the second audio source (`C0 52`) do not work on it and stay in the file for reference |
 | **Raw TCP** (`APP ON`) | `nc slink.local 2323`: same text protocol as USB (max 2 clients) |
+| **Slink-e protocol on TCP** (`SLINKE ON`) | the binary protocol of the Nirvis Slink-e interface on port 2325, for programs written for that device: see [below](#slink-e-protocol-over-tcp) |
 | **MQTT / Home Assistant** (`APP ON` + `MQTT ...`) | automatic discovery under `homeassistant/`; JSON state on `slink/<id>/state`, commands (any CLI line) on `slink/<id>/cmd`, availability on `slink/<id>/avail`. Entities: power, mute, input, sound field, volume (estimate), volume ±, FM frequency, station name, signal level |
 
 First start (WiFi is configured over USB or BLE):
@@ -122,7 +125,7 @@ WEB ON
 NET            # shows the address
 ```
 
-**Security.** The web portal is **HTTP only** (port 80, no HTTPS), and neither the portal nor the TCP console (2323) nor BLE has any authentication: use them only on a trusted network and do not forward ports from the router. The only configurable credentials are the WPA2/WPA3 WiFi password and the user/password
+**Security.** The web portal is **HTTP only** (port 80, no HTTPS), and neither the portal nor the TCP console (2323) nor the Slink-e port (2325) nor BLE has any authentication: use them only on a trusted network and do not forward ports from the router. The only configurable credentials are the WPA2/WPA3 WiFi password and the user/password
 of the MQTT broker (`mqtt://` only, no TLS).
 
 WiFi works only as a client (STA): with BLE active the access point is not stable. WiFi and BLE can be
@@ -163,6 +166,57 @@ Build notes: ESP-IDF 6.x (`mdns` and `mqtt` are managed components, downloaded b
 first build); partition table in `partitions.csv` (two app slots of 1.9 MB for the over-the-air update, flash 4 MB). After changing
 `sdkconfig.defaults` delete the generated `sdkconfig.esp32s3` / `sdkconfig.esp32c3` / `sdkconfig.esp32c6` to regenerate them
 (they are git-ignored).
+
+## Slink-e protocol over TCP
+
+The **Slink-e** (Nirvis Systems) was a PC ↔ S-Link interface with a binary serial protocol ([documented here](http://www.woudy.org/slinke/help/fp/Slinke/lowlevel/lowlevel.htm)).
+Programs written for it (the SlinkX control, Girder / MainLobby plug-ins, Linux tools ...) can use this device in its place: they open a TCP connection to
+**port 2325** instead of a serial port (on Windows a "COM port redirector" / "serial over network" driver turns a COM port into a TCP connection).
+
+Both functions are **disabled by default**, in Settings › Interfaces or from the console (saved in flash):
+
+| Setting | Command | Default | Effect |
+|---|---|---|---|
+| Slink-e protocol on TCP | `SLINKE ON\|OFF` | **off** | opens TCP port 2325 (max 2 clients; WiFi must be on). While off the port is closed |
+| Slink-e: allow sending to the bus | `SLINKETX ON\|OFF` | **off** | without it a connection only **receives** (read-only monitor): messages sent by the program are discarded. Turn it on to let the program control the system |
+
+There is no authentication (like the text console): use it only on a trusted network. The USB port cannot carry this protocol: it is the text console
+(USB Serial/JTAG), already used by the commands described above, so the binary protocol is offered over TCP only.
+
+**What is implemented** (S-Link port 0 is the bus of this device):
+
+| Slink-e | Bytes (hex) | Here |
+|---|---|---|
+| Port send | `0L b1 .. bL` (L = 1..30 bytes) | collected, sent as one frame (up to 24 bytes) at the *port send end*; the line must be free (`TX ... ; Slink-e` shows in the console) |
+| Port send end | `00` | sends the frame; no message ⇒ nothing happens |
+| Port receive / end | `0L b1 .. bL` then `00` | every frame seen on the bus, one *port receive* + one *port receive end* |
+| Receive error | `1F 80` | frame with a timing error or leftover bits |
+| Transmission timeout | `1F 81` | frame longer than 24 bytes, a message not finished within 2 s, or the line never idle: **critical**, resume state |
+| Disable / enable reception | `1F 02` / `1F 03` (port 0), `FF 02` / `FF 03` (all ports) | answered with the same two bytes; disabling does not stop sending |
+| Get version | `FF 0B` | `FF 0B 20` (2.0) |
+| Get serial number | `FF 0C` | `FF 0C` + 8 bytes (`00 00` + the WiFi MAC address) |
+| Save / load defaults | `FF 0E` / `FF 0F` | confirmed with the same bytes (nothing to save) |
+| Resume | `FF AA` | leaves the resume state |
+| Reset | `FF FF` | back to the starting state of the connection (no answer) |
+| Serial-port commands | set baud `DF 08 B` (B = 0..4), get baud `DF 09`, send to serial port `C L ...` | the baud rate is stored and reported (the TCP link has none); bytes sent to the serial port are echoed back, as on the original |
+| Illegal command | `<port> FF` | any command that does not exist here: critical, resume state (everything is ignored until `FF AA`) |
+
+**Not implemented:** the IR, parallel and the three extra S-Link ports of the original (this device has a single bus; messages to ports 1–3 are ignored)
+and the **S-Link bit mode** (`.. 1F 04 B data`, sending a number of bits that is not a multiple of 8: the hardware here sends whole bytes, the command is accepted and ignored).
+Frames are limited to 24 bytes by the bus driver.
+
+Example (Python): ask the amplifier for its status (`C0 0F`) and print what arrives. The same bytes in `SLINKETX ON` mode:
+
+```python
+import socket
+s = socket.create_connection(("slink.local", 2325))
+s.sendall(bytes([0x02, 0xC0, 0x0F, 0x00]))      # port send of 2 bytes (C0 0F), then port send end
+while True:
+    print(s.recv(64).hex(" "))                    # e.g. 07 c8 70 16 16 21 ff 00   (7 bytes of a frame, then the end marker)
+```
+
+The protocol was written from the published documentation only. It was exercised on a real ESP32-S3 with a script (version, serial number, enable/disable, baud, illegal command and resume,
+send with and without `SLINKETX`, a status request answered by the amplifier, too-long and unfinished messages), but not with a real Slink-e program (none was available).
 
 ## Firmware update over WiFi (OTA)
 
@@ -220,9 +274,10 @@ outgoing frames.
 - No active collision detection while transmitting (only "line ready" beforehand).
 - The amplifier's answers arrive as asynchronous `RX` lines.
 - The tuner answers only while the TUNER input is selected, and has no band-change or direct-preset-write command.
-- Web portal, TCP console and BLE are unauthenticated; the portal is HTTP only.
+- Web portal, TCP console, Slink-e port and BLE are unauthenticated; the portal is HTTP only.
 
 ## Documentation
+- [`docs/en/SOURCES.md`](docs/en/SOURCES.md): the sources read (also the Slink-e documentation used for the TCP protocol).
 - [`docs/en/WIRING.md`](docs/en/WIRING.md): hookup (MOSFET or direct), first test.
 - [`docs/en/ESP32-H2.md`](docs/en/ESP32-H2.md): the ESP32-H2 (no WiFi: USB serial + BLE only), what was checked about its power use, how to build it.
 - [`docs/en/INPUTS_AND_FRAMES.md`](docs/en/INPUTS_AND_FRAMES.md): inputs, format of all measured frames (radio, EQ, sound field, volume, power, mute), FM station list, calibration of the knob.

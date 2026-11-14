@@ -104,11 +104,22 @@ void cli_out(const char *fmt, ...)               /* the same output as the comma
     va_end(ap);
 }
 
+#define MAX_FHOOKS 2
+static cli_frame_cb_t s_fh[MAX_FHOOKS];
+int cli_frame_hook_add(cli_frame_cb_t fn)
+{
+    for (int i = 0; i < MAX_FHOOKS; i++) if (s_fh[i] == fn) return 0;
+    for (int i = 0; i < MAX_FHOOKS; i++) if (!s_fh[i]) { s_fh[i] = fn; return 0; }
+    return -1;
+}
+void cli_frame_hook_remove(cli_frame_cb_t fn) { for (int i = 0; i < MAX_FHOOKS; i++) if (s_fh[i] == fn) s_fh[i] = NULL; }
+
 static void rx_task(void *arg)
 {
     slink_frame_t f;
     for (;;) {
         if (!slink_receive(&f, portMAX_DELAY)) continue;
+        for (int i = 0; i < MAX_FHOOKS; i++) { cli_frame_cb_t h = s_fh[i]; if (h) h(&f); }
         char line[16 + 3 * SLINK_MAX_FRAME + 24 + 140];
         int n = snprintf(line, sizeof line, "RX");
         for (int i = 0; i < f.len; i++)
@@ -388,6 +399,7 @@ static void help(void)
         "  ECHO ON|OFF (now %s)   DECODE ON|OFF (now %s)   LOOPBACK ON|OFF (own frames as RX)" CRLF
         "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF
         "  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
+        "  SLINKE ON|OFF   SLINKETX ON|OFF   Slink-e serial protocol on TCP port 2325 (off by default); SLINKETX allows sending to the bus (saved)" CRLF
         "  ALLOFF             power off every Sony unit on the bus (CD 1-3, MD, tuner, then the amplifier): the remote's SYSTEM/STANDBY \"ALL OFF\"" CRLF
         "  ECO ON|OFF         low-power profile: WiFi max modem sleep, CPU 40-80 MHz, 11 dBm TX (default ON, saved)" CRLF
         "  WIFI <ssid> [pass] | WIFI CLEAR   MQTT <mqtt://host> [user] [pass] | MQTT CLEAR   HOSTNAME <name>   NET (status)" CRLF
@@ -1028,7 +1040,7 @@ static void handle_cmd(char *line)
         uint8_t b[4] = {TUNER_DEV, 0x51, (uint8_t)atoi(tok[1]), (uint8_t)atoi(tok[2])};
         do_send(b, 4);
     }
-    else if (!strcmp(c0, "BLE") || !strcmp(c0, "WEB") || !strcmp(c0, "APP") || !strcmp(c0, "WIFI") ||
+    else if (!strcmp(c0, "BLE") || !strcmp(c0, "WEB") || !strcmp(c0, "APP") || !strcmp(c0, "SLINKE") || !strcmp(c0, "SLINKETX") || !strcmp(c0, "WIFI") ||
              !strcmp(c0, "MQTT") || !strcmp(c0, "HOSTNAME") || !strcmp(c0, "NET") || !strcmp(c0, "ECO") ||
              !strcmp(c0, "VOLCFG") || !strcmp(c0, "UITITLE") || !strcmp(c0, "CFG") || !strcmp(c0, "WIFIPWR")) handle_net(raw, tok, nt);
     else if (!parse_hex_line(line)) out("ERR unknown command (try HELP)\r\n");
@@ -1061,7 +1073,7 @@ static void handle_net(char *raw, char **tok, int nt)
 {
     const char *c0 = tok[0];
 #if !SOC_WIFI_SUPPORTED
-    if (!strcmp(c0, "WIFI") || !strcmp(c0, "WEB") || !strcmp(c0, "APP") || !strcmp(c0, "MQTT") || !strcmp(c0, "HOSTNAME") || !strcmp(c0, "WIFIPWR")) {
+    if (!strcmp(c0, "WIFI") || !strcmp(c0, "WEB") || !strcmp(c0, "APP") || !strcmp(c0, "SLINKE") || !strcmp(c0, "SLINKETX") || !strcmp(c0, "MQTT") || !strcmp(c0, "HOSTNAME") || !strcmp(c0, "WIFIPWR")) {
         out("ERR not available: this chip (ESP32-H2) has no WiFi; use the USB serial port or BLE" CRLF);
         return;
     }
@@ -1084,6 +1096,18 @@ static void handle_net(char *raw, char **tok, int nt)
         out("OK %s %s (saved, persistent)" CRLF, c0, v ? "ON" : "OFF");
         if (v && flag != &g_set.ble && flag != &g_set.eco && !g_set.ssid[0]) out("NOTE no WiFi network set: WIFI <ssid> <password>" CRLF);
     }
+    else if (!strcmp(c0, "SLINKE") || !strcmp(c0, "SLINKETX")) {
+        bool tx = c0[6] == 'T'; bool *flag = tx ? &g_set.slinke_tx : &g_set.slinke;
+        const char *what = tx ? "Slink-e protocol: sending to the bus allowed (otherwise read-only monitor)" : "Slink-e serial protocol on TCP port 2325 (for programs written for the Nirvis Slink-e)";
+        if (nt < 2) { out("%s %s - %s. Usage: %s ON|OFF" CRLF, c0, *flag ? "ON" : "OFF", what, c0); return; }
+        if (!parse_onoff(tok[1], &v)) { out("ERR usage: %s ON|OFF" CRLF, c0); return; }
+        *flag = v;
+        settings_save();
+        net_apply();
+        out("OK %s %s (saved, persistent)" CRLF, c0, v ? "ON" : "OFF");
+        if (v && !tx && !g_set.ssid[0]) out("NOTE no WiFi network set: WIFI <ssid> <password>" CRLF);
+        if (v && !tx && !g_set.slinke_tx) out("NOTE read-only: SLINKETX ON lets the connected program send to the bus" CRLF);
+    }
     else if (!strcmp(c0, "WIFI")) {
         if (na >= 2 && !strcasecmp(av[1], "CLEAR")) {
             g_set.ssid[0] = 0; g_set.pass[0] = 0; settings_save(); net_apply();
@@ -1096,7 +1120,7 @@ static void handle_net(char *raw, char **tok, int nt)
             strncpy(g_set.pass, na > 2 ? av[2] : "", sizeof g_set.pass - 1); g_set.pass[sizeof g_set.pass - 1] = 0;
             settings_save(); net_apply();
             out("OK wifi \"%s\" saved%s" CRLF, g_set.ssid,
-                (g_set.web || g_set.app) ? " (connecting...)" : " (enable it with WEB ON or APP ON)");
+                NET_WANTED ? " (connecting...)" : " (enable it with WEB ON or APP ON)");
         } else {
             net_status(st, sizeof st);
             out("%s" CRLF "Usage: WIFI <ssid> [password] | WIFI CLEAR  (quote values with blanks)" CRLF, st);
@@ -1145,6 +1169,8 @@ static void handle_net(char *raw, char **tok, int nt)
             else if (!strcmp(k, "mqtt_pass") && strlen(vv) < sizeof g_set.mqtt_pass) strcpy(g_set.mqtt_pass, vv);
             else if (!strcmp(k, "title_app") && strlen(vv) < sizeof g_set.title_app) strcpy(g_set.title_app, vv);
             else if (!strcmp(k, "title_page") && strlen(vv) < sizeof g_set.title_page) strcpy(g_set.title_page, vv);
+            else if (!strcmp(k, "slinke")) g_set.slinke = n != 0;
+            else if (!strcmp(k, "slinke_tx")) g_set.slinke_tx = n != 0;
             else if (!strcmp(k, "ota_push")) g_set.ota_push = n != 0;
             else if (!strcmp(k, "ota_pull")) g_set.ota_pull = n != 0;
             else if (!strcmp(k, "ota_url") && strlen(vv) < sizeof g_set.ota_url) strcpy(g_set.ota_url, vv);
@@ -1164,6 +1190,7 @@ static void handle_net(char *raw, char **tok, int nt)
             out("CFG vol_up %d" CRLF "CFG vol_down %d" CRLF "CFG vol_margin %d" CRLF, (int)g_set.vol_up, (int)g_set.vol_down, (int)g_set.vol_margin);
             out("CFG host \"%s\"" CRLF "CFG ssid \"%s\"" CRLF "CFG mqtt_uri \"%s\"" CRLF "CFG mqtt_user \"%s\"" CRLF, g_set.host, g_set.ssid, g_set.mqtt_uri, g_set.mqtt_user);
             out("CFG title_app \"%s\"" CRLF "CFG title_page \"%s\"" CRLF, g_set.title_app, g_set.title_page);
+            out("CFG slinke %d" CRLF "CFG slinke_tx %d" CRLF, g_set.slinke, g_set.slinke_tx);
             out("CFG ota_url \"%s\"" CRLF "CFG ota_push %d" CRLF "CFG ota_pull %d" CRLF, g_set.ota_url, g_set.ota_push, g_set.ota_pull);
             if (pw) out("CFG pass \"%s\"" CRLF "CFG mqtt_pass \"%s\"" CRLF "CFG ota_pass \"%s\"" CRLF "CFG ota_token \"%s\"" CRLF, g_set.pass, g_set.mqtt_pass, g_set.ota_pass, g_set.ota_token);
             out("OK cfg end%s" CRLF, pw ? " (with passwords)" : "");

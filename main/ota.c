@@ -392,7 +392,7 @@ static void confirm_task(void *a)
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(2000));
         if (esp_timer_get_time() < 30LL * 1000000) continue;                       /* it must run for 30 s ... */
-        if (g_set.ssid[0] && (g_set.web || g_set.app) && !net_have_ip()) continue; /* ... and, when the network is in use, be on it */
+        if (g_set.ssid[0] && NET_WANTED && !net_have_ip()) continue; /* ... and, when the network is in use, be on it */
         const esp_partition_t *run = esp_ota_get_running_partition();
         esp_ota_img_states_t st;
         if (esp_ota_get_state_partition(run, &st) == ESP_OK && st == ESP_OTA_IMG_PENDING_VERIFY) {

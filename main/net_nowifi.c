@@ -60,6 +60,9 @@ int  web_clients(void) { return 0; }
 void tcp_srv_start(void) {}
 void tcp_srv_stop(void) {}
 int  tcp_srv_clients(void) { return 0; }
+void slinke_start(void) {}
+void slinke_stop(void) {}
+int  slinke_clients(void) { return 0; }
 void mqtt_bridge_start(void) {}
 void mqtt_bridge_stop(void) {}
 bool mqtt_bridge_running(void) { return false; }

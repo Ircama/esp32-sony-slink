@@ -27,9 +27,12 @@ typedef struct {
     bool ota_push;          /* firmware update: accept images sent from outside (POST /api/ota). OFF by default: nothing is installed unattended */
     bool ota_pull;          /* firmware update: allow the device to download an image, only when the user asks (OTA UPDATE / portal button). ON by default */
     char ota_pass[33];      /* firmware update: optional password for the push upload (POST /api/ota); empty = no password */
+    bool slinke;            /* Slink-e serial protocol on TCP port 2325 (programs written for the Nirvis Slink-e). OFF by default */
+    bool slinke_tx;         /* ... and they may send to the bus (otherwise the connection is a read-only monitor). OFF by default */
 } settings_t;
 
 extern settings_t g_set;
+#define NET_WANTED (g_set.web || g_set.app || g_set.slinke)   /* something that needs the WiFi is on */
 
 void settings_load(void);                 /* fills g_set from NVS (defaults if absent); NVS must be initialised */
 void settings_save(void);                 /* writes g_set to NVS */

@@ -1,6 +1,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdbool.h>
+#include "slink.h"
 
 /* Text protocol (see README). One command core, many transports:
  * USB Serial/JTAG, BLE Nordic UART, raw TCP, WebSocket (web portal), MQTT.
@@ -14,6 +15,11 @@ void cli_out(const char *fmt, ...) __attribute__((format(printf, 1, 2)));   /* p
 typedef void (*cli_sink_t)(const char *data, size_t len);
 int  cli_sink_add(cli_sink_t fn);       /* 0 ok, -1 full */
 void cli_sink_remove(cli_sink_t fn);
+
+/* Every frame received from the bus, as the console's receive task takes it (for the Slink-e protocol server). Must NOT block. */
+typedef void (*cli_frame_cb_t)(const slink_frame_t *f);
+int  cli_frame_hook_add(cli_frame_cb_t fn);      /* 0 ok, -1 full */
+void cli_frame_hook_remove(cli_frame_cb_t fn);
 
 /* Queue a command line for the (single) worker task. false = queue full or line too long. */
 bool cli_submit(const char *line);

@@ -230,12 +230,13 @@ void net_apply(void)
     power_apply();
     if (g_set.ble) ble_nus_start(); else ble_nus_stop();
 
-    bool want_wifi = (g_set.web || g_set.app) && g_set.ssid[0];
+    bool want_wifi = NET_WANTED && g_set.ssid[0];
     wifi_apply(want_wifi);
 
     bool up = want_wifi && s_have_ip;
     if (up && g_set.web) web_start(); else web_stop();
     if (up && g_set.app) tcp_srv_start(); else tcp_srv_stop();
+    if (up && g_set.slinke) slinke_start(); else slinke_stop();
 
     char snap[sizeof s_mqtt_applied];
     snprintf(snap, sizeof snap, "%s\n%s\n%s", g_set.mqtt_uri, g_set.mqtt_user, g_set.mqtt_pass);
@@ -254,7 +255,7 @@ void net_status(char *b, size_t n)
     size_t k = 0;
     #define P(...) do { if (k < n) k += (size_t)snprintf(b + k, n - k, __VA_ARGS__); } while (0)
     if (!g_set.ssid[0]) P("WIFI  no network set (WIFI <ssid> <password>)\r\n");
-    else if (!(g_set.web || g_set.app)) P("WIFI  \"%s\" saved, idle (turns on with WEB ON or APP ON)\r\n", g_set.ssid);
+    else if (!NET_WANTED) P("WIFI  \"%s\" saved, idle (turns on with WEB ON or APP ON)\r\n", g_set.ssid);
     else if (s_have_ip) {
         wifi_ap_record_t ap;
         int rssi = esp_wifi_sta_get_ap_info(&ap) == ESP_OK ? ap.rssi : 0;
@@ -271,6 +272,8 @@ void net_status(char *b, size_t n)
         if (g_set.mqtt_uri[0]) P(" (%s)", g_set.mqtt_uri);
         P("\r\n");
     } else P("APP   OFF\r\n");
+    if (g_set.slinke) P("SLKE  ON  Slink-e protocol on tcp port 2325, %d client(s), %s\r\n", slinke_clients(), g_set.slinke_tx ? "sending allowed" : "read-only (SLINKETX ON to allow sending)");
+    else P("SLKE  OFF\r\n");
     #undef P
     while (k >= 2 && b[k - 1] == '\n') { b[--k] = 0; if (k && b[k - 1] == '\r') b[--k] = 0; }   /* no trailing CRLF */
 }
@@ -295,7 +298,7 @@ static size_t net_json(char *b, size_t sz)
     size_t n = 0;
     #define P(...) do { if (n < sz) n += (size_t)snprintf(b + n, sz - n, __VA_ARGS__); } while (0)
     #define J(str) do { if (n < sz) n += jstr(b + n, sz - n, (str)); } while (0)
-    const char *wifi = !g_set.ssid[0] ? "none" : !(g_set.web || g_set.app) ? "idle" : s_have_ip ? "connected" : "connecting";
+    const char *wifi = !g_set.ssid[0] ? "none" : !NET_WANTED ? "idle" : s_have_ip ? "connected" : "connecting";
     wifi_ap_record_t ap;
     int rssi = s_have_ip && esp_wifi_sta_get_ap_info(&ap) == ESP_OK ? ap.rssi : 0;
     P("{\"t\":\"net\",\"ble\":%d,\"web\":%d,\"app\":%d,\"eco\":%d,\"bleConn\":%d,\"bleName\":", g_set.ble, g_set.web, g_set.app, g_set.eco, ble_nus_connected());
@@ -307,7 +310,7 @@ static size_t net_json(char *b, size_t sz)
     P(",\"host\":"); J(g_set.host);
     P(",\"mqtt\":"); J(g_set.mqtt_uri);
     P(",\"mqttUser\":"); J(g_set.mqtt_user);
-    P(",\"mqttOk\":%d,\"tcp\":%d}", mqtt_bridge_connected(), tcp_srv_clients());
+    P(",\"mqttOk\":%d,\"tcp\":%d,\"slke\":%d,\"slkeTx\":%d,\"slkeN\":%d}", mqtt_bridge_connected(), tcp_srv_clients(), g_set.slinke, g_set.slinke_tx, slinke_clients());
     #undef P
     #undef J
     return n < sz ? n : sz - 1;

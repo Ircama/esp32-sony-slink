@@ -775,6 +775,8 @@ body.hxon .hx{display:block}
           <div class="set"><div class="t"><b>UART su Bluetooth LE</b><span id="bleSub">Console seriale via Nordic UART Service</span></div><button class="sw" role="switch" aria-checked="false" id="swBle" aria-label="UART su BLE"></button></div>
           <div class="set"><div class="t"><b>Portale web</b><span>Questa pagina</span></div><button class="sw" role="switch" aria-checked="true" id="swWeb" aria-label="Portale web"></button></div>
           <div class="set"><div class="t"><b>Interfaccia applicativa WiFi</b><span id="appSub">Console TCP (porta 2323) e MQTT per Home Assistant</span></div><button class="sw" role="switch" aria-checked="false" id="swApp" aria-label="Interfaccia applicativa WiFi"></button></div>
+          <div class="set"><div class="t"><b>Protocollo Slink-e su TCP</b><span id="slkeSub">Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)</span></div><button class="sw" role="switch" aria-checked="false" id="swSlke" aria-label="Protocollo Slink-e su TCP"></button></div>
+          <div class="set"><div class="t"><b>Slink-e: consenti l’invio sul bus</b><span id="slkeTxSub">Spento: la connessione è un monitor di sola lettura</span></div><button class="sw" role="switch" aria-checked="false" id="swSlkeTx" aria-label="Slink-e: consenti l’invio sul bus"></button></div>
           <div class="set"><div class="t"><b>Risparmio energetico</b><span>WiFi in modem sleep massimo, CPU 40–80 MHz, potenza TX ridotta. Latenza dei comandi fino a ~0,3 s.</span></div><button class="sw" role="switch" aria-checked="true" id="swEco" aria-label="Risparmio energetico"></button></div>
           <p class="hint">Le impostazioni sono salvate nella memoria del dispositivo e restano dopo il riavvio.</p>
         </div>
@@ -1470,6 +1472,15 @@ const TRX = [
   ['Lettura del nome RDS in corso…', 'Reading the RDS name…', 'Lecture du nom RDS en cours…', 'RDS-Name wird gelesen…', 'Leyendo el nombre RDS…'],
   ['Massimizza', 'Maximise', 'Agrandir', 'Maximieren', 'Maximizar'],
   ['Riduci', 'Restore', 'Réduire', 'Verkleinern', 'Reducir'],
+  ['Protocollo Slink-e su TCP', 'Slink-e protocol over TCP', 'Protocole Slink-e sur TCP', 'Slink-e-Protokoll über TCP', 'Protocolo Slink-e sobre TCP'],
+  ['Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)', 'Port 2325, for programs written for the Slink-e (Nirvis)', 'Port 2325, pour les programmes écrits pour le Slink-e (Nirvis)', 'Port 2325, für Programme, die für den Slink-e (Nirvis) geschrieben wurden', 'Puerto 2325, para programas escritos para el Slink-e (Nirvis)'],
+  ['Slink-e: consenti l’invio sul bus', 'Slink-e: allow sending to the bus', 'Slink-e : autoriser l’envoi sur le bus', 'Slink-e: Senden auf den Bus erlauben', 'Slink-e: permitir el envío al bus'],
+  ['Spento: la connessione è un monitor di sola lettura', 'Off: the connection is a read-only monitor', 'Désactivé : la connexion est un moniteur en lecture seule', 'Aus: die Verbindung ist ein reiner Lesemonitor', 'Apagado: la conexión es un monitor de solo lectura'],
+  ['Acceso: il programma collegato può inviare comandi all’impianto', 'On: the connected program can send commands to the system', 'Activé : le programme connecté peut envoyer des commandes à l’installation', 'An: das verbundene Programm kann Befehle an die Anlage senden', 'Encendido: el programa conectado puede enviar comandos a la instalación'],
+  ['Attivo · porta 2325 · {n} client', 'On · port 2325 · {n} client(s)', 'Actif · port 2325 · {n} client(s)', 'Aktiv · Port 2325 · {n} Client(s)', 'Activo · puerto 2325 · {n} cliente(s)'],
+  ['il protocollo Slink-e', 'the Slink-e protocol', 'le protocole Slink-e', 'das Slink-e-Protokoll', 'el protocolo Slink-e'],
+  ["l'invio Slink-e", 'Slink-e sending', "l'envoi Slink-e", 'das Slink-e-Senden', 'el envío Slink-e'],
+  ['I programmi collegati con il protocollo Slink-e perderanno la connessione.', 'Programs connected with the Slink-e protocol will lose the connection.', 'Les programmes connectés avec le protocole Slink-e perdront la connexion.', 'Programme, die über das Slink-e-Protokoll verbunden sind, verlieren die Verbindung.', 'Los programas conectados con el protocolo Slink-e perderán la conexión.'],
   ['Controlla aggiornamenti', 'Check for updates', 'Rechercher des mises à jour', 'Nach Updates suchen', 'Buscar actualizaciones'],
   ['Controllo in corso…', 'Checking…', 'Vérification…', 'Prüfung läuft…', 'Comprobando…'],
   ['Dettagli', 'Details', 'Détails', 'Details', 'Detalles'],
@@ -2421,12 +2432,14 @@ const allUrls = n => [...new Set([realUrl(n), n.ip && 'http://' + n.ip + '/', n.
 function renderNet() {
   const n = S.net; if (!n) return;
   const set = (id, v) => { const e = $(id); e.setAttribute('aria-checked', !!v); };
-  set('#swBle', n.ble); set('#swWeb', n.web); set('#swApp', n.app); set('#swEco', n.eco);
+  set('#swBle', n.ble); set('#swWeb', n.web); set('#swApp', n.app); set('#swEco', n.eco); set('#swSlke', n.slke); set('#swSlkeTx', n.slkeTx);
+  $('#slkeSub').textContent = n.slke ? tr('Attivo · porta 2325 · {n} client', { n: n.slkeN || 0 }) : tr('Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)');
+  $('#slkeTxSub').textContent = n.slkeTx ? tr('Acceso: il programma collegato può inviare comandi all’impianto') : tr('Spento: la connessione è un monitor di sola lettura');
   $('#bleSub').textContent = n.ble ? (n.bleConn ? tr('Attivo · client connesso') : tr('Attivo · visibile come {n}', { n: n.bleName || 'S-Link' })) : tr('Console seriale via Nordic UART Service');
   $('#appSub').textContent = n.app ? tr('Attiva · TCP porta 2323 ({n} client) · MQTT {m}', { n: n.tcp, m: tr(n.mqtt ? (n.mqttOk ? 'connesso' : 'in connessione…') : 'non configurato') }) : tr('Console TCP (porta 2323) e MQTT per Home Assistant');
   const wifi = n.wifi === 'connected' ? tr('Connesso · {r} dBm', { r: n.rssi }) : n.wifi === 'connecting' ? tr('In connessione…') : n.wifi === 'idle' ? tr('Inattivo') : tr('Non configurato');
   $('#netKv').innerHTML = '<dt>WiFi</dt><dd>' + esc(n.ssid || '—') + ' · ' + wifi + '</dd><dt>' + tr('Indirizzo') + '</dt><dd>' + esc(n.ip || '—') + '</dd><dt>' + tr('Nome') + '</dt><dd>' + esc(n.dns || realHost(n)) + '</dd>';
-  $('#accessKv').innerHTML = '<dt>Web</dt><dd>' + allUrls(n).map(esc).join('<br>') + '</dd><dt>TCP</dt><dd><code>nc ' + esc(n.dns || n.ip || realHost(n)) + ' 2323</code></dd><dt>BLE</dt><dd>' + esc(n.bleName || 'S-Link-xxxx') + ' · Nordic UART</dd>';
+  $('#accessKv').innerHTML = '<dt>Web</dt><dd>' + allUrls(n).map(esc).join('<br>') + '</dd><dt>TCP</dt><dd><code>nc ' + esc(n.dns || n.ip || realHost(n)) + ' 2323</code></dd><dt>BLE</dt><dd>' + esc(n.bleName || 'S-Link-xxxx') + ' · Nordic UART</dd>' + (n.slke ? '<dt>Slink-e</dt><dd><code>' + esc(n.dns || n.ip || realHost(n)) + ':2325</code></dd>' : '');
   const act = document.activeElement; if (!$('#wifiForm').contains(act)) { $('#fSsid').value = n.ssid || ''; $('#fHost').value = n.host || ''; }
   if (!$('#mqttForm').contains(act)) { $('#mUri').value = n.mqtt || ''; $('#mUser').value = n.mqttUser || ''; }
 }
@@ -2545,6 +2558,8 @@ function wire() {
   $('#dgLedSet').onclick = () => cmd('LED ' + (+$('#dgLed').value), { ack: true }); $('#dgLedOff').onclick = () => cmd('LED OFF', { ack: true });
   $('#dgLine').onclick = () => cmd('LINE');
   toggle('#swEco', 'ECO', 'Risparmio energetico'); toggle('#swBle', 'BLE', 'UART su BLE'); toggle('#swApp', 'APP', "l'interfaccia WiFi", 'MQTT e console TCP smetteranno di funzionare.');
+  toggle('#swSlke', 'SLINKE', 'il protocollo Slink-e', 'I programmi collegati con il protocollo Slink-e perderanno la connessione.');
+  toggle('#swSlkeTx', 'SLINKETX', "l'invio Slink-e");
   toggle('#swWeb', 'WEB', 'il portale web', 'Questa pagina si spegnerà. Potrai riattivarla con il comando WEB ON da USB, BLE o TCP.');
   const q = s => '"' + s.replace(/"/g, '') + '"';
   $('#wifiForm').onsubmit = async e => { e.preventDefault(); const s = $('#fSsid').value.trim(), p = $('#fPass').value, h = $('#fHost').value.trim();

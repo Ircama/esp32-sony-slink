@@ -25,6 +25,7 @@ void web_push(const char *json, size_t n);  /* queue a JSON text frame for every
 int  web_clients(void);                     /* WebSocket clients connected now */
 size_t stats_json(char *buf, size_t sz);    /* {"t":"stats",...}: device statistics, read on request (stats.c) */
 
+#include "slinke.h"
 void tcp_srv_start(void);
 void tcp_srv_stop(void);
 int  tcp_srv_clients(void);
