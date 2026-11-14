@@ -988,8 +988,8 @@
         /* ── Phone: the index opens as an overlay from the left edge ── */
         #toc-edge, #toc-backdrop { display: none; }
         @media (max-width: 767.98px) {
-            #toc-edge { display: block; position: fixed; left: 0; top: 52px; bottom: 0; width: 24px; z-index: 900; touch-action: pan-y; }
-            #toc-edge::after { content: ''; position: absolute; left: 0; top: 50%; width: 5px; height: 56px; margin-top: -28px; border-radius: 0 4px 4px 0; background: var(--va, #e1b66a); opacity: .55; }
+            #toc-edge { display: block; position: fixed; left: 0; top: 52px; bottom: 0; width: 36px; z-index: 900; touch-action: pan-y; }
+            #toc-edge::after { content: ''; position: absolute; left: 0; top: 50%; width: 14px; height: 84px; margin-top: -42px; border-radius: 0 9px 9px 0; background: var(--va, #e1b66a); opacity: .7; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
             #toc-backdrop { position: fixed; inset: 0; z-index: 1100; background: rgba(0, 0, 0, .4); }
             body.toc-open #toc-backdrop { display: block; }
             body.toc-open #toc-edge { display: none; }

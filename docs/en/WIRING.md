@@ -7,7 +7,90 @@ ESP32-S3 (same code for ESP32-C3 Super Mini).
 The jack on the back, marked **S-LINK / CONTROL A1 (II)**, is a **3.5 mm mono jack** (tip = signal, sleeve = ground). The bus is single-wire,
 bidirectional, open-collector with a pull-up inside the amplifier (~5 V idle on the STR-DA50ES). Two ways to connect it:
 
+```mermaid
+flowchart LR
+    subgraph PHONE["Phone / PC / Home Assistant"]
+        direction TB
+        WEB["Web portal<br/>http://slink.local/"]
+        MQ["MQTT · TCP 2323<br/>BLE · USB serial"]
+    end
+
+    subgraph ESP["ESP32-S3<br/>(firmware + web portal)"]
+        direction TB
+        FW["S-Link decoder<br/>and command core"]
+        GPIO["GPIO8<br/>open-drain"]
+    end
+
+    Q1["Q1 · BSS138<br/>N-channel MOSFET<br/>level shifter"]
+
+    subgraph SONY["Sony STR-DA50ES"]
+        direction TB
+        JACK["S-LINK / CONTROL A1<br/>3.5 mm mono jack<br/>one wire, ~5 V idle"]
+    end
+
+    WEB ---|"WiFi"| FW
+    MQ ---|"WiFi / BLE / USB"| FW
+    FW --- GPIO
+    GPIO ---|"3.3 V logic"| Q1
+    Q1 ---|"5 V bus"| JACK
+
+    classDef client fill:#e3f2fd,stroke:#1976d2,color:#222
+    classDef esp fill:#fff2cc,stroke:#b38f00,color:#222
+    classDef mosfet fill:#e8f5e9,stroke:#388e3c,color:#222
+    classDef sony fill:#f3e5f5,stroke:#7b1fa2,color:#222
+    class WEB,MQ client
+    class FW,GPIO esp
+    class Q1 mosfet
+    class JACK sony
+```
+
 **A. ESP32 (3.3 V GPIO): one N-channel MOSFET** (e.g. BSS138), bidirectional and non-inverting (0 V on the ESP32 is 0 V on the Sony and vice versa):
+
+```mermaid
+flowchart LR
+    subgraph ESP["ESP32-S3"]
+        direction TB
+        V33["+3.3 V"]
+        GPIO["GPIO8<br/>Open-drain · PAD ODPU<br/>Internal pull-up to +3.3 V"]
+        GND["GND"]
+    end
+
+    subgraph MOS["Q1 · BSS138<br/>N-channel MOSFET"]
+        direction TB
+        G["G · Gate"]
+        S["S · Source"]
+        D["D · Drain"]
+    end
+
+    subgraph SONY["Sony amplifier"]
+        direction TB
+        TIP["3.5 mm JACK · TIP<br/>S-LINK / CONTROL A1<br/>Idle ≈ +5 V<br/>Internal amplifier pull-up"]
+        SLEEVE["3.5 mm JACK · SLEEVE<br/>GND"]
+    end
+
+    V33 ---|"Direct connection"| G
+    GPIO ---|"Direct connection"| S
+    D ---|"Direct connection"| TIP
+    GND ---|"Common ground"| SLEEVE
+
+    classDef supply fill:#fff2cc,stroke:#b38f00,color:#222
+    classDef gpio fill:#e3f2fd,stroke:#1976d2,color:#222
+    classDef mosfet fill:#e8f5e9,stroke:#388e3c,color:#222
+    classDef sony fill:#f3e5f5,stroke:#7b1fa2,color:#222
+
+    class V33 supply
+    class GPIO,GND gpio
+    class G,S,D mosfet
+    class TIP,SLEEVE sony
+```
+
+How the single MOSFET passes the bus in both directions (the gate is held at 3.3 V, so the transistor conducts as soon as the source goes below it):
+
+| Situation | What happens | Level on the ESP32 / on the Sony |
+|---|---|---|
+| Idle | nobody pulls: the transistor is off (V<sub>GS</sub> = 0); each side sits at its own pull-up | 3.3 V / ≈ 5 V |
+| The ESP32 sends a mark | the GPIO pulls the source low: V<sub>GS</sub> = 3.3 V, the transistor conducts and drags the drain (the bus) low | 0 V / 0 V |
+| The amplifier (or another device) pulls the bus low | the body diode pulls the source low, V<sub>GS</sub> rises, the transistor conducts: the ESP32 sees the mark | 0 V / 0 V |
 
 | MOSFET | Connected to |
 |---|---|
@@ -16,6 +99,34 @@ bidirectional, open-collector with a pull-up inside the amplifier (~5 V idle on 
 | Drain (D) | jack tip (S-Link); jack sleeve to GND |
 
 **B. 5 V TTL GPIO (not for a 3.3 V ESP32): direct, through 330 Ω**
+
+```mermaid
+flowchart LR
+    subgraph MCU["5 V TTL board"]
+        direction TB
+        IO["GPIO (S-Link)<br/>5 V logic"]
+        MGND["GND"]
+    end
+
+    R["R · 330 Ω<br/>series resistor"]
+
+    subgraph SONY["Sony amplifier"]
+        direction TB
+        TIP["3.5 mm JACK · TIP<br/>S-LINK / CONTROL A1<br/>Idle ≈ +5 V"]
+        SLEEVE["3.5 mm JACK · SLEEVE<br/>GND"]
+    end
+
+    IO --- R
+    R ---|"signal"| TIP
+    MGND ---|"Common ground"| SLEEVE
+
+    classDef gpio fill:#e3f2fd,stroke:#1976d2,color:#222
+    classDef part fill:#fff2cc,stroke:#b38f00,color:#222
+    classDef sony fill:#f3e5f5,stroke:#7b1fa2,color:#222
+    class IO,MGND gpio
+    class R part
+    class TIP,SLEEVE sony
+```
 
 ```
   Jack 3.5 mm mono                 GPIO 5 V

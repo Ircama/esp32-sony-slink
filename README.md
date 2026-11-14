@@ -1,8 +1,8 @@
 # ESP32 Sony S-Link / Control-A1 Controller
 
-Control and monitor Sony Hi-Fi gear (such as the STR-DA50ES) from your phone, PC, or smart home using an ESP32 and a single wire connected to the S-Link jack.
+A modern web application for comfortable, intuitive control of a **Sony STR-DA50ES** amplifier, designed to take the place of the **RM-TP501** remote. The whole web portal runs on an **ESP32-S3** that connects to the amplifier's **S-Link / Control-A1** jack with a single wire and one small N-channel MOSFET (see [`docs/en/WIRING.md`](docs/en/WIRING.md)).
 
-Written in C with ESP-IDF, this firmware interfaces with the Sony S-Link / Control-A1 bus, decodes bus traffic in real time, and exposes your devices through multiple interfaces:
+Beyond the amplifier, the firmware (written in C with ESP-IDF) implements the S-Link / Control-A1 protocol broadly: it decodes bus traffic in real time and handles the other device types on the bus, such as the tuner, CD players and changers and MiniDisc recorders (the Jukebox tab; those are implemented from published documentation and have not been tried on real units). Everything is exposed through several interfaces:
 
 - **Web Portal:** A modern, embedded web app for full device control, inspired by the Sony RM-TP501 remote (reference remotes: RM-TP501, RM-TP501E, RM-TP502, RM-TP503, RM-TP504 and RM-TP1).
 - **REST & WebSocket API:** For custom integrations and real-time state updates.
