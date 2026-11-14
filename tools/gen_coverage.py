@@ -1,4 +1,4 @@
-"""Generates docs/en/WEB_COVERAGE.md: which documented S-Link commands, firmware commands and S-Link replies the web interface
+"""Generates docs/WEB_COVERAGE.md: which documented S-Link commands, firmware commands and S-Link replies the web interface
 supports. The command table is the CATALOG in main/web/index.html (the same data drives the "Documented commands" panel of the
 Console tab), so the document cannot drift from the page:
 
@@ -115,7 +115,7 @@ w()
 w("What was compared: the command tables published at [hifi-remote.com](https://www.hifi-remote.com/sony/Sony_dsp.htm) "
   "(pages 192 amplifier, 193 tuner, 195 sound field/EQ, 144 CD player), [boehmel.de/slink.htm](https://www.boehmel.de/slink.htm) "
   "(MD, amplifier, tuner, surround), [Ircama/Sony_SLink](https://github.com/Ircama/Sony_SLink) and the Control-A1 reverse-engineering notes "
-  "listed in `docs/en/CODES_TO_TRY.md`; the commands of the firmware command line (`main/cli.c`); and the replies decoded by the firmware (`main/decode.c`).")
+  "listed in `docs/CODES_TO_TRY.md`; the commands of the firmware command line (`main/cli.c`); and the replies decoded by the firmware (`main/decode.c`).")
 w()
 w("## Summary")
 w()
@@ -170,7 +170,7 @@ for r in REPLIES:
 w()
 w("Replies that no unit on this bus sends (CD/MD) are decoded but have no state in the interface; the unit would have to be on the bus to be tried.")
 
-dst = os.path.join(root, "docs", "en", "WEB_COVERAGE.md")
+dst = os.path.join(root, "docs", "WEB_COVERAGE.md")
 os.makedirs(os.path.dirname(dst), exist_ok=True)
 open(dst, "w", encoding="utf-8", newline="\n").write(o.getvalue())
 sys.stdout.reconfigure(encoding="utf-8")

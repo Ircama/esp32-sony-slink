@@ -98,7 +98,7 @@ The sound field is **stored per input**: TUNER → `CB 70 1D 00 0C`, MD/DAT → 
 ## Format of the `CB` replies
 | Frame | Meaning |
 |---|---|
-| `CB 70 FF PP SS` | state: `FF` = sound field number (`00` = off); `PP` = sound field preset (0–4); `SS` = **speaker configuration** bitmap (`01` front small, `04` centre downgraded to small when the front is large, `08` no centre, `10` rear downgraded, `20` no rear, `40` no subwoofer), reported only with a field on. On the DA50ES `00 0C` = no centre speaker (source: hifi-remote Sony_dsp_203, see `docs/en/RM-TP501.md`) |
+| `CB 70 FF PP SS` | state: `FF` = sound field number (`00` = off); `PP` = sound field preset (0–4); `SS` = **speaker configuration** bitmap (`01` front small, `04` centre downgraded to small when the front is large, `08` no centre, `10` rear downgraded, `20` no rear, `40` no subwoofer), reported only with a field on. On the DA50ES `00 0C` = no centre speaker (source: hifi-remote Sony_dsp_203, see `docs/RM-TP501.md`) |
 | `CB 50 POS BAND FH FL G SL TY` | equaliser: position (0 front, 1 centre, 2 rear), band (0 bass, 1 mid, 2 treble), frequency `FH FL` in Hz, gain `G` (signed byte, dB), slope `SL` (0 narrow, 1 medium, 2 wide), `TY` = `01` reply to a query, `03` setting confirmation |
 | `CB cc VV TY` | parameter: `cc` = `40` rear level, `41` centre, `42` subwoofer, `43` rear balance, `46` dynamic range compression, `47` LFE mix; `VV` signed value; `TY` = `01` read, `03` setting confirmed (`02`/`00` appear after the ± keys, see below) |
 | `CB 0E` | not available (in the current state) |

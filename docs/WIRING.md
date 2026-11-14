@@ -136,8 +136,49 @@ flowchart LR
   └─────────────┘
 ```
 
-Powered from USB: nothing is taken from the jack. A 3.3 V ESP32 wired as in B (as the author did on the DA50ES, which works) is **outside the chip's
+The jack carries only the signal and ground: nothing is taken from it (see [Powering the board](#powering-the-board)). A 3.3 V ESP32 wired as in B (as the author did on the DA50ES, which works) is **outside the chip's
 specification** because of the 5 V idle level; prefer A (the MOSFET variant has not been measured on the author's bench).
+
+## Powering the board
+
+The board can be powered in two ways; both work with the S-Link wiring above.
+
+- **From USB**, with any 5 V supply or charger: the simplest solution, and the one used to flash the board.
+- **From the amplifier.** The author reports that the STR-DA50ES has a small **auxiliary transformer** whose output is about **12–16 V** and which feeds the **standby circuit**: it stays powered with the amplifier in standby, which is what the ESP32 needs to receive the "power on" command. A **step-down (buck) converter to 5 V** is required to feed the **ESP32-S3 Super Mini** module (its 5 V pin): never connect the 12–16 V directly to the module. Measure the real voltage on your unit before connecting anything.
+
+```mermaid
+flowchart LR
+    subgraph SONY["Sony STR-DA50ES"]
+        direction TB
+        TR["Auxiliary transformer<br/>≈ 12-16 V<br/>(feeds the standby circuit)"]
+    end
+
+    BUCK["Step-down converter<br/>12-16 V to 5 V"]
+
+    subgraph MOD["ESP32-S3 Super Mini"]
+        direction TB
+        V5["5 V pin"]
+        USB["USB-C port<br/>first programming"]
+    end
+
+    WIFI["WiFi<br/>firmware updates (OTA)"]
+
+    TR --> BUCK
+    BUCK --> V5
+    USB -.-|"first flash only"| V5
+    MOD -.- WIFI
+
+    classDef sony fill:#f3e5f5,stroke:#7b1fa2,color:#222
+    classDef part fill:#fff2cc,stroke:#b38f00,color:#222
+    classDef esp fill:#e3f2fd,stroke:#1976d2,color:#222
+    class TR sony
+    class BUCK part
+    class V5,USB,WIFI esp
+```
+
+**Safety.** The supply of the amplifier is connected to the mains: work inside it only if you know how to, with the unit unplugged, and protect the tap (e.g. a small fuse). Do not feed the module from the converter and from USB at the same time (the two 5 V sources would be tied together): when you connect the USB cable, disconnect the converter, or power the board from USB only.
+
+**Programming.** The module has a **USB** port, used for the **initial programming** (`pio run -e esp32s3 -t upload`, or the factory image of the release written with `esptool.py`: see the README). Once the firmware is installed, the module can be **updated over WiFi** (OTA), without opening the amplifier again: from the portal (Settings › Firmware update), with `OTA UPDATE`, or by pushing a `.bin` with `tools/ota_push.py` after `OTA PUSH ON` (see the README, *Firmware update over WiFi*).
 
 ## Verified in the field
 - With the direct 330 Ω wiring (B, on a 3.3 V ESP32) the STR-DA50ES **switched on** with `C0 2E` and replied

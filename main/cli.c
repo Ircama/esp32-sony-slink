@@ -659,7 +659,7 @@ static void handle_cmd(char *line)
                     slink_send(q, 4, 1);
                     vTaskDelay(pdMS_TO_TICKS(500));
                 }
-            out("OK EQ read (rear needs the sound field ON; band frequencies in docs/en/INPUTS_AND_FRAMES.md)" CRLF);
+            out("OK EQ read (rear needs the sound field ON; band frequencies in docs/INPUTS_AND_FRAMES.md)" CRLF);
         } else if (nt >= 5) {
             int p = !strcmp(tok[1], "F") || !strcmp(tok[1], "FRONT") ? 0 : (!strcmp(tok[1], "R") || !strcmp(tok[1], "REAR") ? 2 : -1);
             int b = !strcmp(tok[2], "BASS") ? 0 : (!strcmp(tok[2], "MID") ? 1 : (!strcmp(tok[2], "TREBLE") ? 2 : -1));
