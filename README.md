@@ -128,6 +128,8 @@ NET            # shows the address
 **Security.** The web portal is **HTTP only** (port 80, no HTTPS), and neither the portal nor the TCP console (2323) nor the Slink-e port (2325) nor BLE has any authentication: use them only on a trusted network and do not forward ports from the router. The only configurable credentials are the WPA2/WPA3 WiFi password and the user/password
 of the MQTT broker (`mqtt://` only, no TLS).
 
+**Tab bar on a phone** (Settings › Interface, kept in the device). When the tabs do not fit in portrait: *Compression* (checkbox, on by default) narrows the buttons first; then, according to the two switches (they exclude each other), the bar either **scrolls** sideways, or the last tabs move into an **Altro** (More) menu and are no longer in the bar (e.g. Settings and Help). With neither switch on, the buttons are always compressed. On wide screens the side column is unchanged.
+
 WiFi works only as a client (STA): with BLE active the access point is not stable. WiFi and BLE can be
 on together (ESP-IDF software coexistence).
 

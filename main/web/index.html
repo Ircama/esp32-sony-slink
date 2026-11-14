@@ -109,8 +109,15 @@ body.helpfs .helpf{position:fixed;inset:0;z-index:1000;width:100%!important;heig
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
   padding:0 8px env(safe-area-inset-bottom,0px);background:color-mix(in srgb,var(--surface) 92%,transparent);
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;gap:4px;
-  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain}   /* too many tabs: the strip scrolls sideways and "Altro" lists the hidden ones */
+  overflow:hidden;scrollbar-width:none;overscroll-behavior-x:contain}   /* too many tabs: according to Settings the strip scrolls sideways (data-mode=scroll) or the last tabs move into "Altro" (data-mode=more) */
 nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button.mv{display:none}                /* a tab that moved into the "Altro" menu is not in the strip any more */
+nav.tabs.meas #navMore{display:flex!important}  /* while measuring, "Altro" takes its place in the strip */
+@media(max-width:859px){
+  nav.tabs[data-mode="scroll"]{overflow-x:auto}
+  nav.tabs.cmp{gap:0}
+  nav.tabs.cmp button{flex:1 1 0;padding:0 1px;font-size:9.5px;letter-spacing:-.02em}   /* "Compressione": narrower buttons, down to the width of the label, before scrolling / "Altro" */
+}
 nav.tabs::before,nav.tabs::after{content:"";margin:auto}   /* centre the buttons when they fit; with overflow the strip starts at the left edge (justify-content:center would cut it) */
 nav.tabs button{flex:1 0 62px;max-width:120px;padding:0 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   font-size:11.5px;color:var(--text3);border-radius:14px;margin:6px 0;transition:.15s}
@@ -121,6 +128,7 @@ nav.tabs button[aria-selected="true"]{color:var(--accent);background:var(--accen
 nav.tabs button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 nav.tabs button#navMore{position:sticky;right:0;flex:0 0 auto;min-width:58px;background:var(--surface);box-shadow:-10px 0 10px -6px var(--surface)}
 nav.tabs button#navMore svg{fill:currentColor;stroke:none}
+.chk{width:22px;height:22px;accent-color:var(--accent);flex:none}
 #moreMenu{position:fixed;right:8px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 8px);z-index:40;min-width:200px;max-width:calc(100vw - 16px);max-height:60vh;overflow:auto;
   padding:6px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 8px 28px rgba(0,0,0,.28)}
 #moreMenu button{display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border-radius:10px;font-size:14px;color:var(--text);text-align:left;touch-action:manipulation}
@@ -846,6 +854,9 @@ body.hxon .hx{display:block}
           <div class="set"><div class="t"><b>Valori fissi del volume</b><span>I pulsanti Min, 1, 2.5… sotto la manopola</span></div><button class="sw" role="switch" aria-checked="true" id="uoVchips" aria-label="Valori fissi del volume"></button></div>
           <div class="set"><div class="t"><b>Scala della manopola</b><span>I controlli Lineare, Logaritmica, Fino al limite</span></div><button class="sw" role="switch" aria-checked="true" id="uoKmode" aria-label="Scala della manopola"></button></div>
           <div class="set" style="display:block"><div class="t"><b>Schede visibili</b><span>Impostazioni resta sempre visibile</span></div><div class="seg wrap" id="tabsSeg" style="margin-top:8px"></div></div>
+          <div class="set"><div class="t"><b>Barra delle schede: scorrimento</b><span>Su telefono le schede che non entrano si raggiungono scorrendo la barra di lato (esclude «Altro»)</span></div><button class="sw" role="switch" aria-checked="false" id="uoNavScroll" aria-label="Barra delle schede: scorrimento"></button></div>
+          <div class="set"><div class="t"><b>Barra delle schede: pulsante Altro</b><span>Su telefono le schede che non entrano passano nel menu Altro e non restano nella barra (esclude lo scorrimento)</span></div><button class="sw" role="switch" aria-checked="true" id="uoNavMore" aria-label="Barra delle schede: pulsante Altro"></button></div>
+          <div class="set"><div class="t"><b>Compressione</b><span>Restringe i pulsanti per far entrare più schede prima di ricorrere a scorrimento o Altro; senza nessuno dei due i pulsanti si comprimono sempre</span></div><input class="chk" type="checkbox" id="uoNavCmp" checked aria-label="Compressione"></div>
           <div class="set"><div class="t"><b>Personalizzazione delle schede</b><span>Abilita la possibilità di nascondere la visualizzazione di elementi grafici non utili</span></div><button class="sw" role="switch" aria-checked="false" id="uoHx" aria-label="Personalizzazione delle schede"></button></div>
           <div class="set"><div class="t"><b>Elementi nascosti</b><span id="hidCount"></span></div><button class="btn sm" id="hidReset">Ripristina</button></div>
         </div>
@@ -1496,6 +1507,12 @@ const TRX = [
   ["l'invio Slink-e", 'Slink-e sending', "l'envoi Slink-e", 'das Slink-e-Senden', 'el envío Slink-e'],
   ['I programmi collegati con il protocollo Slink-e perderanno la connessione.', 'Programs connected with the Slink-e protocol will lose the connection.', 'Les programmes connectés avec le protocole Slink-e perdront la connexion.', 'Programme, die über das Slink-e-Protokoll verbunden sind, verlieren die Verbindung.', 'Los programas conectados con el protocolo Slink-e perderán la conexión.'],
   ['Altro', 'More', 'Plus', 'Mehr', 'Más'],
+  ['Barra delle schede: scorrimento', 'Tab bar: scrolling', 'Barre d’onglets : défilement', 'Tab-Leiste: Scrollen', 'Barra de pestañas: desplazamiento'],
+  ['Su telefono le schede che non entrano si raggiungono scorrendo la barra di lato (esclude «Altro»)', 'On a phone, tabs that do not fit are reached by scrolling the bar sideways (excludes “More”)', 'Sur téléphone, les onglets qui ne tiennent pas s’atteignent en faisant défiler la barre (exclut « Plus »)', 'Auf dem Handy erreicht man Tabs, die nicht passen, durch seitliches Scrollen der Leiste (schließt „Mehr“ aus)', 'En el teléfono, las pestañas que no caben se alcanzan desplazando la barra (excluye «Más»)'],
+  ['Barra delle schede: pulsante Altro', 'Tab bar: More button', 'Barre d’onglets : bouton Plus', 'Tab-Leiste: Mehr-Schaltfläche', 'Barra de pestañas: botón Más'],
+  ['Su telefono le schede che non entrano passano nel menu Altro e non restano nella barra (esclude lo scorrimento)', 'On a phone, tabs that do not fit move into the More menu and are not left in the bar (excludes scrolling)', 'Sur téléphone, les onglets qui ne tiennent pas passent dans le menu Plus et ne restent pas dans la barre (exclut le défilement)', 'Auf dem Handy wandern Tabs, die nicht passen, ins Mehr-Menü und bleiben nicht in der Leiste (schließt Scrollen aus)', 'En el teléfono, las pestañas que no caben pasan al menú Más y no quedan en la barra (excluye el desplazamiento)'],
+  ['Compressione', 'Compression', 'Compression', 'Komprimierung', 'Compresión'],
+  ['Restringe i pulsanti per far entrare più schede prima di ricorrere a scorrimento o Altro; senza nessuno dei due i pulsanti si comprimono sempre', 'Narrows the buttons to fit more tabs before falling back to scrolling or More; with neither, the buttons are always compressed', 'Réduit les boutons pour y faire tenir plus d’onglets avant de passer au défilement ou à Plus ; sans l’un ni l’autre, les boutons sont toujours compressés', 'Verkleinert die Schaltflächen, damit mehr Tabs passen, bevor Scrollen oder Mehr greift; ohne beides werden sie immer komprimiert', 'Estrecha los botones para que quepan más pestañas antes de recurrir al desplazamiento o a Más; sin ninguno de los dos, los botones siempre se comprimen'],
   ['Altre sezioni', 'More sections', 'Autres sections', 'Weitere Bereiche', 'Más secciones'],
   ['Controlla aggiornamenti', 'Check for updates', 'Rechercher des mises à jour', 'Nach Updates suchen', 'Buscar actualizaciones'],
   ['Controllo in corso…', 'Checking…', 'Vérification…', 'Prüfung läuft…', 'Comprobando…'],
@@ -1745,7 +1762,7 @@ function srcActive(s) { return S.in === s.c || (s.alt && s.alt.includes(S.in)); 
 const maskLine = t => t.replace(/^(CFG (?:SET )?(?:pass|mqtt_pass|ota_pass|ota_token) ).*/i, '$1"***"').replace(/^(OTA (?:PASS|TOKEN) ).*/i, '$1"***"');      /* passwords never reach the console log */
 let ws = null, retry = 0, ackUntil = 0, lastRx = 0, loadedInfo = false, rdsAsked = 0, rdsNone = 0, sfSt = null;
 /* interface options (per browser) */
-const UIDEF = { allOff: 1, codes: 1, quick: 1, kmode: 1, vchips: 1, hx: 0, tabs: { home: 1, radio: 1, sound: 1, stats: 1, console: 1, jukebox: 1, help: 1 } };
+const UIDEF = { allOff: 1, codes: 1, quick: 1, kmode: 1, vchips: 1, hx: 0, navScroll: 0, navMore: 1, navCompress: 1, tabs: { home: 1, radio: 1, sound: 1, stats: 1, console: 1, jukebox: 1, help: 1 } };
 let UI = (() => { let o = {}; try { o = JSON.parse(store.get('ui', '{}')) || {}; } catch (e) {} return Object.assign({}, UIDEF, o, { tabs: Object.assign({}, UIDEF.tabs, o.tabs || {}) }); })();
 let HID = (() => { try { const a = JSON.parse(store.get('hid', '[]')); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
 let TITLE = { app: store.get('t_app', ''), page: store.get('t_page', '') };
@@ -2662,26 +2679,35 @@ function helpTheme() {
 /* Tab bar on a phone: the buttons scroll sideways; "Altro" (pinned at the right edge, only while the buttons do not fit) lists the tabs that are not fully visible */
 function navFit() {
   const nav = $('nav.tabs'), more = $('#navMore'); if (!nav || !more) return;
-  more.style.display = 'none';
-  const ovf = !matchMedia('(min-width: 860px)').matches && nav.scrollWidth > nav.clientWidth + 1;
-  more.style.display = '';
-  if (more.hidden === ovf) more.hidden = !ovf;                       /* written only when it changes (the observer below watches "hidden") */
-  if (!ovf) navMoreClose();
+  const wide = matchMedia('(min-width: 860px)').matches;
+  const mode = UI.navMore ? 'more' : UI.navScroll ? 'scroll' : 'none';
+  nav.dataset.mode = mode; nav.classList.toggle('cmp', !wide && (!!UI.navCompress || mode === 'none'));   /* no scroll and no "Altro": the buttons always compress */
+  const tabs = $$('nav.tabs button[data-tab]').filter(b => !b.hidden);
+  tabs.forEach(b => b.classList.remove('mv'));
+  let moved = 0;
+  if (!wide && mode === 'more' && nav.scrollWidth > nav.clientWidth + 1) {
+    nav.classList.add('meas');                                       /* with "Altro" in place, move tabs from the end until the rest fits */
+    for (let i = tabs.length - 1; i > 0 && nav.scrollWidth > nav.clientWidth + 1; i--) { tabs[i].classList.add('mv'); moved++; }
+    nav.classList.remove('meas');
+  }
+  if (more.hidden === (moved > 0)) more.hidden = moved === 0;        /* written only when it changes (the observer below watches "hidden") */
+  if (!moved) navMoreClose();
+  navMarkMore();
+}
+function navMarkMore() {                                             /* "Altro" looks selected while the current tab is in its menu */
+  const more = $('#navMore'), act = $('nav.tabs button[data-tab][aria-selected="true"]');
+  if (more) more.setAttribute('aria-selected', !!(act && act.classList.contains('mv')));
 }
 function navMoreClose() { const m = $('#moreMenu'); if (m && !m.hidden) { m.hidden = true; $('#navMore').setAttribute('aria-expanded', 'false'); } }
 function navReveal(n) {                                              /* the selected tab scrolls into the middle of the strip */
-  const nav = $('nav.tabs'), b = $('nav.tabs button[data-tab="' + n + '"]'); navMoreClose();
-  if (!nav || !b || nav.scrollWidth <= nav.clientWidth + 1 || matchMedia('(min-width: 860px)').matches) return;
+  const nav = $('nav.tabs'), b = $('nav.tabs button[data-tab="' + n + '"]'); navMoreClose(); navMarkMore();
+  if (!nav || !b || nav.dataset.mode !== 'scroll' || nav.scrollWidth <= nav.clientWidth + 1 || matchMedia('(min-width: 860px)').matches) return;
   nav.scrollTo({ left: Math.max(0, b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2), behavior: 'smooth' });
 }
 function navMoreToggle() {
-  const m = $('#moreMenu'), more = $('#navMore'), nav = $('nav.tabs');
+  const m = $('#moreMenu'), more = $('#navMore');
   if (!m.hidden) { navMoreClose(); return; }
-  const nr = nav.getBoundingClientRect(), edge = more.getBoundingClientRect().left;
-  const vis = $$('nav.tabs button[data-tab]').filter(b => !b.hidden);
-  let list = vis.filter(b => { const r = b.getBoundingClientRect(); return r.left < nr.left - 1 || r.right > edge + 1; });
-  if (!list.length) list = vis;
-  const act = $('nav.tabs button[aria-selected="true"]');
+  const list = $$('nav.tabs button[data-tab].mv'), act = $('nav.tabs button[data-tab][aria-selected="true"]');
   m.innerHTML = list.map(b => '<button type="button" role="menuitem" data-t="' + b.dataset.tab + '"' + (b === act ? ' aria-current="true"' : '') + '>' + b.innerHTML + '</button>').join('');
   $$('#moreMenu button').forEach(x => x.onclick = () => { showTab(x.dataset.t); });
   m.hidden = false; more.setAttribute('aria-expanded', 'true');
@@ -2695,6 +2721,8 @@ function navInit() {
   addEventListener('resize', fit);
   if (window.ResizeObserver) new ResizeObserver(fit).observe(nav);
   new MutationObserver(fit).observe(nav, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);      /* the labels change width when the fonts / translations arrive */
+  addEventListener('load', fit); setTimeout(fit, 1500);
   fit();
 }
 function showTab(n) {
@@ -3662,6 +3690,9 @@ function applyUI() {
   $('#uoAllOff').setAttribute('aria-checked', !!UI.allOff); $('#uoCodes').setAttribute('aria-checked', !!UI.codes); $('#uoQuick').setAttribute('aria-checked', !!UI.quick);
   $('#uoKmode').setAttribute('aria-checked', !!UI.kmode); $('#uoHx').setAttribute('aria-checked', !!UI.hx);
   $$('#tabsSeg button').forEach(b => b.setAttribute('aria-pressed', !!UI.tabs[b.dataset.t]));
+  $('#uoNavScroll').setAttribute('aria-checked', !!UI.navScroll); $('#uoNavMore').setAttribute('aria-checked', !!UI.navMore);
+  $('#uoNavCmp').checked = !!UI.navCompress; $('#uoNavCmp').disabled = !UI.navScroll && !UI.navMore;
+  navFit();
   const n = HID.length; $('#hidCount').textContent = n ? tr('{n} elementi nascosti', { n }) : tr('Nessun elemento nascosto');
   $('#hidReset').disabled = !n;
 }
@@ -3702,6 +3733,10 @@ function initUiOptions() {
   applyEdit();
   const sw = (id, key) => { $(id).onclick = () => { UI[key] = UI[key] ? 0 : 1; saveUI(); applyUI(); if (key === 'codes') render(); }; };
   sw('#uoAllOff', 'allOff'); sw('#uoCodes', 'codes'); sw('#uoQuick', 'quick'); sw('#uoKmode', 'kmode'); sw('#uoVchips', 'vchips'); sw('#uoHx', 'hx');
+  /* tab bar on a phone: scroll and "Altro" exclude each other; "Compressione" is tried first */
+  $('#uoNavScroll').onclick = () => { UI.navScroll = UI.navScroll ? 0 : 1; if (UI.navScroll) UI.navMore = 0; saveUI(); applyUI(); };
+  $('#uoNavMore').onclick = () => { UI.navMore = UI.navMore ? 0 : 1; if (UI.navMore) UI.navScroll = 0; saveUI(); applyUI(); };
+  $('#uoNavCmp').onchange = e => { UI.navCompress = e.target.checked ? 1 : 0; saveUI(); applyUI(); };
   $('#tabsSeg').innerHTML = TABS.map(t => '<button data-t="' + t[0] + '" aria-pressed="true">' + esc(tr(t[1])) + '</button>').join('');
   $$('#tabsSeg button').forEach(b => b.onclick = () => {
     const t = b.dataset.t, on = UI.tabs[t] ? 0 : 1;
