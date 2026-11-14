@@ -123,6 +123,8 @@ static int amp_cmd(const uint8_t *d, size_t n, char *o, size_t sz)
     case 0x52: return n > 2 ? snprintf(o, sz, "2nd audio %s", src_name(d[2])) : 0;
     case 0x6A: return snprintf(o, sz, "query device name");
     case 0x6B: return snprintf(o, sz, "query device info");
+    case 0xC7: return snprintf(o, sz, "query volume (pclk-mn10, PC-Link receivers; error on the DA50ES)");
+    case 0xC8: return n > 2 ? snprintf(o, sz, d[2] == 0 ? "mute (pclk-mn10; not tried)" : "set volume %u (pclk-mn10, PC-Link receivers; not tried)", d[2]) : 0;
     case 0x83: return n > 2 ? snprintf(o, sz, "input type %s", intype_name(d[2])) : 0;
     default:   return snprintf(o, sz, "cmd %02X", d[1]);
     }
@@ -466,7 +468,9 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x43: n = md ? (len > 2 ? snprintf(bd, sizeof bd, "combine with track %u", d[2]) : 0) : (len > 2 ? snprintf(bd, sizeof bd, "get disc list of group %u", bcd(d[2])) : 0); break;
             case 0x46: n = md ? snprintf(bd, sizeof bd, "split adjust") : (len > 2 ? snprintf(bd, sizeof bd, "get memo of disc %u in a slave changer", cd_disc(d[2])) : 0); break;
             case 0x4A: n = md ? 0 : (len > 2 ? snprintf(bd, sizeof bd, d[2] == 0 ? "get title of the current track (CD Text; older decks: BCD to hex)" : "get title of track %u (CD Text; older decks: BCD to hex)", bcd(d[2])) : 0); break;
-            case 0x54: n = md ? (len > 2 ? snprintf(bd, sizeof bd, "remaining time of disc %u", d[2]) : 0) : 0; break;
+            case 0x54: n = md ? (len > 2 ? snprintf(bd, sizeof bd, "remaining time of disc %u", d[2]) : 0)
+                                 : (len > 3 && d[2] == 0 && d[3] == 1 ? snprintf(bd, sizeof bd, "open tray (PC-Link HCD-J300 only, pclink-i2c; not verified on S-Link)") : 0); break;
+            case 0xC0: n = md && len > 2 ? snprintf(bd, sizeof bd, "force remote mode %02X (pclk-mn10; locks the recorder until reboot)", d[2]) : 0; break;
             case 0x58: n = md ? snprintf(bd, sizeof bd, "get disc name") : 0; break;
             case 0x5A: n = md ? (len > 2 ? snprintf(bd, sizeof bd, "get name of track %u", d[2]) : 0) : 0; break;
             case 0x63: n = md ? 0 : (len > 2 ? snprintf(bd, sizeof bd, "get bar code of disc %u", cd_disc(d[2])) : 0); break;
@@ -521,7 +525,7 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x08: n = snprintf(bd, sizeof bd, "ready (TOC read)"); break;
             case 0x09: n = snprintf(bd, sizeof bd, "start of track"); break;
             case 0x0C: n = snprintf(bd, sizeof bd, "about 30 s left on track"); break;
-            case 0x0E: n = snprintf(bd, sizeof bd, "already done / unavailable (Eigenheer: \"power is off\")"); break;
+            case 0x0E: n = snprintf(bd, sizeof bd, "already done / unavailable (Eigenheer: \"power is off\"; cdp-cx355: also a memo write on a CD TEXT disc)"); break;
             case 0x0F: n = snprintf(bd, sizeof bd, "error (bad command)"); break;
             case 0x10: n = snprintf(bd, sizeof bd, "no memo"); break;
             case 0x11: n = snprintf(bd, sizeof bd, "no delete file"); break;

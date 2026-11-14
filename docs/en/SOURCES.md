@@ -66,3 +66,12 @@ Everything is already decoded or documented (see `CODES_TO_TRY.md`); nothing to 
 
 What changed in the software: the text of reply `0E` and a decoder entry for the amplifier reply `62` (`C8 62 15 80 00 00 33` is shown as "status 62, not identified"; it never appears on the STR-DA50ES).
 
+## Fifth review: cdp-cx355, pclink-i2c, a Japanese SIRC page, the jukebox set_memo log (14 November 2026)
+
+| Source | What it is | Result |
+|---|---|---|
+| [jaikamat/cdp-cx355](https://github.com/jaikamat/cdp-cx355) | Arduino controller for a CDP-CX355 (disc 1-200 on `90`, 201-300 on `93`) | everything it uses was already decoded: disc BCD 1-99 and +54 for 100-200 (`9A`..`FE`), `00/01/02/08/09`, `2E/2F`, `50` disc+track, `40` title, `80` memo (13 bytes, space padded), `0F` status `98 70 00 SS 00 DD 00`, `25/26` timing frames `98 51`, replies `98 0E` (memo write refused on a CD TEXT disc: added to the decoder text), `98 14`, `98 52/58`, `98 0C`, `98 61 FE 6B`. It confirms that the memo is 13 characters |
+| [ukigumo1104, note.com](https://note.com/ukigumo1104/n/n81333e7ec999) | Sony **infrared** (SIRC) codes with an Arduino | not S-Link: nothing to add (IR timing 600 us unit, 12/15/20 bits) |
+| [Sir68k/pclink-i2c](https://github.com/Sir68k/pclink-i2c) | I2C bus of the HCD-J300 hi-fi system (PC-Link, not S-Link): `20 90 54 00 01` opens the CD tray, `B0` = MD board, replies broadcast to address 0 | `90 54 00 01` ("open tray") now has a decoder text, flagged as **PC-Link only, not verified on S-Link changers** (on S-Link `54` is the MD "remaining time" command and the CD reply "loading disc"); nothing is sent by the firmware or the web page |
+| pclk-mn10 `commands.json` (linked from pclink-i2c) | M-Crew PCLK-MN10 adaptor commands | already in the catalogue (second review); added to the decoder: amplifier `C0 C7` (query volume) and `C0 C8` (volume / mute), MD `B0 C0 xx` forced remote-control modes (it locks the recorder until reboot, so there is no button for it) |
+| Jukebox log (`90 80 41 <14 characters>` fails) | a Linux jukebox driver sending a 14-character memo with no padding | consistent with the 13-character memo of the CX355 (error / no write): the web page already sends 13 padded characters (`jbPad(t.slice(0,13),13)`) |
