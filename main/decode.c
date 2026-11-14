@@ -142,6 +142,11 @@ static int amp_reply(const uint8_t *d, size_t n, char *o, size_t sz)
     case 0x2F: return snprintf(o, sz, "power OFF");
     case 0x43: return n > 3 ? snprintf(o, sz, "input type %s (%02X)", intype_name(d[2]), d[3]) : 0;
     case 0x61: return snprintf(o, sz, "model/info %s", n > 2 ? "(raw)" : "");
+    case 0x62: {   /* seen as C8 62 15 80 00 00 33 on another amplifier (jukebox-control list); never on the STR-DA50ES */
+        char h[40] = ""; size_t k = 0;
+        for (size_t i = 2; i < n && k + 4 < sizeof h; i++) k += (size_t)snprintf(h + k, sizeof h - k, "%s%02X", i > 2 ? " " : "", d[i]);
+        return snprintf(o, sz, "status 62 (not identified, other amplifiers only): %s", h);
+    }
     case 0x6A: ascii(d + 2, n - 2, t, sizeof t); return snprintf(o, sz, "device name \"%s\"", t);
     case 0x6B: return snprintf(o, sz, "device info %02X (sent after the name; 02 on STR-DA50ES)", n > 2 ? d[2] : 0);
     case 0x1E: return snprintf(o, sz, "polling for an MD/CD player (followed by B0 22 / 90 22)");
@@ -516,7 +521,7 @@ size_t slink_decode(const uint8_t *d, size_t len, char *out, size_t out_sz)
             case 0x08: n = snprintf(bd, sizeof bd, "ready (TOC read)"); break;
             case 0x09: n = snprintf(bd, sizeof bd, "start of track"); break;
             case 0x0C: n = snprintf(bd, sizeof bd, "about 30 s left on track"); break;
-            case 0x0E: n = snprintf(bd, sizeof bd, "already done / unavailable"); break;
+            case 0x0E: n = snprintf(bd, sizeof bd, "already done / unavailable (Eigenheer: \"power is off\")"); break;
             case 0x0F: n = snprintf(bd, sizeof bd, "error (bad command)"); break;
             case 0x10: n = snprintf(bd, sizeof bd, "no memo"); break;
             case 0x11: n = snprintf(bd, sizeof bd, "no delete file"); break;
