@@ -41,7 +41,7 @@
 static SemaphoreHandle_t s_out_mtx;
 static uint8_t s_dev = CONFIG_SLINK_DEFAULT_DEVICE;
 static int s_repeat = 1;
-static volatile bool s_decode = true;   /* DECODE ON/OFF: annotate RX lines (default on) */
+static volatile bool s_decode = true;   /* DECODE ON/OFF: annotate RX and TX lines (default on) */
 /* last tuner status (C9 70 BB NN FL HH LL) and EQ readings (CB 50 ...), filled by rx_task */
 /* last preset data read by PRESETS: C1 4A -> frequency, C1 48 BB NN -> name (or C9 10 = none) */
 static struct { volatile uint8_t fl; volatile uint16_t f; volatile uint32_t seq, nm_seq; char name[10]; } s_pre;
@@ -180,6 +180,10 @@ static bool do_send(const uint8_t *d, size_t n)
         char line[8 + 3 * SLINK_MAX_FRAME];
         int k = snprintf(line, sizeof line, "TX");
         for (size_t i = 0; i < n; i++) k += snprintf(line + k, sizeof line - k, " %02X", d[i]);
+        if (s_decode && n >= 2) {                         /* same comment as on received frames (DECODE ON) */
+            char dec[120];
+            if (slink_decode(d, n, dec, sizeof dec) > 0) k += snprintf(line + k, sizeof line - k, "   ; %s", dec);
+        }
         out("%s\r\nOK\r\n", line);
     } else if (rc == -3) out("ERR line test active (BLINK OFF / LEVEL OFF first)\r\n");
     else if (rc == -2) out("ERR busy (line never idle)\r\n");
