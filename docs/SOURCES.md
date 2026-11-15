@@ -61,6 +61,13 @@ Read and set aside: nothing to add to the decoder.
 | [Sir68k/pclink-i2c](https://github.com/Sir68k/pclink-i2c) | I2C bus of the HCD-J300 hi-fi system (PC-Link): `20 90 54 00 01` opens the CD tray, `B0` = MD board | PC-Link, not S-Link. `90 54 00 01` ("open tray") has a decoder text flagged **PC-Link only, not verified on S-Link changers** (on S-Link `54` is the MD "remaining time" command and the CD reply "loading disc"); the firmware never sends it |
 | [ginge/sony_md_remote](https://github.com/ginge/sony_md_remote) | library for the wired *LCD remote control* port of portable MiniDisc players (MZ-R55, MZ-R70, MZ-R90) and the RK-TXT1 link | one wire with sync and tri-state handshaking, display text: a different protocol |
 
+## Protocols of the assistants
+
+| Source | What it is | Used for |
+|---|---|---|
+| [Model Context Protocol](https://modelcontextprotocol.io) (specification 2025-06-18) | the protocol AI assistants use to call tools and read resources | `tools/mcp_slink.py` (see [`MCP.md`](MCP.md)): lifecycle, tools, resources and subscriptions, prompts, stdio and Streamable HTTP |
+| Philips Hue API v1 and the SSDP discovery of Hue bridges | what Alexa and the Hue apps speak locally | the Hue emulation (`main/hue.c`) |
+
 ## Not readable
 
 | Source | Reason |

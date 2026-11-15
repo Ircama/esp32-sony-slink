@@ -166,6 +166,7 @@ host name) are stored in NVS and **persist**.
 | USB Serial/JTAG | always on, as before |
 | **BLE UART** (`BLE ON`) | Nordic UART Service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; the device advertises as `S-Link-XXXX`. Apps: nRF Toolbox, Serial Bluetooth Terminal, Web Bluetooth. The **portal itself** runs over it from <https://ircama.github.io/esp32-sony-slink/ble.html> (see [Bluetooth page](#the-portal-over-bluetooth-github-pages)) It is not authenticated: enable it only when needed |
 | **Web portal** (`WEB ON`) | `http://slink.local/` (or the IP: `NET`). Single page, light/dark theme, suited to phone and desktop; WebSocket `/ws` for commands and real-time state. Also REST: `GET /api/state`, `/api/presets`, `/api/stations`, `/api/favs`, `/api/stats` and `POST /api/cmd` (body = one command; the output comes over the WebSocket). A WebSocket client is registered when it sends its first frame |
+| **MCP server** (`tools/mcp_slink.py`, on a computer) | lets an AI assistant (Claude Desktop / Code ...) read and control the amplifier through the portal: tools for power, volume (capped), input, tuner, sound field, equaliser, resources and prompts. See [`docs/MCP.md`](docs/MCP.md) |
 | **Philips Hue** (`HUE ON`) | the amplifier as a dimmable light for Alexa and apps that speak the Hue v1 API: on-off = power, brightness = volume, capped. See [below](#philips-hue-alexa) |
 | **HTTPS** (`HTTPS ON`) | the same portal on `https://slink.local/` (port 443), trusted once the device's CA is installed on the phone / PC: needed to install the portal as an app on Android. See [below](#https-and-installing-the-app) |
 | **Jukebox tab** | appears only while a CD changer (`90`/`91`/`92`) or an MD recorder (`B0`) answers the probe `90 22` / `B0 22`: transport, disc and track lists, memos / CD Text / MD titles, groups and artists. Reading and transport are free; every write (memo, MD titles, artist names, erase track, power off) asks for confirmation. Untested on real units: none is attached to the author's bus. Open `?demo&jb` to see it with an emulated changer and recorder (the GitHub Pages demo always shows it) |
@@ -384,6 +385,7 @@ outgoing frames.
 
 ## Documentation
 - [`docs/SOURCES.md`](docs/SOURCES.md): the sources by topic (command tables, CD, MD, other implementations, the Slink-e documentation used for the TCP protocol).
+- [`docs/MCP.md`](docs/MCP.md): the MCP server for AI assistants (Claude Desktop / Code): setup, tools, resources, prompts, safety.
 - [`docs/WIRING.md`](docs/WIRING.md): hookup (MOSFET or direct), first test.
 - [`docs/ESP32-H2.md`](docs/ESP32-H2.md): the ESP32-H2 (no WiFi: USB serial + BLE only), what was checked about its power use, how to build it.
 - [`docs/INPUTS_AND_FRAMES.md`](docs/INPUTS_AND_FRAMES.md): inputs, format of all measured frames (radio, EQ, sound field, volume, power, mute), FM station list, calibration of the knob.
