@@ -358,7 +358,7 @@ outgoing frames.
 - Web portal, TCP console, Slink-e port and BLE are unauthenticated; the portal is HTTP, or HTTPS with the device's own CA (encrypted, still no login).
 
 ## Documentation
-- [`docs/SOURCES.md`](docs/SOURCES.md): the sources read (also the Slink-e documentation used for the TCP protocol).
+- [`docs/SOURCES.md`](docs/SOURCES.md): the sources by topic (command tables, CD, MD, other implementations, the Slink-e documentation used for the TCP protocol).
 - [`docs/WIRING.md`](docs/WIRING.md): hookup (MOSFET or direct), first test.
 - [`docs/ESP32-H2.md`](docs/ESP32-H2.md): the ESP32-H2 (no WiFi: USB serial + BLE only), what was checked about its power use, how to build it.
 - [`docs/INPUTS_AND_FRAMES.md`](docs/INPUTS_AND_FRAMES.md): inputs, format of all measured frames (radio, EQ, sound field, volume, power, mute), FM station list, calibration of the knob.

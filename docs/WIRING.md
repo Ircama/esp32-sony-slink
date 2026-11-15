@@ -128,14 +128,6 @@ flowchart LR
     class TIP,SLEEVE sony
 ```
 
-```
-  Jack 3.5 mm mono                 GPIO 5 V
-  ┌─────────────┐
-  │ TIP    ─────┼──[ 330 Ω ]──────── GPIO (S-Link)
-  │ SLEEVE ─────┼────────────────── GND
-  └─────────────┘
-```
-
 The jack carries only the signal and ground: nothing is taken from it (see [Powering the board](#powering-the-board)). A 3.3 V ESP32 wired as in B (as the author did on the DA50ES, which works) is **outside the chip's
 specification** because of the 5 V idle level; prefer A (the MOSFET variant has not been measured on the author's bench).
 
@@ -179,14 +171,6 @@ flowchart LR
 **Safety.** The supply of the amplifier is connected to the mains: work inside it only if you know how to, with the unit unplugged, and protect the tap (e.g. a small fuse). Do not feed the module from the converter and from USB at the same time (the two 5 V sources would be tied together): when you connect the USB cable, disconnect the converter, or power the board from USB only.
 
 **Programming.** The module has a **USB** port, used for the **initial programming** (`pio run -e esp32s3 -t upload`, or the factory image of the release written with `esptool.py`: see the README). Once the firmware is installed, the module can be **updated over WiFi** (OTA), without opening the amplifier again: from the portal (Settings › Firmware update), with `OTA UPDATE`, or by pushing a `.bin` with `tools/ota_push.py` after `OTA PUSH ON` (see the README, *Firmware update over WiFi*).
-
-## Verified in the field
-- With the direct 330 Ω wiring (B, on a 3.3 V ESP32) the STR-DA50ES **switched on** with `C0 2E` and replied
-  with status frames (`C8 2E`, `C8 70 ..`, `C9 ..`, `CB ..`), all decoded by the firmware.
-- `C0 6A` (name) → `C8 6A "STR-DA50ES"`. The tuner (`C1`) replies "not available"
-  and the surround (`C3`) "error": this is normal for this model/state.
-- Amplifier ID that works: **0xC0** (replies `C8`). The code `70` (given for the
-  DA1000ES) **produced no reply** with this unit.
 
 ## Notes
 - Measure the idle voltage between tip and sleeve (unit on or in standby): ≤ 3.6 V → direct connection is within specification; ~5 V → use A.
