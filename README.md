@@ -163,7 +163,7 @@ host name) are stored in NVS and **persist**.
 | Interface | How to use it |
 |---|---|
 | USB Serial/JTAG | always on, as before |
-| **BLE UART** (`BLE ON`) | Nordic UART Service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; the device advertises as `S-Link-XXXX`. Apps: nRF Toolbox, Serial Bluetooth Terminal, Web Bluetooth. It is not authenticated: enable it only when needed |
+| **BLE UART** (`BLE ON`) | Nordic UART Service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; the device advertises as `S-Link-XXXX`. Apps: nRF Toolbox, Serial Bluetooth Terminal, Web Bluetooth. The **portal itself** runs over it from <https://ircama.github.io/esp32-sony-slink/ble.html> (see [Bluetooth page](#the-portal-over-bluetooth-github-pages)) It is not authenticated: enable it only when needed |
 | **Web portal** (`WEB ON`) | `http://slink.local/` (or the IP: `NET`). Single page, light/dark theme, suited to phone and desktop; WebSocket `/ws` for commands and real-time state. Also REST: `GET /api/state`, `/api/presets`, `/api/stations`, `/api/favs`, `/api/stats` and `POST /api/cmd` (body = one command; the output comes over the WebSocket). A WebSocket client is registered when it sends its first frame |
 | **HTTPS** (`HTTPS ON`) | the same portal on `https://slink.local/` (port 443), trusted once the device's CA is installed on the phone / PC: needed to install the portal as an app on Android. See [below](#https-and-installing-the-app) |
 | **Jukebox tab** | appears only while a CD changer (`90`/`91`/`92`) or an MD recorder (`B0`) answers the probe `90 22` / `B0 22`: transport, disc and track lists, memos / CD Text / MD titles, groups and artists. Reading and transport are free; every write (memo, MD titles, artist names, erase track, power off) asks for confirmation. Untested on real units: none is attached to the author's bus. Open `?demo&jb` to see it with an emulated changer and recorder (the GitHub Pages demo always shows it) |
@@ -223,6 +223,14 @@ Build notes: ESP-IDF 6.x (`mdns` and `mqtt` are managed components, downloaded b
 first build); partition table in `partitions.csv` (two app slots of 1.9 MB for the over-the-air update, flash 4 MB). After changing
 `sdkconfig.defaults` delete the generated `sdkconfig.esp32s3` / `sdkconfig.esp32c3` / `sdkconfig.esp32c6` to regenerate them
 (they are git-ignored).
+
+## The portal over Bluetooth (GitHub Pages)
+
+Boards without WiFi (the **ESP32-H2**), or with the web portal off, can still be controlled with the same web interface: open **<https://ircama.github.io/esp32-sony-slink/ble.html>** in Chrome, Edge or Opera (PC or Android; Firefox and Safari have no Web Bluetooth), turn the board's BLE on (`BLE ON`, always on for the H2) and press *Connect the device*. The page is the portal itself (same tabs, same controls, same five languages) with a Bluetooth transport instead of the WebSocket, so it needs nothing from the device but the Nordic UART Service. It lives only on GitHub Pages: a device that serves the portal has the WiFi on and does not need it.
+
+How it works: the page writes the usual text commands to the RX characteristic. After the line `@UI` the device also sends, as text lines on the TX characteristic, the JSON frames the portal gets over its WebSocket (`state`, `presets`, `stations`, `favs`, `net`; `@GET <state|tables|net|stats>` asks for one on request; a `net` frame every 5 s doubles as keep-alive). Plain terminal apps never send `@UI` and see only the text, as before. A lost link is retried by itself; the first connection needs a click (the browser asks which device).
+
+Differences from the WiFi portal: the interface preferences stay in the browser (not in the device), and *Firmware update* and *Backup and restore* are hidden (they use HTTP); the statistics are available on the chips that have them (not on the ESP32-H2). The firmware must be recent enough: an older one answers `ERR unknown command` to `@UI` and the page says so. The BLE link has no authentication (see *Security* above).
 
 ## HTTPS and installing the app
 

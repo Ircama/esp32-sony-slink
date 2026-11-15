@@ -99,7 +99,7 @@ static void notify(uint32_t bits)
     if (s_task) xTaskNotify(s_task, bits, eSetBits);
 }
 
-void net_notify_state(void) { notify(NB_STATE); }
+void net_notify_state(void) { notify(NB_STATE); ble_nus_state_changed(); }
 void net_notify_ws_client(void) { notify(NB_WS); }
 
 static void rc_timer_cb(void *arg)
@@ -325,6 +325,8 @@ static size_t net_json(char *b, size_t sz)
     #undef J
     return n < sz ? n : sz - 1;
 }
+
+size_t net_json_get(char *b, size_t sz) { return net_json(b, sz); }
 
 /* decode a (possibly compressed) DNS name starting at off into dotted text; returns false on malformed data */
 static bool dns_name(const uint8_t *m, int len, int off, char *out, size_t sz)

@@ -393,6 +393,18 @@ input.cc{width:44px;height:30px;padding:0;border:1px solid var(--line2);border-r
 .kmode label.kthr{display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer}
 .kthr input{accent-color:var(--accent);width:16px;height:16px}
 .offline{opacity:.45;filter:grayscale(.6);transition:opacity .2s}
+#bleLanding{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:16px;overflow:auto}
+#bleLanding[hidden]{display:none}
+#bleLanding .box{max-width:560px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px}
+#bleLanding h1{margin:0 0 8px;font-size:20px}
+#bleLanding p,#bleLanding li{color:var(--text2);font-size:14px;line-height:1.5}
+#bleLanding ul{padding-left:20px;margin:8px 0 14px}
+#bleLanding .go{font:inherit;padding:12px 22px;border:0;border-radius:12px;background:var(--accent);color:#fff;cursor:pointer;font-size:15px}
+#bleLanding .go[hidden]{display:none}
+#bleLanding .err{color:var(--err);font-size:13px;min-height:1.2em;margin:10px 0 0}
+#bleLanding .links{margin-top:16px;font-size:13px}
+#bleLanding .links a{margin-right:14px;color:var(--accent)}
+body.ble #otaCard,body.ble #bkCard{display:none}
 .stalebar{margin:0 -16px;padding:6px 16px;font-size:12px;text-align:center;color:var(--warn);background:var(--surface2);border-bottom:1px solid var(--line)}
 .skins{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .sk{width:32px;height:32px;border-radius:50%;border:2px solid var(--line2);background:var(--c);padding:0;position:relative;cursor:pointer;flex:none}
@@ -513,6 +525,20 @@ body.hxon .hx{display:block}
 </defs>
 </svg>
 
+<div id="bleLanding" hidden>
+  <div class="box">
+    <h1>Controllo via Bluetooth</h1>
+    <p>Questa pagina controlla il tuo dispositivo S-Link direttamente via Bluetooth LE, senza WiFi e senza il portale web del dispositivo. Serve soprattutto per l’ESP32-H2, che non ha il WiFi, e per ogni scheda con il BLE acceso (comando BLE ON).</p>
+    <ul>
+      <li>Servono Chrome, Edge o Opera (PC o Android): Firefox e Safari non supportano Web Bluetooth.</li>
+      <li>Il dispositivo deve essere acceso, con il BLE attivo, e non collegato ad altre app.</li>
+      <li>Non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.</li>
+    </ul>
+    <button class="go" id="bleGo">Collega il dispositivo</button>
+    <div class="err" id="bleErr" role="alert"></div>
+    <div class="links"><a href="install.html">Installa il firmware</a><a href="./">Demo del portale</a><a href="https://github.com/Ircama/esp32-sony-slink">GitHub</a></div>
+  </div>
+</div>
 <div class="app">
   <header class="top" id="top">
     <div class="brand">
@@ -1011,7 +1037,7 @@ function prefsPush() {
   }, 600);
 }
 (function () {
-  if (/[?&]demo\b/.test(location.search) || location.protocol === 'file:' || window.SLINK_DEMO === true) return;
+  if (/[?&]demo\b/.test(location.search) || location.protocol === 'file:' || window.SLINK_DEMO === true || window.SLINK_BLE === true) return;
   let dev = null;
   try { const x = new XMLHttpRequest(); x.open('GET', '/api/prefs', false); x.send(); if (x.status === 200) dev = JSON.parse(x.responseText); } catch (e) {}
   if (!dev || typeof dev !== 'object') return;                          /* device unreachable or older firmware: browser values only */
@@ -1022,6 +1048,9 @@ function prefsPush() {
 /* demo mode (simulated amplifier, nothing is sent anywhere): only on request - "?demo" in the URL, a file:// copy, or the public demo copy on GitHub Pages
  * (the Pages workflow sets window.SLINK_DEMO). Served by the device, the page is always in real mode unless "?demo" is added. */
 const DEMO = /[?&]demo\b/.test(location.search) || location.protocol === 'file:' || window.SLINK_DEMO === true;
+/* the Bluetooth page (ble.html on GitHub Pages, made by the Pages workflow: window.SLINK_BLE): the same page, talking to the device over Web Bluetooth */
+const BLEMODE = window.SLINK_BLE === true && !DEMO;
+if (BLEMODE) document.body.classList.add('ble');
 
 /* ---------------- i18n: the Italian text is the key; rows are [it, en, fr, de, es] ---------------- */
 const LANGS = [['it', 'Italiano'], ['en', 'English'], ['fr', 'Français'], ['de', 'Deutsch'], ['es', 'Español']];
@@ -1507,6 +1536,17 @@ const TRX = [
   ['Nome della app installata', 'Name of the installed app', 'Nom de l’application installée', 'Name der installierten App', 'Nombre de la aplicación instalada'],
   ['La app installata si chiama come', 'The installed app is called like', 'L’application installée porte le nom', 'Die installierte App heißt wie', 'La aplicación instalada se llama como'],
   ['es. Ampli (usato se scelto sopra)', 'e.g. Amp (used when chosen above)', 'p. ex. Ampli (utilisé si choisi ci-dessus)', 'z. B. Amp (wenn oben gewählt)', 'p. ej. Ampli (si se elige arriba)'],
+  ['Controllo via Bluetooth', 'Control over Bluetooth', 'Contrôle par Bluetooth', 'Steuerung über Bluetooth', 'Control por Bluetooth'],
+  ['Questa pagina controlla il tuo dispositivo S-Link direttamente via Bluetooth LE, senza WiFi e senza il portale web del dispositivo. Serve soprattutto per l’ESP32-H2, che non ha il WiFi, e per ogni scheda con il BLE acceso (comando BLE ON).', 'This page controls your S-Link device directly over Bluetooth LE, with no WiFi and without the device’s own web portal. It is mainly meant for the ESP32-H2, which has no WiFi, and for any board with BLE turned on (command BLE ON).', 'Cette page pilote votre appareil S-Link directement en Bluetooth LE, sans WiFi et sans le portail web de l’appareil. Elle sert surtout pour l’ESP32-H2, qui n’a pas de WiFi, et pour toute carte dont le BLE est activé (commande BLE ON).', 'Diese Seite steuert Ihr S-Link-Gerät direkt über Bluetooth LE, ohne WLAN und ohne das Webportal des Geräts. Sie ist vor allem für den ESP32-H2 gedacht, der kein WLAN hat, und für jede Platine mit eingeschaltetem BLE (Befehl BLE ON).', 'Esta página controla su dispositivo S-Link directamente por Bluetooth LE, sin WiFi y sin el portal web del dispositivo. Sirve sobre todo para el ESP32-H2, que no tiene WiFi, y para cualquier placa con el BLE activado (comando BLE ON).'],
+  ['Servono Chrome, Edge o Opera (PC o Android): Firefox e Safari non supportano Web Bluetooth.', 'You need Chrome, Edge or Opera (PC or Android): Firefox and Safari do not support Web Bluetooth.', 'Il faut Chrome, Edge ou Opera (PC ou Android) : Firefox et Safari ne gèrent pas Web Bluetooth.', 'Erforderlich: Chrome, Edge oder Opera (PC oder Android); Firefox und Safari unterstützen Web Bluetooth nicht.', 'Se necesita Chrome, Edge u Opera (PC o Android): Firefox y Safari no admiten Web Bluetooth.'],
+  ['Il dispositivo deve essere acceso, con il BLE attivo, e non collegato ad altre app.', 'The device must be on, with BLE active, and not connected to other apps.', 'L’appareil doit être allumé, avec le BLE actif, et non connecté à d’autres applications.', 'Das Gerät muss eingeschaltet sein, BLE aktiv und nicht mit anderen Apps verbunden.', 'El dispositivo debe estar encendido, con el BLE activo, y no conectado a otras aplicaciones.'],
+  ['Non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.', 'There is no authentication: anyone within range can connect with any app. Keep BLE on only when needed.', 'Il n’y a pas d’authentification : toute personne à portée peut se connecter avec une application quelconque. N’activez le BLE que si nécessaire.', 'Es gibt keine Authentifizierung: jeder in Reichweite kann sich mit einer beliebigen App verbinden. BLE nur bei Bedarf eingeschaltet lassen.', 'No hay autenticación: cualquiera al alcance puede conectarse con cualquier aplicación. Mantenga el BLE encendido solo cuando haga falta.'],
+  ['Collega il dispositivo', 'Connect the device', 'Connecter l’appareil', 'Gerät verbinden', 'Conectar el dispositivo'],
+  ['Questo browser non supporta Web Bluetooth.', 'This browser does not support Web Bluetooth.', 'Ce navigateur ne gère pas Web Bluetooth.', 'Dieser Browser unterstützt Web Bluetooth nicht.', 'Este navegador no admite Web Bluetooth.'],
+  ['Connessione persa. Ricollega il dispositivo.', 'Connection lost. Connect the device again.', 'Connexion perdue. Reconnectez l’appareil.', 'Verbindung verloren. Gerät erneut verbinden.', 'Conexión perdida. Vuelva a conectar el dispositivo.'],
+  ['Il firmware di questo dispositivo non supporta la pagina Bluetooth: aggiornalo (vedi «Installa il firmware»).', 'The firmware of this device does not support the Bluetooth page: update it (see “Install the firmware”).', 'Le firmware de cet appareil ne gère pas la page Bluetooth : mettez-le à jour (voir « Installer le firmware »).', 'Die Firmware dieses Geräts unterstützt die Bluetooth-Seite nicht: bitte aktualisieren (siehe „Firmware installieren“).', 'El firmware de este dispositivo no admite la página Bluetooth: actualícelo (vea «Instalar el firmware»).'],
+  ['Installa il firmware', 'Install the firmware', 'Installer le firmware', 'Firmware installieren', 'Instalar el firmware'],
+  ['Demo del portale', 'Portal demo', 'Démo du portail', 'Demo des Portals', 'Demo del portal'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -1933,11 +1973,55 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveL
  * flight, and a late error/close of an old socket must not tear down the new one (that made an endless reconnect chain). One
  * reconnect timer at most, with a back-off of 1, 2, 3, 4, 5 s. */
 let reconnectTimer = null;
+/* ---- Bluetooth transport: a WebSocket look-alike over the Nordic UART Service. The device sends the portal's JSON frames as text lines after "@UI". ---- */
+const BLE_NUS = '6e400001-b5a3-f393-e0a9-e50e24dcca9e', BLE_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e', BLE_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+let bleDev = null, bleRx = null, bleOut = Promise.resolve(), bleLostAt = 0;
+function bleLanding(show, msg) { const l = $('#bleLanding'); if (!l) return; l.hidden = !show; if (msg !== undefined) $('#bleErr').textContent = msg; }
+function bleWrite(str) {                                   /* 20-byte writes, one after the other: the device puts the lines together */
+  const data = new TextEncoder().encode(str);
+  for (let i = 0; i < data.length; i += 20) {
+    const part = data.slice(i, i + 20);
+    bleOut = bleOut.then(() => bleRx && (bleRx.writeValueWithoutResponse ? bleRx.writeValueWithoutResponse(part) : bleRx.writeValue(part))).catch(() => {});
+  }
+}
+async function bleChoose() {
+  if (!navigator.bluetooth) { bleLanding(true, tr('Questo browser non supporta Web Bluetooth.')); return; }
+  try {
+    const d = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'S-Link' }, { services: [BLE_NUS] }], optionalServices: [BLE_NUS] });
+    if (bleDev && bleDev !== d) { try { bleDev.gatt.disconnect(); } catch (e) {} }
+    bleDev = d;
+    d.addEventListener('gattserverdisconnected', () => { if (bleDev !== d) return; if (!bleLostAt) bleLostAt = Date.now(); const s = ws; if (s && s.readyState !== 3) { s.readyState = 3; if (s.onclose) s.onclose(); } });
+  } catch (e) { bleLanding(true, e && e.name === 'NotFoundError' ? '' : (e && e.message || String(e))); return; }
+  bleLanding(false, ''); bleLostAt = 0; connect();
+}
+function bleOpen() {
+  const s = { readyState: 0, onopen: null, onmessage: null, onclose: null, onerror: null, send: line => bleWrite(line + '\n'), close() { try { if (bleDev && bleDev.gatt.connected) bleDev.gatt.disconnect(); } catch (e) {} } };
+  ws = s;
+  (async () => {
+    const srv = await bleDev.gatt.connect();
+    const svc = await srv.getPrimaryService(BLE_NUS);
+    bleRx = await svc.getCharacteristic(BLE_RX);
+    const tx = await svc.getCharacteristic(BLE_TX);
+    const dec = new TextDecoder(); let buf = '';
+    tx.addEventListener('characteristicvaluechanged', e => {
+      buf += dec.decode(e.target.value, { stream: true });
+      let i; while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1); if (line && ws === s && s.onmessage) { if (line[0] === '{') s.gotJson = true; s.onmessage({ data: line }); } }
+    });
+    await tx.startNotifications();
+    s.readyState = 1; bleLostAt = 0; if (s.onopen) s.onopen();
+    bleWrite('@UI\n');                                      /* send me the JSON frames of the portal */
+    setTimeout(() => { if (ws === s && s.readyState === 1 && !s.gotJson) bleLanding(true, tr('Il firmware di questo dispositivo non supporta la pagina Bluetooth: aggiornalo (vedi «Installa il firmware»).')); }, 6000);
+  })().catch(() => { if (s.readyState !== 3) { s.readyState = 3; if (s.onclose) s.onclose(); } });
+  return s;
+}
+
 function connect() {
   if (DEMO) { linkReady = true; setConn(true, 'Modalità demo'); demoStart(); return; }
+  if (BLEMODE && !bleDev) { setConn(false, 'Connessione…'); bleLanding(true); return; }                 /* nothing chosen yet: the landing page */
+  if (BLEMODE && bleLostAt && Date.now() - bleLostAt > 20000) { bleLanding(true, tr('Connessione persa. Ricollega il dispositivo.')); }
   clearTimeout(reconnectTimer); reconnectTimer = null;
   if (!S.connected) setConn(false, retry ? 'Riconnessione…' : 'Connessione…');
-  const s = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+  const s = BLEMODE ? bleOpen() : new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
   ws = s;
   s.onopen = () => { if (ws !== s) return; busQ = []; glassUpd(); busAt = 0; busSentAt = 0; busReset(); busActAt = 0; retry = 0; lastRx = Date.now(); loadedInfo = Date.now() - infoAt < 30000; rdsAsked = 0; sfSt = null; setConn(true, 'Connesso'); setTimeout(() => { if (ws === s && !linkReady) { linkReady = true; setConn(true, 'Connesso'); } }, 3000); cmd('STATUS', { auto: true }); setTimeout(() => { cmd('VOLCFG', { auto: true }); cmd('UITITLE', { auto: true }); cmd('DECODE', { auto: true }); cmd('LOOPBACK', { auto: true }); cmd('PAD', { auto: true }); cmd('WIFIPWR', { auto: true }); cmd('C0 0E', { auto: true }); setTimeout(jbProbe, 1500); }, 2200); };
   s.onmessage = e => { if (ws === s) onMsg(e.data); };
@@ -1945,7 +2029,7 @@ function connect() {
   s.onerror = () => { try { s.close(); } catch (e) {} };
 }
 setInterval(() => {                       /* the device pushes a frame every 5 s: silence means a dead socket */
-  if (!DEMO && ws && ws.readyState === 1 && Date.now() - lastRx > 16000) { const dead = ws; setConn(false, 'Riconnessione…'); connect(); try { dead.close(); } catch (e) {} }
+  if (!DEMO && !BLEMODE && ws && ws.readyState === 1 && Date.now() - lastRx > 16000) { const dead = ws; setConn(false, 'Riconnessione…'); connect(); try { dead.close(); } catch (e) {} }
 }, 4000);
 function onMsg(d) {
   lastRx = Date.now();
@@ -2019,6 +2103,7 @@ function handleLine(d) {
 }
 async function fetchJson(u) {
   if (DEMO) return;
+  if (BLEMODE) { const m = /\/api\/(\w+)/.exec(u); if (m && ws && ws.readyState === 1) ws.send('@GET ' + m[1]); return; }      /* the device answers with the same JSON frame */
   try { const r = await fetch(u, { cache: 'no-store' }); onMsg(await r.text()); } catch (e) {}
 }
 
@@ -3998,6 +4083,7 @@ $('#otaRb').onclick = () => {                      /* two clicks: no confirm() d
 };
 
 restoreLast(); showTab((t => t === 'jukebox' ? 'home' : t)(QP('tab') || store.get('tab', 'home'))); render(); renderPresets(); renderStations(); initUiOptions(); initJukebox(); initBackup(); if (JB.demo) setTimeout(jbProbe, 800); connect();
+if (BLEMODE) $('#bleGo').onclick = bleChoose;
 document.body.dataset.ready = '1';
 
 /* PWA: the manifest and the icons make the page installable ("Add to Home screen"); the service worker (sw.js) keeps the app shell, but browsers register
@@ -4011,7 +4097,7 @@ if (window.SLINK_BUILD && !DEMO) fetch('/api/ota', { cache: 'no-store' }).then(r
   try { if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); location.replace(location.pathname + '?r=' + j.web + location.hash); return; } } catch (e) {}
   toast('Questa pagina non è aggiornata: ricarica forzando (Ctrl+F5) o svuota la cache del browser', 'err');
 }).catch(() => {});
-if ('serviceWorker' in navigator && window.isSecureContext && !DEMO) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator && window.isSecureContext && !DEMO && !BLEMODE) navigator.serviceWorker.register('/sw.js').catch(() => {});
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaEv = e; if (!pwaInstalled()) $('#pwaRow').hidden = false; });
 window.addEventListener('appinstalled', () => { pwaEv = null; $('#pwaRow').hidden = true; toast('App installata', 'ok'); });
 $('#pwaBtn').onclick = () => { if (!pwaEv) return; pwaEv.prompt(); pwaEv.userChoice.finally(() => { pwaEv = null; $('#pwaRow').hidden = true; }); };

@@ -35,7 +35,16 @@ void net_apply(void)
     if (g_set.ble) ble_nus_start(); else ble_nus_stop();
 }
 
-void net_init(void) { net_apply(); }
+void net_init(void) { state_set_listener(net_notify_state); net_apply(); }
+
+/* the same {"t":"net"} frame as net.c, for the Bluetooth page: no WiFi, no web portal, no TCP */
+size_t net_json_get(char *b, size_t sz)
+{
+    int n = snprintf(b, sz, "{\"t\":\"net\",\"ble\":%d,\"web\":0,\"app\":0,\"eco\":%d,\"bleConn\":%d,\"bleName\":\"%s\",\"wifi\":\"none\",\"rssi\":0,\"ip\":\"\",\"dns\":\"\","
+                            "\"ssid\":\"\",\"host\":\"%s\",\"mqtt\":\"\",\"mqttUser\":\"\",\"mqttOk\":0,\"tcp\":0,\"slke\":0,\"slkeTx\":0,\"slkeN\":0,\"https\":0}",
+                     g_set.ble, g_set.eco, ble_nus_connected(), ble_nus_name(), g_set.host);
+    return n > 0 && (size_t)n < sz ? (size_t)n : 0;
+}
 
 void net_status(char *b, size_t n)
 {
@@ -48,7 +57,7 @@ void net_status(char *b, size_t n)
 }
 
 bool net_have_ip(void) { return false; }
-void net_notify_state(void) {}
+void net_notify_state(void) { ble_nus_state_changed(); }
 void net_notify_ws_client(void) {}
 int  net_twt_state(unsigned *interval_ms) { if (interval_ms) *interval_ms = 0; return NET_TWT_NO_CHIP; }
 
