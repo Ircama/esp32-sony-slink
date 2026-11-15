@@ -1,7 +1,12 @@
-/* Service worker of the S-Link portal: keeps the app shell so the installed app opens at once (and shows the "disconnected" screen instead of a
- * browser error when the device is off). The live data (WebSocket /ws, /api/*) is never cached. Browsers register service workers only on a secure
- * context (https:// or localhost); on plain http://<device> the page still works, it just is not cached. Change VERSION to flush the cache. */
-const VERSION = 'slink-v1';
+/* Service worker of the S-Link portal. Browsers register service workers only on a secure context (https:// or localhost): on plain http://<device> the
+ * page still works, it just is not cached. With HTTPS (see the README) this keeps the app shell so the installed app opens at once and, when the device
+ * does not answer, still opens and shows the "disconnected" screen instead of a browser error.
+ *   - the shell (page, manifest, icons, help) is served from the cache AT ONCE and refreshed in the background ("stale while revalidate"): the next
+ *     start has the version the device served last time. The page itself asks the device which build it serves (/api/ota) and, when the cached copy
+ *     is an old one, reloads once with ?r=<build>; a request with ?r= always goes to the network first.
+ *   - the live data (WebSocket /ws, /api/*) is never cached.
+ * Change VERSION to flush the cache. */
+const VERSION = 'slink-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -12,10 +17,17 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   const r = e.request, u = new URL(r.url);
-  if (r.method !== 'GET' || u.origin !== location.origin || u.pathname.startsWith('/api/') || u.pathname === '/ws' || u.pathname === '/sw.js') return;
-  /* network first (the firmware may have been updated), the cached copy when the device does not answer */
-  e.respondWith(fetch(r).then(res => {
-    if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(r, copy)); }
+  if (r.method !== 'GET' || u.origin !== location.origin || u.pathname.startsWith('/api/') || u.pathname === '/ws' || u.pathname === '/sw.js' || u.pathname === '/ca.crt') return;
+  const key = u.origin + u.pathname;                                    /* one copy per path: the query string (?tab=, ?r=) is not part of the key */
+  const fromNet = () => fetch(r, { cache: 'no-cache' }).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(key, copy)); }
     return res;
-  }).catch(() => caches.match(r, { ignoreSearch: true }).then(m => m || (r.mode === 'navigate' ? caches.match('/') : Response.error()))));
+  });
+  const offline = () => caches.match(key).then(m => m || (r.mode === 'navigate' ? caches.match(u.origin + '/') : Response.error()));
+  if (u.searchParams.has('r')) { e.respondWith(fromNet().catch(offline)); return; }      /* the page asked for a fresh copy */
+  e.respondWith(caches.match(key).then(m => {
+    const net = fromNet();
+    if (m) { e.waitUntil(net.catch(() => {})); return m; }             /* cached: answer now, refresh behind */
+    return net.catch(offline);
+  }));
 });

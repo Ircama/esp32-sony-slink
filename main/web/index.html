@@ -393,6 +393,7 @@ input.cc{width:44px;height:30px;padding:0;border:1px solid var(--line2);border-r
 .kmode label.kthr{display:flex;align-items:center;gap:6px;padding:0 10px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer}
 .kthr input{accent-color:var(--accent);width:16px;height:16px}
 .offline{opacity:.45;filter:grayscale(.6);transition:opacity .2s}
+.stalebar{margin:0 -16px;padding:6px 16px;font-size:12px;text-align:center;color:var(--warn);background:var(--surface2);border-bottom:1px solid var(--line)}
 .skins{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .sk{width:32px;height:32px;border-radius:50%;border:2px solid var(--line2);background:var(--c);padding:0;position:relative;cursor:pointer;flex:none}
 .sk[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--c)}
@@ -528,6 +529,7 @@ body.hxon .hx{display:block}
     <svg class="i glass" id="glass" hidden role="img" aria-label="Comando in coda" aria-live="polite"><title>Comando in coda</title><use href="#i-hourglass"/></svg>
     <button class="pwr offline" id="pwr" inert aria-label="Accendi o spegni l'amplificatore" title="Accendi / standby"><svg class="i"><use href="#i-power"/></svg></button>
   </header>
+  <div class="stalebar" id="staleBar" role="status" hidden></div>
 
   <main class="offline" inert>
     <div class="standby" id="standby" role="status">
@@ -1499,6 +1501,7 @@ const TRX = [
   ['Lettura del nome RDS in corso…', 'Reading the RDS name…', 'Lecture du nom RDS en cours…', 'RDS-Name wird gelesen…', 'Leyendo el nombre RDS…'],
   ['Massimizza', 'Maximise', 'Agrandir', 'Maximieren', 'Maximizar'],
   ['Riduci', 'Restore', 'Réduire', 'Verkleinern', 'Reducir'],
+  ['Ultimo stato noto, {t}: in attesa del dispositivo…', 'Last known state, {t}: waiting for the device…', 'Dernier état connu, {t} : en attente de l’appareil…', 'Letzter bekannter Zustand, {t}: warte auf das Gerät…', 'Último estado conocido, {t}: esperando al dispositivo…'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -1873,7 +1876,37 @@ function setConn(ok, txt) {
   $('#dot').className = 'dot ' + (live ? 'live' : 'wait'); connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel();
   /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
   ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the page, the header's volume buttons and the power button */
+  if (live) S.stale = 0;
+  staleUpd();
 }
+/* Last known state: this browser keeps a copy of what the device reported; when the page is opened while the device does not answer yet (or at all) it
+ * shows that copy, dimmed and not usable, with the time it comes from, until the first real state arrives. Only the display: nothing is sent. */
+const LAST_KEY = 'last-state', LAST_MAX_AGE = 14 * 864e5;
+function saveLast() {
+  if (DEMO || !linkReady) return;
+  try { store.set(LAST_KEY, JSON.stringify({ at: Date.now(), power: S.power, mute: S.mute, in: S.in, video: S.video, vol: S.vol, name: S.name, labels: S.labels, sf: S.sf, par: S.par,
+    eq: S.eq, tuner: S.tuner, presets: S.presets, stations: S.stations, favs: S.favs, cc: S.cc, itype: S.itype, snd: S.snd, idev: S.idev, sfp: S.sfp, spk: S.spk, info: S.info })); } catch (e) {}
+}
+function restoreLast() {
+  if (DEMO) return;
+  try {
+    const o = JSON.parse(store.get(LAST_KEY, 'null'));
+    if (!o || !o.at || Date.now() - o.at > LAST_MAX_AGE) return;
+    delete o.at; Object.assign(S, o); S.stale = JSON.parse(store.get(LAST_KEY)).at;
+  } catch (e) {}
+}
+function staleUpd() {
+  const b = $('#staleBar'); if (!b) return;
+  const on = !!S.stale && !(S.connected && linkReady);
+  if (on) {
+    const d = new Date(S.stale), same = d.toDateString() === new Date().toDateString();
+    b.textContent = tr('Ultimo stato noto, {t}: in attesa del dispositivo…', { t: same ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) });
+  }
+  b.hidden = !on;
+}
+setInterval(saveLast, 20000);
+addEventListener('pagehide', saveLast);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveLast(); });
 /* Every socket handles ONLY itself (the global `ws` is the current one): while the device reboots several attempts can be in
  * flight, and a late error/close of an old socket must not tear down the new one (that made an endless reconnect chain). One
  * reconnect timer at most, with a back-off of 1, 2, 3, 4, 5 s. */
@@ -3926,7 +3959,7 @@ $('#otaRb').onclick = () => {                      /* two clicks: no confirm() d
   OTA.rbAt = 0; b.textContent = t; cmd('OTA ROLLBACK', { ack: true }); otaWaitBoot();
 };
 
-showTab((t => t === 'jukebox' ? 'home' : t)(QP('tab') || store.get('tab', 'home'))); render(); renderPresets(); renderStations(); initUiOptions(); initJukebox(); initBackup(); if (JB.demo) setTimeout(jbProbe, 800); connect();
+restoreLast(); showTab((t => t === 'jukebox' ? 'home' : t)(QP('tab') || store.get('tab', 'home'))); render(); renderPresets(); renderStations(); initUiOptions(); initJukebox(); initBackup(); if (JB.demo) setTimeout(jbProbe, 800); connect();
 document.body.dataset.ready = '1';
 
 /* PWA: the manifest and the icons make the page installable ("Add to Home screen"); the service worker (sw.js) keeps the app shell, but browsers register
