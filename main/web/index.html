@@ -567,6 +567,7 @@ body.hxon .hx{display:block}
     <button class="pwr offline" id="pwr" inert aria-label="Accendi o spegni l'amplificatore" title="Accendi / standby"><svg class="i"><use href="#i-power"/></svg></button>
   </header>
   <div class="stalebar" id="staleBar" role="status" hidden></div>
+  <div class="stalebar" id="bleBar" role="alert" hidden><span id="bleBarTxt">Il dispositivo non risponde.</span> <button class="btn sm" id="bleRetry">Riprova</button> <button class="btn sm" id="bleOther">Cambia dispositivo</button> <button class="btn sm" id="bleReset">Reimposta</button></div>
 
   <main class="offline" inert>
     <div class="standby" id="standby" role="status">
@@ -1565,6 +1566,11 @@ const TRX = [
   ['produttore sconosciuto', 'unknown vendor', 'fabricant inconnu', 'Hersteller unbekannt', 'fabricante desconocido'],
   ['Installa come app', 'Install as an app', 'Installer comme application', 'Als App installieren', 'Instalar como aplicación'],
   ['Chrome non conserva da solo il permesso sul dispositivo: a ogni apertura serve una conferma nella sua finestra (un solo tocco su «Collega»). Per ricollegarsi senza finestra abilita in chrome://flags il Web Bluetooth con i permessi persistenti (“Use the new permissions backend for Web Bluetooth”) e riavvia Chrome.', 'Chrome does not keep the permission for the device by itself: every time it opens it needs a confirmation in its window (one tap on “Connect”). To reconnect without the window, turn on Web Bluetooth persistent permissions in chrome://flags (“Use the new permissions backend for Web Bluetooth”) and restart Chrome.', 'Chrome ne garde pas seul l’autorisation sur l’appareil : à chaque ouverture il faut une confirmation dans sa fenêtre (un seul appui sur « Connecter »). Pour se reconnecter sans fenêtre, activez dans chrome://flags les autorisations persistantes de Web Bluetooth (« Use the new permissions backend for Web Bluetooth ») et redémarrez Chrome.', 'Chrome behält die Berechtigung für das Gerät nicht von selbst: bei jedem Öffnen ist eine Bestätigung in seinem Fenster nötig (ein Tipp auf „Verbinden“). Für die Verbindung ohne Fenster in chrome://flags die dauerhaften Web-Bluetooth-Berechtigungen aktivieren („Use the new permissions backend for Web Bluetooth“) und Chrome neu starten.', 'Chrome no conserva por sí solo el permiso del dispositivo: cada vez que se abre hace falta una confirmación en su ventana (un toque en «Conectar»). Para reconectar sin ventana active en chrome://flags los permisos persistentes de Web Bluetooth («Use the new permissions backend for Web Bluetooth») y reinicie Chrome.'],
+  ['minimo', 'minimum', 'minimum', 'Minimum', 'mínimo'],
+  ['assente', 'not present', 'absente', 'nicht vorhanden', 'ausente'],
+  ['Il dispositivo non risponde.', 'The device does not answer.', 'L’appareil ne répond pas.', 'Das Gerät antwortet nicht.', 'El dispositivo no responde.'],
+  ['Riprova', 'Try again', 'Réessayer', 'Erneut versuchen', 'Reintentar'],
+  ['Cambia dispositivo', 'Change device', 'Changer d’appareil', 'Gerät wechseln', 'Cambiar de dispositivo'],
   ['Dispositivi Bluetooth', 'Bluetooth devices', 'Appareils Bluetooth', 'Bluetooth-Geräte', 'Dispositivos Bluetooth'],
   ['Dispositivi già usati', 'Devices used before', 'Appareils déjà utilisés', 'Bereits verwendete Geräte', 'Dispositivos usados antes'],
   ['Nessun dispositivo salvato', 'No saved device', 'Aucun appareil enregistré', 'Kein Gerät gespeichert', 'Ningún dispositivo guardado'],
@@ -2025,6 +2031,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveL
 let reconnectTimer = null;
 /* ---- Bluetooth transport: a WebSocket look-alike over the Nordic UART Service. The device sends the portal's JSON frames as text lines after "@UI". ---- */
 const BLE_NUS = '6e400001-b5a3-f393-e0a9-e50e24dcca9e', BLE_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e', BLE_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+let bleBarT = Date.now();
 let bleDev = null, bleRx = null, bleOut = Promise.resolve(), bleLostAt = 0, bleNoAuto = false, bleAutoTried = false, bleNoPerm = false;
 /* what the browser remembers of the Bluetooth side: the devices chosen so far and the name of the app (localStorage; a cookie would travel to the server with every request and hold nothing more) */
 const BLE_DEF_NAME = 'S-Link BLE';
@@ -2719,7 +2726,8 @@ function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
   kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', j.bleDiag || '—'], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
     ['Firmware', j.fw], ['Compilato', fmtBuilt(j.built)], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
-    ['Memoria libera', fmtKb(j.heap) + ' / ' + fmtKb(j.heapTotal)], ['Minimo storico', fmtKb(j.heapMin)], ['Blocco più grande', fmtKb(j.heapBlock)], ['Task attivi', j.tasks]]);
+    ['Memoria libera', fmtKb(j.heap) + ' / ' + fmtKb(j.heapTotal)], ['Minimo storico', fmtKb(j.heapMin)], ['Blocco più grande', fmtKb(j.heapBlock)],
+    ['PSRAM', j.psram ? fmtKb(j.psramFree) + ' / ' + fmtKb(j.psram) + ' · ' + tr('minimo') + ' ' + fmtKb(j.psramMin) : tr('assente')], ['Task attivi', j.tasks]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);
   kvRows('#stConn', [['Client web', j.web], ['Client TCP', j.tcp], ['BLE', j.ble ? (j.bleConn ? tr('connesso') : tr('attivo')) : tr('spento')],
@@ -4235,6 +4243,12 @@ if (BLEMODE) {
   $('#bleAppName').value = store.get('ble-appname', '');
   $('#bleAppForm').onsubmit = e => { e.preventDefault(); store.set('ble-appname', $('#bleAppName').value.trim()); bleApplyManifest(); toast(tr('Nome salvato: vale per la prossima installazione della app'), 'ok'); };
   $('#bleAdd').onclick = () => bleSwitch();
+  /* the page does not answer while the device does not: this bar is not inside the dimmed page, so it stays usable. Shown after 8 s without a link */
+  const barUpd = () => { const live = S.connected && linkReady; if (live) bleBarT = Date.now(); $('#bleBar').hidden = live || !$('#bleLanding').hidden || Date.now() - bleBarT < 8000; };
+  setInterval(barUpd, 1000);
+  $('#bleRetry').onclick = () => { bleBarT = Date.now(); try { if (ws && ws.close) ws.close(); } catch (e) {} clearTimeout(reconnectTimer); reconnectTimer = null; retry = 0; connect(); toast(tr('Riprova'), ''); };
+  $('#bleOther').onclick = () => bleSwitch();
+  $('#bleReset').onclick = () => $('#bleResetAll').click();
   const forgetAll = async () => { for (const k of bleList()) { const d = await bleKnownDevice(k.id); try { if (d && d.forget) await d.forget(); } catch (e) {} } };
   $('#bleForgetAll').onclick = async () => { if (!await confirmDlg(tr('Dimenticare i dispositivi?'), tr('Il browser non si ricollegherà più da solo: dovrai sceglierli di nuovo.'), tr('Dimentica'))) return; await forgetAll(); store.set('ble-devs', '[]'); store.set('ble-last', ''); bleSwitch(); };
   $('#bleResetAll').onclick = async () => { if (!await confirmDlg(tr('Reimpostare la configurazione?'), tr('Dispositivi, nome della app e preferenze di questa pagina vengono cancellati.'), tr('Reimposta'))) return; await forgetAll(); try { localStorage.clear(); } catch (e) {} location.reload(); };

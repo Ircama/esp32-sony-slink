@@ -219,7 +219,7 @@ browser (or add `?demo`): it uses a simulated amplifier.
 The HTML file is embedded in the firmware: `tools/gen_web.py` converts it into `main/web_page.c` before every build
 (automatic with PlatformIO, or by hand with `python tools/gen_web.py`). `tools/gen_coverage.py` regenerates the coverage document.
 
-Build notes: ESP-IDF 6.x (`mdns` and `mqtt` are managed components, downloaded by the component manager: internet is needed on the
+Build notes: the ESP32-S3 build uses the 2 MB of PSRAM of the S3FH4R2 board (`sdkconfig.defaults.esp32s3`, picked up by `idf.py` by itself and listed in `platformio.ini`; a board without PSRAM boots without it): with the WiFi, the HTTPS server and Bluetooth LE on together the internal RAM ran down to a few KB (HTTPS stopped answering and the Bluetooth link failed); the TLS and WiFi buffers are now in PSRAM and the Statistics page shows the internal RAM and the PSRAM apart. ESP-IDF 6.x (`mdns` and `mqtt` are managed components, downloaded by the component manager: internet is needed on the
 first build); partition table in `partitions.csv` (two app slots of 1.9 MB for the over-the-air update, flash 4 MB). After changing
 `sdkconfig.defaults` delete the generated `sdkconfig.esp32s3` / `sdkconfig.esp32c3` / `sdkconfig.esp32c6` to regenerate them
 (they are git-ignored).

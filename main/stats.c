@@ -85,10 +85,12 @@ size_t stats_json(char *b, size_t sz)
     P("{\"t\":\"stats\",\"inst\":%lld,\"slot\":\"%s\",\"ostate\":\"%s\",\"fimg\":%u,\"fslot\":%u,\"fflash\":%u,\"up\":%lld,\"reset\":\"%s\",\"chip\":\"%s\",\"rev\":%d,\"cores\":%d,\"fw\":\"%s\",\"built\":\"%s\",\"idf\":\"%s\",",
       (long long)ota_installed(), slot, ost, (unsigned)fimg, (unsigned)fslot, (unsigned)fflash, (long long)(esp_timer_get_time() / 1000000), reset_reason(), CONFIG_IDF_TARGET, ci.revision, ci.cores, fw, built, idf);
     if (t_ok) P("\"temp\":%.1f,", (double)t); else P("\"temp\":null,");
-    P("\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,",
-      (unsigned)esp_get_free_heap_size(), (unsigned)esp_get_minimum_free_heap_size(),
-      (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT), (unsigned)heap_caps_get_total_size(MALLOC_CAP_8BIT),
+    P("\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,",       /* internal RAM only: it is the one that runs short */
+      (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+      (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_total_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
       (unsigned)uxTaskGetNumberOfTasks());
+    P("\"psram\":%u,\"psramFree\":%u,\"psramMin\":%u,", (unsigned)heap_caps_get_total_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+      (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM));
     unsigned twt_ms = 0; int twt = net_twt_state(&twt_ms);
     P("\"cpu\":%u,\"cpuMax\":%d,\"cpuMin\":%d,\"eco\":%d,\"twt\":%d,\"twtMs\":%u,", (unsigned)esp_rom_get_cpu_ticks_per_us(),
       pm_ok ? pm.max_freq_mhz : 0, pm_ok ? pm.min_freq_mhz : 0, g_set.eco, twt, twt_ms);

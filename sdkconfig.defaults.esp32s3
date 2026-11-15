@@ -1,0 +1,13 @@
+# ESP32-S3 only (idf.py picks this file up by itself; with PlatformIO it is listed in platformio.ini).
+# The S3FH4R2 board has 2 MB of PSRAM that was never used: with the WiFi, the HTTPS server and Bluetooth LE on at the same time the internal RAM ran down to a few KB
+# (free heap minimum 6 KB), and the Bluetooth link stopped answering. The big buffers (TLS, WiFi/LWIP) go to PSRAM; stacks and small objects stay in the internal RAM.
+# A board without PSRAM (or with another kind) simply boots without it (SPIRAM_IGNORE_NOTFOUND).
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_QUAD=y
+CONFIG_SPIRAM_SPEED_40M=y
+CONFIG_SPIRAM_IGNORE_NOTFOUND=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=4096
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC=n
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
