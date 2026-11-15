@@ -401,6 +401,7 @@ input.cc{width:44px;height:30px;padding:0;border:1px solid var(--line2);border-r
 #bleLanding ul{padding-left:20px;margin:8px 0 14px}
 #bleLanding .go{font:inherit;padding:12px 22px;border:0;border-radius:12px;background:var(--accent);color:#fff;cursor:pointer;font-size:15px}
 #bleLanding .go[hidden]{display:none}
+#bleLanding .go.alt{background:transparent;color:var(--accent);border:1px solid var(--accent);margin-left:6px}
 #bleLanding .err{color:var(--err);font-size:13px;min-height:1.2em;margin:10px 0 0}
 #bleLanding .links{margin-top:16px;font-size:13px}
 #bleLanding .links a{margin-right:14px;color:var(--accent)}
@@ -534,7 +535,7 @@ body.hxon .hx{display:block}
       <li>Il dispositivo deve essere acceso, con il BLE attivo, e non collegato ad altre app.</li>
       <li>Non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.</li>
     </ul>
-    <button class="go" id="bleGo">Collega il dispositivo</button>
+    <button class="go" id="bleGo">Collega il dispositivo</button> <button class="go alt" id="bleInstall" hidden>Installa come app</button>
     <div class="err" id="bleErr" role="alert"></div>
     <div class="links"><a href="install.html">Installa il firmware</a><a href="./">Demo del portale</a><a href="https://github.com/Ircama/esp32-sony-slink">GitHub</a></div>
   </div>
@@ -1540,6 +1541,9 @@ const TRX = [
   ['Nome della app installata', 'Name of the installed app', 'Nom de l’application installée', 'Name der installierten App', 'Nombre de la aplicación instalada'],
   ['La app installata si chiama come', 'The installed app is called like', 'L’application installée porte le nom', 'Die installierte App heißt wie', 'La aplicación instalada se llama como'],
   ['es. Ampli (usato se scelto sopra)', 'e.g. Amp (used when chosen above)', 'p. ex. Ampli (utilisé si choisi ci-dessus)', 'z. B. Amp (wenn oben gewählt)', 'p. ej. Ampli (si se elige arriba)'],
+  ['indirizzo casuale (amministrato localmente)', 'random address (locally administered)', 'adresse aléatoire (administrée localement)', 'Zufallsadresse (lokal verwaltet)', 'dirección aleatoria (administrada localmente)'],
+  ['produttore sconosciuto', 'unknown vendor', 'fabricant inconnu', 'Hersteller unbekannt', 'fabricante desconocido'],
+  ['Installa come app', 'Install as an app', 'Installer comme application', 'Als App installieren', 'Instalar como aplicación'],
   ['Controllo via Bluetooth', 'Control over Bluetooth', 'Contrôle par Bluetooth', 'Steuerung über Bluetooth', 'Control por Bluetooth'],
   ['Questa pagina controlla il tuo dispositivo S-Link direttamente via Bluetooth LE, senza WiFi e senza il portale web del dispositivo. Serve soprattutto per l’ESP32-H2, che non ha il WiFi, e per ogni scheda con il BLE acceso (comando BLE ON).', 'This page controls your S-Link device directly over Bluetooth LE, with no WiFi and without the device’s own web portal. It is mainly meant for the ESP32-H2, which has no WiFi, and for any board with BLE turned on (command BLE ON).', 'Cette page pilote votre appareil S-Link directement en Bluetooth LE, sans WiFi et sans le portail web de l’appareil. Elle sert surtout pour l’ESP32-H2, qui n’a pas de WiFi, et pour toute carte dont le BLE est activé (commande BLE ON).', 'Diese Seite steuert Ihr S-Link-Gerät direkt über Bluetooth LE, ohne WLAN und ohne das Webportal des Geräts. Sie ist vor allem für den ESP32-H2 gedacht, der kein WLAN hat, und für jede Platine mit eingeschaltetem BLE (Befehl BLE ON).', 'Esta página controla su dispositivo S-Link directamente por Bluetooth LE, sin WiFi y sin el portal web del dispositivo. Sirve sobre todo para el ESP32-H2, que no tiene WiFi, y para cualquier placa con el BLE activado (comando BLE ON).'],
   ['Servono Chrome, Edge o Opera (PC o Android): Firefox e Safari non supportano Web Bluetooth.', 'You need Chrome, Edge or Opera (PC or Android): Firefox and Safari do not support Web Bluetooth.', 'Il faut Chrome, Edge ou Opera (PC ou Android) : Firefox et Safari ne gèrent pas Web Bluetooth.', 'Erforderlich: Chrome, Edge oder Opera (PC oder Android); Firefox und Safari unterstützen Web Bluetooth nicht.', 'Se necesita Chrome, Edge u Opera (PC o Android): Firefox y Safari no admiten Web Bluetooth.'],
@@ -2584,9 +2588,20 @@ const fmtBuilt = b => { const d = new Date(String(b || '').replace(/\s+/g, ' '))
 const fmtInst = t => t ? new Date(t * 1000).toLocaleString() : tr('non disponibile (installato via USB o orologio non sincronizzato)');
 const otaStateName = st => ({ valid: tr('valido'), pending: tr('in prova: non ancora confermato') })[st] || st || '—';
 function kvRows(sel, rows) { $(sel).innerHTML = rows.map(r => '<dt>' + tr(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join(''); }
+/* vendor of a MAC address from its first three bytes: the Espressif blocks of the IEEE registry (tools/gen_oui.py); a random (locally administered) address is recognised as such */
+/* OUI-BEGIN */
+const OUI_ESP = new Set('004B12 007007 00FB4A 048308 04B247 083A8D 083AF2 089272 08A6F7 08AD0A 08B61F 08D1F9 08F9E0 0C4EA0 0C8B95 0CB815 0CDC7E 10003B 10061C 1020BA 1051DB 10521C 1091A8 1097BD 10B41D 10BDA3 140808 142B2F 14335C 146393 14C19F 188B0E 18FE34 1C2904 1C6465 1C6920 1C8F57 1C9DC2 1CC3AB 1CDBD4 202565 2043A8 20500D 206EF1 209BA9 20E7C8 240AC4 244CAB 24587C 2462AB 246F28 24A160 24B2DE 24D7EB 24DCC3 24EC4A 2805A5 28372F 28562F 288485 2C3AE8 2CBCBB 2CF432 3030F9 3076F5 308398 30AEA4 30C6F7 30C922 30EDA0 345F45 348518 34865D 349454 34987A 34AB95 34B472 34B7DA 34C934 34CDB0 38182B 383E51 3844BE 3C0F02 3C6105 3C71BF 3C8427 3C8A1F 3CDC75 3CE255 3CE90E 4022D8 402BD6 404CCA 409151 40F520 441793 441BF6 441D64 447B30 44B176 44BD8D 4827E2 4831B7 483FDA 485519 489D31 48AFF3 48CA43 48E729 48F6EE 4C11AE 4C7525 4C8421 4CC382 4CEBD6 500291 50787D 543204 5443B2 545AA6 549DEA 582ABD 582BD3 588C81 58BF25 58CF79 58E6C5 5C013B 5CCF7F 600194 6055F9 648914 64B708 64E833 680947 6825DD 686725 689DD2 68B6B3 68C63A 68EE8F 68FE71 6C2FA0 6CB456 6CC840 70039F 70041D 704BCA 70AF09 70B8F6 744DBD 748927 781C3C 782184 78421C 78E36D 78EE4C 7C0C5F 7C2C67 7C4FAD 7C7398 7C87CE 7C9EBD 7CD544 7CDFA1 7CE8B1 80456B 8053E0 80646F 806599 807D3A 80B54E 80F1B2 80F3DA 840D8E 841FE8 84C7BB 84CCA8 84F3EB 84F703 84FCE6 8813BF 8856A6 885721 88F155 8C4598 8C4B14 8C4F00 8C8C29 8C94DF 8CAAB5 8CBFEA 8CCE4E 8CFD49 901506 90380C 90649B 907069 9097D5 90B339 90DA72 90E5B1 943CC6 9451DC 9454C5 94A990 94B555 94B97E 94E686 983DAE 9888E0 98A316 98C377 98CDAC 98F4AB 9C139E 9C9C1F 9C9E6E 9CCC01 A020A6 A0764E A085E3 A0A3B3 A0B765 A0DD6C A0F262 A47B9D A4CB8F A4CF12 A4E57C A4E972 A4F00F A8032A A842E3 A84674 A848FA A8FD07 AC0BFB AC1518 AC276E AC67B2 ACA704 ACD074 ACEBE6 B03FD3 B08184 B0A604 B0A732 B0B21C B0CBD8 B43A45 B48A0A B4A64A B4BFE9 B4E62D B81F3F B87B4D B8D61A B8F009 B8F862 BC1926 BCDDC2 BCFF4D C049EF C04E30 C05D89 C0CDD6 C44F33 C45BBE C49E7E C4D8D5 C4DD57 C4DEE2 C82B96 C82E18 C88541 C88A7B C8C9A3 C8EA71 C8ED8B C8F09E CC50E3 CC68C7 CC7B5C CC7E1F CC8DA2 CCBA97 CCDBA7 CCE732 D0CF13 D0EF76 D40592 D48AFC D48C49 D4D4DA D4E9F4 D4F98D D8132A D83BDA D885AC D8A01D D8BC38 D8BFC0 D8F15B DC0675 DC0A69 DC1ED5 DC4F22 DC5475 DC55B1 DCB4D9 DCDA0C E05A1B E072A1 E08CFE E09806 E0E2E6 E465B8 E4B063 E4B323 E80690 E831CD E83DC1 E868E7 E86BEA E89F6D E8DB84 E8EDBD E8F60A EC6260 EC64C9 EC94CB ECC9FF ECD61B ECDA3B ECE334 ECFABC F008D1 F0161D F024F9 F09E9E F0F5BD F412FA F42DC9 F4650B F4CFA2 F80C4E F843EE F85B1B F8B3B7 FC012C FCB467 FCE8C0 FCF5C4'.split(' '));   /* 355 MA-L blocks of Espressif Inc. (IEEE registry), made by tools/gen_oui.py */
+/* OUI-END */
+function macVendor(m) {
+  const h = (m || '').replace(/[^0-9a-f]/gi, '').toUpperCase();
+  if (h.length < 6) return '';
+  if (OUI_ESP.has(h.slice(0, 6))) return 'Espressif Inc.';
+  return parseInt(h.slice(0, 2), 16) & 2 ? tr('indirizzo casuale (amministrato localmente)') : tr('produttore sconosciuto');
+}
+const macTxt = m => m ? m + ' · ' + macVendor(m) : '—';
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
-  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', j.mac || '—'], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', j.bleMac || '—'], ['Collegamento Bluetooth', j.bleDiag || '—'], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
+  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', j.bleDiag || '—'], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
     ['Firmware', j.fw], ['Compilato', fmtBuilt(j.built)], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['Memoria libera', fmtKb(j.heap) + ' / ' + fmtKb(j.heapTotal)], ['Minimo storico', fmtKb(j.heapMin)], ['Blocco più grande', fmtKb(j.heapBlock)], ['Task attivi', j.tasks]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
@@ -2632,7 +2647,7 @@ function renderNet() {
   $('#httpsCaRow').hidden = !n.https;
   $('#slkeSub').textContent = n.slke ? tr('Attivo · porta 2325 · {n} client', { n: n.slkeN || 0 }) : tr('Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)');
   $('#slkeTxSub').textContent = n.slkeTx ? tr('Acceso: il programma collegato può inviare comandi all’impianto') : tr('Spento: la connessione è un monitor di sola lettura');
-  { const bi = $('#bleNameIn'); if (bi && document.activeElement !== bi) bi.value = n.bleCustom ? (n.bleName || '') : ''; $('#bleMacTxt').textContent = n.bleMac ? tr('Indirizzo Bluetooth') + ' ' + n.bleMac + (n.wifiMac ? ' · WiFi ' + n.wifiMac : '') : ''; }
+  { const bi = $('#bleNameIn'); if (bi && document.activeElement !== bi) bi.value = n.bleCustom ? (n.bleName || '') : ''; $('#bleMacTxt').textContent = n.bleMac ? tr('Indirizzo Bluetooth') + ' ' + macTxt(n.bleMac) + (n.wifiMac ? ' · WiFi ' + macTxt(n.wifiMac) : '') : ''; }
   $('#bleSub').textContent = n.ble ? (n.bleConn ? tr('Attivo · client connesso') : tr('Attivo · visibile come {n}', { n: n.bleName || 'S-Link' })) : tr('Console seriale via Nordic UART Service');
   $('#appSub').textContent = n.app ? tr('Attiva · TCP porta 2323 ({n} client) · MQTT {m}', { n: n.tcp, m: tr(n.mqtt ? (n.mqttOk ? 'connesso' : 'in connessione…') : 'non configurato') }) : tr('Console TCP (porta 2323) e MQTT per Home Assistant');
   const wifi = n.wifi === 'connected' ? tr('Connesso · {r} dBm', { r: n.rssi }) : n.wifi === 'connecting' ? tr('In connessione…') : n.wifi === 'idle' ? tr('Inattivo') : tr('Non configurato');
@@ -3839,7 +3854,7 @@ const saveUI = () => store.set('ui', JSON.stringify(UI));
 const qt = t => '"' + t.replace(/"/g, '') + '"';
 const TABS = [['home', 'Ascolto'], ['radio', 'Radio'], ['sound', 'Suono'], ['stats', 'Statistiche'], ['console', 'Console'], ['jukebox', 'Jukebox'], ['help', 'Help']];
 function applyTitles() {
-  document.title = TITLE.page || 'S-Link · Sony ES';
+  document.title = TITLE.page || (BLEMODE ? 'S-Link · Bluetooth' : 'S-Link · Sony ES');
   let m = $('meta[name=apple-mobile-web-app-title]'); if (!m) { m = document.createElement('meta'); m.name = 'apple-mobile-web-app-title'; document.head.appendChild(m); }
   m.content = TITLE.page || 'S-Link';
   render();
@@ -4106,10 +4121,12 @@ if (window.SLINK_BUILD && !DEMO) fetch('/api/ota', { cache: 'no-store' }).then(r
   try { if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); location.replace(location.pathname + '?r=' + j.web + location.hash); return; } } catch (e) {}
   toast('Questa pagina non è aggiornata: ricarica forzando (Ctrl+F5) o svuota la cache del browser', 'err');
 }).catch(() => {});
-if ('serviceWorker' in navigator && window.isSecureContext && !DEMO && !BLEMODE) navigator.serviceWorker.register('/sw.js').catch(() => {});
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaEv = e; if (!pwaInstalled()) $('#pwaRow').hidden = false; });
-window.addEventListener('appinstalled', () => { pwaEv = null; $('#pwaRow').hidden = true; toast('App installata', 'ok'); });
-$('#pwaBtn').onclick = () => { if (!pwaEv) return; pwaEv.prompt(); pwaEv.userChoice.finally(() => { pwaEv = null; $('#pwaRow').hidden = true; }); };
+if ('serviceWorker' in navigator && window.isSecureContext && !DEMO) navigator.serviceWorker.register(BLEMODE ? './sw-ble.js' : '/sw.js').catch(() => {});   /* ble.html: the worker of the Pages site keeps the page, so the app also starts offline */
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaEv = e; if (!pwaInstalled()) { $('#pwaRow').hidden = false; if ($('#bleInstall')) $('#bleInstall').hidden = false; } });
+window.addEventListener('appinstalled', () => { pwaEv = null; $('#pwaRow').hidden = true; if ($('#bleInstall')) $('#bleInstall').hidden = true; toast('App installata', 'ok'); });
+const pwaInstall = () => { if (!pwaEv) return; pwaEv.prompt(); pwaEv.userChoice.finally(() => { pwaEv = null; $('#pwaRow').hidden = true; if ($('#bleInstall')) $('#bleInstall').hidden = true; }); };
+$('#pwaBtn').onclick = pwaInstall;
+if ($('#bleInstall')) $('#bleInstall').onclick = pwaInstall;
 </script>
 </body>
 </html>

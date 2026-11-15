@@ -5,6 +5,7 @@
 # download GitHub release files (no CORS headers), so the factory images of the latest release are copied into firmware/ here; the site is rebuilt when the
 # "Firmware" workflow finishes (a new release).
 # ble.html is the same page with window.SLINK_BLE: it talks to the device over Web Bluetooth (Nordic UART) instead of the WebSocket (boards with BLE, e.g. the ESP32-H2).
+# It is an installable app of its own (manifest-ble.webmanifest, sw-ble.js from site/).
 name: Demo on GitHub Pages
 
 on:
@@ -42,7 +43,9 @@ jobs:
           grep -q 'SLINK_DEMO_JB' _site/index.html
           cp main/web/index.html _site/ble.html
           sed -i '0,/<head>/s//<head>\n<script>window.SLINK_BLE = true;<\/script>/' _site/ble.html
-          grep -q 'SLINK_BLE' _site/ble.html
+          sed -i 's|href="./manifest.webmanifest"|href="./manifest-ble.webmanifest"|; s|^<title>[^<]*</title>|<title>S-Link · Bluetooth</title>|' _site/ble.html
+          grep -q 'SLINK_BLE' _site/ble.html && grep -q 'manifest-ble.webmanifest' _site/ble.html
+          cp site/manifest-ble.webmanifest site/sw-ble.js _site/
           touch _site/.nojekyll
       - name: Web installer (install.html + the firmware of the latest release)
         env:
