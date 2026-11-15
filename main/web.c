@@ -164,6 +164,8 @@ static esp_err_t h_ca(httpd_req_t *r)
 /* The PWA manifest is made here, not served as a file, so that the name of the installed app follows the titles set in Settings (UITITLE):
  *   name       = page title (UITITLE PAGE), else "S-Link · Sony ES"
  *   short_name = header title (UITITLE APP), else the page title, else "S-Link": it is the label under the icon on the phone
+ *   UITITLE PWA PAGE: both are the page title (so the app is called like the page, not like the header)
+ *   UITITLE NAME "text": both are that text (it wins over the two above)
  * (the rest is the same as main/web/manifest.webmanifest, which is no longer served) */
 static size_t json_str(char *o, size_t sz, const char *s)
 {
@@ -183,6 +185,8 @@ static esp_err_t h_manifest(httpd_req_t *r)
     char name[120], shrt[120], buf[1400];
     const char *page = g_set.title_page[0] ? g_set.title_page : "S-Link \xC2\xB7 Sony ES";
     const char *app = g_set.title_app[0] ? g_set.title_app : g_set.title_page[0] ? g_set.title_page : "S-Link";
+    if (g_set.title_pwa[0]) app = page = g_set.title_pwa;                                   /* UITITLE NAME: a name of its own for the installed app */
+    else if (g_set.pwa_page) app = page = g_set.title_page[0] ? g_set.title_page : "S-Link";    /* UITITLE PWA PAGE: the page title names the app (name and label) */
     json_str(name, sizeof name, page); json_str(shrt, sizeof shrt, app);
     int n = snprintf(buf, sizeof buf,
         "{\n"

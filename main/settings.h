@@ -21,6 +21,8 @@ typedef struct {
     unsigned char wps;      /* WiFi power save: 0 auto (eco: max modem, else min modem), 1 none, 2 min modem, 3 max modem */
     unsigned char lis;      /* WiFi listen interval in beacons (1-10), 0 = automatic (3 in eco, DTIM otherwise) */
     char title_app[33];     /* web interface: header title (empty = amplifier name) */
+    char title_pwa[33];     /* name of the installed app (PWA manifest), free text; empty = follow pwa_page (UITITLE NAME "text") */
+    bool pwa_page;          /* installed app (PWA manifest) is named after the page title instead of the header title (UITITLE PWA PAGE) */
     char title_page[33];    /* web interface: page title (tabs, bookmarks) */
     char ota_url[128];      /* firmware update: custom URL of the .bin (empty = latest GitHub release) */
     char ota_token[64];     /* firmware update: optional Bearer token sent to the download server (empty = none) */

@@ -43,6 +43,8 @@ void settings_load(void)
     if (nvs_get_u8(h, "lis", &v) == ESP_OK && v <= 10) g_set.lis = v;
     get_str(h, "tapp", g_set.title_app, sizeof g_set.title_app, "");
     get_str(h, "tpg", g_set.title_page, sizeof g_set.title_page, "");
+    if (nvs_get_u8(h, "pwas", &v) == ESP_OK) g_set.pwa_page = v;
+    get_str(h, "tpwa", g_set.title_pwa, sizeof g_set.title_pwa, "");
     get_str(h, "ourl", g_set.ota_url, sizeof g_set.ota_url, "");
     get_str(h, "otok", g_set.ota_token, sizeof g_set.ota_token, "");
     get_str(h, "opw", g_set.ota_pass, sizeof g_set.ota_pass, "");
@@ -77,6 +79,8 @@ void settings_save(void)
     nvs_set_u8(h, "lis", g_set.lis);
     nvs_set_str(h, "tapp", g_set.title_app);
     nvs_set_str(h, "tpg", g_set.title_page);
+    nvs_set_u8(h, "pwas", g_set.pwa_page);
+    nvs_set_str(h, "tpwa", g_set.title_pwa);
     nvs_set_str(h, "ourl", g_set.ota_url);
     nvs_set_str(h, "otok", g_set.ota_token);
     nvs_set_str(h, "opw", g_set.ota_pass);
