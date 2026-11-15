@@ -247,6 +247,7 @@ void net_apply(void)
     if (up && g_set.web) web_start(); else web_stop();
     if (up && g_set.app) tcp_srv_start(); else tcp_srv_stop();
     if (up && g_set.slinke) slinke_start(); else slinke_stop();
+    if (up && g_set.hue && g_set.web) hue_start(); else hue_stop();
 
     char snap[sizeof s_mqtt_applied];
     snprintf(snap, sizeof snap, "%s\n%s\n%s", g_set.mqtt_uri, g_set.mqtt_user, g_set.mqtt_pass);
@@ -323,7 +324,9 @@ static size_t net_json(char *b, size_t sz)
     P(",\"host\":"); J(g_set.host);
     P(",\"mqtt\":"); J(g_set.mqtt_uri);
     P(",\"mqttUser\":"); J(g_set.mqtt_user);
-    P(",\"mqttOk\":%d,\"tcp\":%d,\"slke\":%d,\"slkeTx\":%d,\"slkeN\":%d,\"https\":%d}", mqtt_bridge_connected(), tcp_srv_clients(), g_set.slinke, g_set.slinke_tx, slinke_clients(), g_set.https && web_https_running());
+    P(",\"mqttOk\":%d,\"tcp\":%d,\"slke\":%d,\"slkeTx\":%d,\"slkeN\":%d,\"https\":%d,\"hue\":%d,\"hueMax\":%d,\"hueName\":", mqtt_bridge_connected(), tcp_srv_clients(), g_set.slinke, g_set.slinke_tx, slinke_clients(), g_set.https && web_https_running(), g_set.hue, g_set.hue_max ? g_set.hue_max : 30);
+    J(g_set.hue_name);
+    P("}");
     #undef P
     #undef J
     return n < sz ? n : sz - 1;

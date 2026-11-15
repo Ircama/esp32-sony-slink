@@ -408,12 +408,14 @@ void web_start(void)
         c.max_open_sockets = 6;
         c.lru_purge_enable = true;
         c.stack_size = 8192;                          /* the firmware upload (flash writes) runs in this task */
-        c.max_uri_handlers = 24;
+        c.max_uri_handlers = 40;
+        c.uri_match_fn = httpd_uri_match_wildcard;                     /* for the Hue API (/api/<user>/lights/1/state); the exact URIs registered first still win */
         c.close_fn = on_close;
         c.send_wait_timeout = 3;
         c.recv_wait_timeout = 5;
         if (httpd_start(&s_srv, &c) != ESP_OK) { s_srv = NULL; return; }
         reg_all(s_srv);
+        hue_register(s_srv);                                            /* answers only while HUE is on */
         cli_sink_add(web_sink);
     }
     if (g_set.https) https_start(); else https_stop();

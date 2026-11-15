@@ -32,11 +32,14 @@ typedef struct {
     char ota_pass[33];      /* firmware update: optional password for the push upload (POST /api/ota); empty = no password */
     bool slinke;            /* Slink-e serial protocol on TCP port 2325 (programs written for the Nirvis Slink-e). OFF by default */
     bool https;             /* HTTPS web portal on port 443 with a certificate from the device's own CA (tls.c). OFF by default */
+    bool hue;               /* Philips Hue "bridge" (hue.c): the amplifier as a dimmable light for Alexa / Hue apps: on-off = power, brightness = volume. OFF by default */
+    uint8_t hue_max;        /* ... volume at 100 % brightness, percent of the knob travel (default 30): the cap */
+    char hue_name[33];      /* ... name of the light (empty = "Amplificatore") */
     bool slinke_tx;         /* ... and they may send to the bus (otherwise the connection is a read-only monitor). OFF by default */
 } settings_t;
 
 extern settings_t g_set;
-#define NET_WANTED (g_set.web || g_set.app || g_set.slinke)   /* something that needs the WiFi is on */
+#define NET_WANTED (g_set.web || g_set.app || g_set.slinke || g_set.hue)   /* something that needs the WiFi is on */
 
 void settings_load(void);                 /* fills g_set from NVS (defaults if absent); NVS must be initialised */
 void settings_save(void);                 /* writes g_set to NVS */

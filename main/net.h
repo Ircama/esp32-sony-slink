@@ -29,6 +29,10 @@ int  web_clients(void);                     /* WebSocket clients connected now *
 size_t stats_json(char *buf, size_t sz);    /* {"t":"stats",...}: device statistics, read on request (stats.c) */
 
 #include "slinke.h"
+void hue_start(void);                       /* Philips Hue "bridge": SSDP answers (the HTTP part is on the web server, hue_register) */
+void hue_stop(void);
+bool hue_running(void);
+void hue_register(void *httpd_handle);      /* registers its URIs on the web server (port 80) */
 void tcp_srv_start(void);
 void tcp_srv_stop(void);
 int  tcp_srv_clients(void);

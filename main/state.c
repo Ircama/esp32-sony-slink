@@ -39,6 +39,15 @@ bool state_tuner(unsigned *f, bool *am, char *name, size_t n)
     return ok;
 }
 
+int state_power(void)
+{
+    if (!s_mtx) return -1;
+    xSemaphoreTake(s_mtx, portMAX_DELAY);
+    int p = S.power;
+    xSemaphoreGive(s_mtx);
+    return p;
+}
+
 /* The amp's power-off reply is often garbled on the bus (the line drops while it shuts down), so the
  * reply is never decoded: record the power state when our own PWRON/PWROFF was sent. */
 void state_set_power(int on)

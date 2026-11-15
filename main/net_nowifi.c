@@ -72,6 +72,10 @@ int  web_clients(void) { return 0; }
 void tcp_srv_start(void) {}
 void tcp_srv_stop(void) {}
 int  tcp_srv_clients(void) { return 0; }
+void hue_start(void) {}
+void hue_stop(void) {}
+bool hue_running(void) { return false; }
+void hue_register(void *h) { (void)h; }
 void slinke_start(void) {}
 void slinke_stop(void) {}
 int  slinke_clients(void) { return 0; }

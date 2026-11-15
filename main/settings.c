@@ -55,6 +55,9 @@ void settings_load(void)
     if (nvs_get_u8(h, "slke", &v) == ESP_OK) g_set.slinke = v;
     if (nvs_get_u8(h, "slktx", &v) == ESP_OK) g_set.slinke_tx = v;
     if (nvs_get_u8(h, "https", &v) == ESP_OK) g_set.https = v;
+    if (nvs_get_u8(h, "hue", &v) == ESP_OK) g_set.hue = v;
+    g_set.hue_max = 30; if (nvs_get_u8(h, "huemax", &v) == ESP_OK && v >= 1 && v <= 100) g_set.hue_max = v;
+    get_str(h, "huen", g_set.hue_name, sizeof g_set.hue_name, "");
     nvs_close(h);
 }
 
@@ -93,6 +96,9 @@ void settings_save(void)
     nvs_set_u8(h, "slke", g_set.slinke);
     nvs_set_u8(h, "slktx", g_set.slinke_tx);
     nvs_set_u8(h, "https", g_set.https);
+    nvs_set_u8(h, "hue", g_set.hue);
+    nvs_set_u8(h, "huemax", g_set.hue_max);
+    nvs_set_str(h, "huen", g_set.hue_name);
     nvs_commit(h);
     nvs_close(h);
 }

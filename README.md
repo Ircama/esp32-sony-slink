@@ -139,6 +139,7 @@ Host → ESP (one line per command, case-insensitive):
 | `APP ON\|OFF` | enable/disable the **WiFi application interface**: TCP console (port 2323) and MQTT bridge with Home Assistant discovery (saved) |
 | `SLINKE ON\|OFF` | enable/disable the **Slink-e serial protocol on TCP** (port 2325, see [Slink-e protocol over TCP](#slink-e-protocol-over-tcp)); **off** by default (saved) |
 | `HTTPS ON\|OFF\|RESET` | also serve the web portal on **https** (port 443) with a certificate from the device's own CA, see [HTTPS and installing the app](#https-and-installing-the-app); `RESET` deletes the CA and makes a new one (saved) |
+| `HUE ON\|OFF`, `HUE MAX <1-100>`, `HUE NAME <text>` | the amplifier as a **Philips Hue light** for Alexa and Hue apps (on-off = power, brightness = volume up to `MAX` % of the knob, default 30), see [Philips Hue](#philips-hue-alexa); off by default (saved) |
 | `SLINKETX ON\|OFF` | let a connected Slink-e program **send** to the bus; **off** by default: the connection is then a read-only monitor (saved) |
 | `WIFI <ssid> [password]` / `WIFI CLEAR` | WiFi network (saved). With blanks use quotes: `WIFI "My home" "the password"`. WiFi turns on only if `WEB`, `APP` or `SLINKE` is ON |
 | `MQTT <mqtt://host[:port]> [user] [password]` / `MQTT CLEAR` | MQTT broker (saved; plain TCP only, no TLS) |
@@ -165,6 +166,7 @@ host name) are stored in NVS and **persist**.
 | USB Serial/JTAG | always on, as before |
 | **BLE UART** (`BLE ON`) | Nordic UART Service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; the device advertises as `S-Link-XXXX`. Apps: nRF Toolbox, Serial Bluetooth Terminal, Web Bluetooth. The **portal itself** runs over it from <https://ircama.github.io/esp32-sony-slink/ble.html> (see [Bluetooth page](#the-portal-over-bluetooth-github-pages)) It is not authenticated: enable it only when needed |
 | **Web portal** (`WEB ON`) | `http://slink.local/` (or the IP: `NET`). Single page, light/dark theme, suited to phone and desktop; WebSocket `/ws` for commands and real-time state. Also REST: `GET /api/state`, `/api/presets`, `/api/stations`, `/api/favs`, `/api/stats` and `POST /api/cmd` (body = one command; the output comes over the WebSocket). A WebSocket client is registered when it sends its first frame |
+| **Philips Hue** (`HUE ON`) | the amplifier as a dimmable light for Alexa and apps that speak the Hue v1 API: on-off = power, brightness = volume, capped. See [below](#philips-hue-alexa) |
 | **HTTPS** (`HTTPS ON`) | the same portal on `https://slink.local/` (port 443), trusted once the device's CA is installed on the phone / PC: needed to install the portal as an app on Android. See [below](#https-and-installing-the-app) |
 | **Jukebox tab** | appears only while a CD changer (`90`/`91`/`92`) or an MD recorder (`B0`) answers the probe `90 22` / `B0 22`: transport, disc and track lists, memos / CD Text / MD titles, groups and artists. Reading and transport are free; every write (memo, MD titles, artist names, erase track, power off) asks for confirmation. Untested on real units: none is attached to the author's bus. Open `?demo&jb` to see it with an emulated changer and recorder (the GitHub Pages demo always shows it) |
 | **Backup / restore** | Settings › Backup and restore saves one JSON file with the amplifier's configuration (input names, sound field, EQ, surround levels, speaker set-up, 2nd audio, 5.1; its tuner presets are stored for reference only, S-Link cannot write them), what the ESP32 keeps (settings, FM stations, favourites; passwords only if asked) and this browser's interface preferences; the file can be restored selectively. Volume, input and power state are never touched. Only writes verified on the STR-DA50ES are used (sound field, EQ, surround levels, 5.1); input names (`C0 88`), speaker sizes (`C3 53`) and the second audio source (`C0 52`) do not work on it and stay in the file for reference |
@@ -223,6 +225,19 @@ Build notes: the ESP32-S3 build uses the 2 MB of PSRAM of the S3FH4R2 board (`sd
 first build); partition table in `partitions.csv` (two app slots of 1.9 MB for the over-the-air update, flash 4 MB). After changing
 `sdkconfig.defaults` delete the generated `sdkconfig.esp32s3` / `sdkconfig.esp32c3` / `sdkconfig.esp32c6` to regenerate them
 (they are git-ignored).
+
+## Philips Hue (Alexa)
+
+`HUE ON` (or *Settings › Interfaces › Philips Hue*, off by default; it needs the web portal on) makes the device behave as a **Philips Hue bridge with one dimmable light**, the way the open-source ESP "Alexa" libraries do. Alexa (the Echo devices that discover Hue lights on the local network) and any app that speaks the Hue v1 API can then discover it and:
+
+| Voice / app | What the amplifier does |
+|---|---|
+| "Alexa, turn on *Amplificatore*" / off | power on (`PWRON`) / standby (`PWROFF`) |
+| "Alexa, set *Amplificatore* to 40 %" | volume: 100 % brightness is the **maximum volume** (`HUE MAX`, default **30 %** of the knob travel), so 40 % brightness = 12 % of the knob. The volume is never above that cap whatever is asked |
+
+Set it up: `HUE ON`, optionally `HUE NAME "Ampli"` (the name of the light; default *Amplificatore*) and `HUE MAX 40`, then ask Alexa to discover the devices ("Alexa, discover my devices", or in the Alexa app: *Devices › + › Add device › Light › Philips Hue*; if it is asked to press the link button, the device accepts without it). After a rename, discover again.
+
+How it works: the device answers the SSDP search (UDP 1900, multicast 239.255.255.250) with the address of `/description.xml` and serves the Hue API on the portal's port 80 (`POST /api`, `GET /api/<user>/lights`, `PUT /api/<user>/lights/1/state`, ...); the URIs of the portal keep priority. Notes: there is **no authentication** in this kind of Hue emulation, so anyone on the local network can switch the amplifier and set the volume up to the cap (keep `HUE MAX` low, switch `HUE` off when not needed); a request that switches on and sets the volume together sends both at once (the amplifier may not have started yet); the volume is the knob estimate (when the position is not known the knob first goes to the minimum, then up to the target); the motor knob is slow. Checked with a PC: the SSDP answer, `description.xml`, the user creation, the light and its state, and the power-off request; **not tried with a real Echo / Alexa** (nor with a Hue app), and not with the volume on a live amplifier. Google Home and Siri do not use this: they need Home Assistant (MQTT discovery) or Matter.
 
 ## The portal over Bluetooth (GitHub Pages)
 
