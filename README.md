@@ -46,6 +46,8 @@ Beyond the amplifier, the firmware (written in C with ESP-IDF) implements the S-
 
 ## Build and flash
 
+**Web installer.** The quickest way: open **<https://ircama.github.io/esp32-sony-slink/install.html>** in Chrome, Edge or Opera on a computer (or Chrome on Android with a USB OTG cable), connect the board to a USB port and press *Connect and install*: the page reads the chip type (ESP32-S3, C3, C6, C5 or H2) and writes the matching firmware of the latest release (Web Serial and [ESP Web Tools](https://github.com/esphome/esp-web-tools); nothing is installed on the computer). The images are copied to the site when it is built, because a browser cannot download the release files from GitHub directly.
+
 You do not need to build anything to try the firmware: every [release](https://github.com/Ircama/esp32-sony-slink/releases) has a ready `slink-<chip>-factory.bin` (bootloader, partition table and application in one file) that you flash at address `0x0` with `esptool` (`pip install esptool`, then `esptool --chip esp32s3 write_flash 0x0 slink-esp32s3-factory.bin`). To build it yourself, choose one of the two toolchains below; both need **git**, **Python 3.10 or newer** and an internet connection for the first build (toolchains and the managed components `mdns` and `mqtt` are downloaded).
 
 | Chip | Board used / typical | PlatformIO environment | Status |

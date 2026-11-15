@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Install the S-Link firmware</title>
+<style>
+  :root { --bg:#f3f0e9; --fg:#1d1b16; --muted:#5d584c; --card:#ffffff; --line:#ddd7c9; --accent:#2f6fdb; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0c0d10; --fg:#e8e6df; --muted:#9a968a; --card:#17191e; --line:#262a31; --accent:#6ea3ff; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; }
+  h2 { font-size:1.1rem; margin:28px 0 8px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:16px 0; }
+  .muted { color:var(--muted); font-size:.92rem; }
+  a { color:var(--accent); }
+  table { border-collapse:collapse; width:100%; font-size:.92rem; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .btn { font:inherit; padding:12px 22px; border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
+  #nosupport { display:none; border-color:#b23a30; }
+  code { background:rgba(127,127,127,.15); padding:1px 5px; border-radius:5px; }
+  esp-web-install-button { --esp-tools-button-color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Install the S-Link firmware</h1>
+  <p class="muted">ESP32 Sony S-Link / Control-A1 controller. Flash a board connected to <strong>this computer's USB port</strong> straight from the browser: the page recognises the chip and writes the matching firmware. <a href="./">Demo of the web portal</a> · <a href="https://github.com/Ircama/esp32-sony-slink">Project on GitHub</a></p>
+
+  <div class="card" id="nosupport">
+    <strong>This browser cannot do it.</strong> Flashing needs <em>Web Serial</em>: use Chrome, Edge or Opera on a computer (or Chrome on Android with a USB OTG cable). Firefox and Safari do not have it. You can still download the images below and write them with <code>esptool</code>.
+  </div>
+
+  <div class="card">
+    <esp-web-install-button manifest="firmware/manifest.json">
+      <button slot="activate" class="btn">Connect and install</button>
+      <span slot="unsupported">Your browser does not support Web Serial (use Chrome, Edge or Opera).</span>
+      <span slot="not-allowed">This page must be opened over HTTPS.</span>
+    </esp-web-install-button>
+    <p class="muted" id="ver"></p>
+  </div>
+
+  <h2>How it works</h2>
+  <ol>
+    <li>Plug the board into a USB port of this computer and press <em>Connect and install</em>.</li>
+    <li>Choose the serial port in the browser window (an <em>USB JTAG/serial</em> or <em>USB Serial</em> device). The page reads the chip type and picks the firmware for it.</li>
+    <li>Confirm. The image is written at address <code>0x0</code> (bootloader, partition table and application). Leave <em>Erase device</em> <strong>off</strong> to keep the settings of a board that already runs this firmware (WiFi, stations, titles); turn it on for a clean start.</li>
+    <li>When it ends the board restarts. The <em>Logs &amp; Console</em> button shows its output.</li>
+  </ol>
+  <p class="muted">If the board is not listed, put it in download mode: hold <strong>BOOT</strong> while plugging it in (or while pressing <strong>RESET</strong>), then try again. The boards with a native USB port need no driver on current Windows, macOS and Linux.</p>
+
+  <h2>What gets installed</h2>
+  <table>
+    <tr><th>Chip</th><th>Image</th><th>Notes</th></tr>
+    <tr><td>ESP32-S3</td><td><a href="firmware/slink-esp32s3-factory.bin">slink-esp32s3-factory.bin</a></td><td>the board the project was developed on</td></tr>
+    <tr><td>ESP32-C3</td><td><a href="firmware/slink-esp32c3-factory.bin">slink-esp32c3-factory.bin</a></td><td>builds; not tried on the amplifier</td></tr>
+    <tr><td>ESP32-C6</td><td><a href="firmware/slink-esp32c6-factory.bin">slink-esp32c6-factory.bin</a></td><td>WiFi 6; not tried on a board</td></tr>
+    <tr><td>ESP32-C5</td><td><a href="firmware/slink-esp32c5-factory.bin">slink-esp32c5-factory.bin</a></td><td>WiFi 6, 2.4 + 5 GHz; the installer may not support it yet</td></tr>
+    <tr><td>ESP32-H2</td><td><a href="firmware/slink-esp32h2-factory.bin">slink-esp32h2-factory.bin</a></td><td>no WiFi: USB serial and Bluetooth LE only (no web portal)</td></tr>
+  </table>
+
+  <h2>After the first installation</h2>
+  <p>Boards with WiFi: open the serial console (<em>Logs &amp; Console</em>, or any terminal) and type <code>WIFI "NetworkName" "password"</code> then <code>WEB ON</code>; <code>NET</code> shows the address, and the portal opens at <code>http://slink.local/</code>. The next updates can be done over WiFi from the portal (Settings › Firmware update), without the cable. The wiring to the amplifier is described in the <a href="https://github.com/Ircama/esp32-sony-slink/blob/main/docs/WIRING.md">wiring guide</a>.</p>
+  <p class="muted">The firmware is flashed with <a href="https://github.com/esphome/esp-web-tools">ESP Web Tools</a> (Apache-2.0). The images are the ones of the latest <a href="https://github.com/Ircama/esp32-sony-slink/releases/latest">release</a>, copied here when the site is built (checksums in <code>SHA256SUMS.txt</code> of the release).</p>
+</main>
+<script>
+  if (!('serial' in navigator)) document.getElementById('nosupport').style.display = 'block';
+  fetch('firmware/manifest.json').then(r => r.json()).then(m => { document.getElementById('ver').textContent = 'Firmware version: ' + m.version; }).catch(() => {});
+</script>
+<script type="module" src="https://unpkg.com/esp-web-tools@10.5.2/dist/web/install-button.js?module"></script>
+</body>
+</html>

@@ -1,12 +1,18 @@
 # Publishes the web portal in demo mode (simulated amplifier, no device needed) on GitHub Pages:
 #   https://<owner>.github.io/<repo>/
 # The files of main/web/ are copied as they are; only a one-line script is added to index.html to switch the demo on (with the emulated CD changer / MD recorder: Jukebox tab).
+# The site also has install.html (site/): a web installer (ESP Web Tools, Web Serial) that flashes a board connected to the visitor's USB port. The browser cannot
+# download GitHub release files (no CORS headers), so the factory images of the latest release are copied into firmware/ here; the site is rebuilt when the
+# "Firmware" workflow finishes (a new release).
 name: Demo on GitHub Pages
 
 on:
   push:
     branches: [main]
-    paths: ["main/web/**", ".github/workflows/pages.yml"]
+    paths: ["main/web/**", "site/**", ".github/workflows/pages.yml"]
+  workflow_run:
+    workflows: ["Firmware"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -21,6 +27,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -33,6 +40,20 @@ jobs:
           sed -i '0,/<head>/s//<head>\n<script>window.SLINK_DEMO = true; window.SLINK_DEMO_JB = true;<\/script>/' _site/index.html
           grep -q 'SLINK_DEMO_JB' _site/index.html
           touch _site/.nojekyll
+      - name: Web installer (install.html + the firmware of the latest release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp site/install.html _site/
+          mkdir -p _site/firmware
+          cp site/firmware/manifest.json _site/firmware/
+          if gh release download --repo "$GITHUB_REPOSITORY" --pattern 'slink-*-factory.bin' --pattern 'SHA256SUMS.txt' --dir _site/firmware; then
+            TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+            sed -i "s/\"version\": \"latest\"/\"version\": \"$TAG\"/" _site/firmware/manifest.json
+            (cd _site/firmware && sha256sum -c --ignore-missing SHA256SUMS.txt && ls -l)
+          else
+            echo "::warning::no release with firmware images yet: the installer page will not work"
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

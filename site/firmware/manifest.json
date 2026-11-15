@@ -1,0 +1,13 @@
+{
+  "name": "S-Link / Control-A1 controller (esp32-sony-slink)",
+  "version": "latest",
+  "new_install_prompt_erase": true,
+  "new_install_improv_wait_time": 0,
+  "builds": [
+    { "chipFamily": "ESP32-S3", "parts": [ { "path": "slink-esp32s3-factory.bin", "offset": 0 } ] },
+    { "chipFamily": "ESP32-C3", "parts": [ { "path": "slink-esp32c3-factory.bin", "offset": 0 } ] },
+    { "chipFamily": "ESP32-C6", "parts": [ { "path": "slink-esp32c6-factory.bin", "offset": 0 } ] },
+    { "chipFamily": "ESP32-C5", "parts": [ { "path": "slink-esp32c5-factory.bin", "offset": 0 } ] },
+    { "chipFamily": "ESP32-H2", "parts": [ { "path": "slink-esp32h2-factory.bin", "offset": 0 } ] }
+  ]
+}
