@@ -5,67 +5,282 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Install the S-Link firmware</title>
 <style>
-  :root { --bg:#f3f0e9; --fg:#1d1b16; --muted:#5d584c; --card:#ffffff; --line:#ddd7c9; --accent:#2f6fdb; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0c0d10; --fg:#e8e6df; --muted:#9a968a; --card:#17191e; --line:#262a31; --accent:#6ea3ff; } }
+  :root { --bg:#f3f0e9; --fg:#1d1b16; --muted:#5d584c; --card:#ffffff; --line:#ddd7c9; --accent:#2f6fdb; --ok:#2f7d4f; --err:#b23a30; --warn:#a8650c; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0c0d10; --fg:#e8e6df; --muted:#9a968a; --card:#17191e; --line:#262a31; --accent:#6ea3ff; --ok:#5dc283; --err:#ff7b6e; --warn:#e0a24a; } }
   body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
-  main { max-width:720px; margin:0 auto; padding:24px 16px 48px; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 48px; }
   h1 { font-size:1.5rem; margin:0 0 4px; }
-  h2 { font-size:1.1rem; margin:28px 0 8px; }
+  h2 { font-size:1.1rem; margin:0 0 8px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin:16px 0; }
   .muted { color:var(--muted); font-size:.92rem; }
+  .ok { color:var(--ok); } .err { color:var(--err); } .warn { color:var(--warn); }
   a { color:var(--accent); }
   table { border-collapse:collapse; width:100%; font-size:.92rem; }
-  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
-  .btn { font:inherit; padding:12px 22px; border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
-  #nosupport { display:none; border-color:#b23a30; }
-  code { background:rgba(127,127,127,.15); padding:1px 5px; border-radius:5px; }
+  th, td { text-align:left; padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { width:34%; font-weight:600; }
+  .btn { font:inherit; padding:10px 18px; border:1px solid var(--accent); border-radius:12px; background:transparent; color:var(--accent); cursor:pointer; }
+  .btn.primary { background:var(--accent); color:#fff; }
+  .btn[disabled] { opacity:.5; cursor:default; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:8px 0; }
+  label.opt { display:block; margin:8px 0 2px; }
+  #nosupport { display:none; border-color:var(--err); }
+  code { background:rgba(127,127,127,.15); padding:1px 5px; border-radius:5px; word-break:break-all; }
+  #instwrap[inert] { opacity:.45; }
+  select { font:inherit; max-width:100%; }
   esp-web-install-button { --esp-tools-button-color:var(--accent); }
 </style>
 </head>
 <body>
 <main>
   <h1>Install the S-Link firmware</h1>
-  <p class="muted">ESP32 Sony S-Link / Control-A1 controller. Flash a board connected to <strong>this computer's USB port</strong> straight from the browser: the page recognises the chip and writes the matching firmware. <a href="./">Demo of the web portal</a> · <a href="https://github.com/Ircama/esp32-sony-slink">Project on GitHub</a></p>
+  <p class="muted">ESP32 Sony S-Link / Control-A1 controller. Flash a board connected to <strong>this computer's USB port</strong> straight from the browser. <a href="./">Demo of the web portal</a> · <a href="https://github.com/Ircama/esp32-sony-slink">Project on GitHub</a></p>
 
   <div class="card" id="nosupport">
     <strong>This browser cannot do it.</strong> Flashing needs <em>Web Serial</em>: use Chrome, Edge or Opera on a computer (or Chrome on Android with a USB OTG cable). Firefox and Safari do not have it. You can still download the images below and write them with <code>esptool</code>.
   </div>
 
   <div class="card">
-    <esp-web-install-button manifest="firmware/manifest.json">
-      <button slot="activate" class="btn">Connect and install</button>
-      <span slot="unsupported">Your browser does not support Web Serial (use Chrome, Edge or Opera).</span>
-      <span slot="not-allowed">This page must be opened over HTTPS.</span>
-    </esp-web-install-button>
-    <p class="muted" id="ver"></p>
+    <h2>1 · Recognise the board <span class="muted">(optional, nothing is written)</span></h2>
+    <p class="muted">Connect the board, then press <em>Detect hardware</em>: the page opens the serial port, asks the chip who it is and shows what it found. The firmware that fits is selected below. The board restarts when the check ends.</p>
+    <div class="row"><button class="btn" id="detect">Detect hardware</button><span class="muted" id="detmsg"></span></div>
+    <table id="stats" hidden></table>
   </div>
 
-  <h2>How it works</h2>
-  <ol>
-    <li>Plug the board into a USB port of this computer and press <em>Connect and install</em>.</li>
-    <li>Choose the serial port in the browser window (an <em>USB JTAG/serial</em> or <em>USB Serial</em> device). The page reads the chip type and picks the firmware for it.</li>
-    <li>Confirm. The image is written at address <code>0x0</code> (bootloader, partition table and application). Leave <em>Erase device</em> <strong>off</strong> to keep the settings of a board that already runs this firmware (WiFi, stations, titles); turn it on for a clean start.</li>
-    <li>When it ends the board restarts. The <em>Logs &amp; Console</em> button shows its output.</li>
-  </ol>
-  <p class="muted">If the board is not listed, put it in download mode: hold <strong>BOOT</strong> while plugging it in (or while pressing <strong>RESET</strong>), then try again. The boards with a native USB port need no driver on current Windows, macOS and Linux.</p>
+  <div class="card">
+    <h2>2 · Choose the firmware</h2>
+    <label class="opt"><input type="radio" name="src" value="github" checked> <strong>Latest release published on GitHub</strong></label>
+    <div class="muted" id="ghinfo" style="margin-left:24px">Looking up the release…</div>
+    <div class="row" style="margin-left:24px"><button class="btn" id="verify">Verify against GitHub</button><span id="vermsg" class="muted"></span></div>
 
-  <h2>What gets installed</h2>
-  <table>
-    <tr><th>Chip</th><th>Image</th><th>Notes</th></tr>
-    <tr><td>ESP32-S3</td><td><a href="firmware/slink-esp32s3-factory.bin">slink-esp32s3-factory.bin</a></td><td>the board the project was developed on</td></tr>
-    <tr><td>ESP32-C3</td><td><a href="firmware/slink-esp32c3-factory.bin">slink-esp32c3-factory.bin</a></td><td>builds; not tried on the amplifier</td></tr>
-    <tr><td>ESP32-C6</td><td><a href="firmware/slink-esp32c6-factory.bin">slink-esp32c6-factory.bin</a></td><td>WiFi 6; not tried on a board</td></tr>
-    <tr><td>ESP32-C5</td><td><a href="firmware/slink-esp32c5-factory.bin">slink-esp32c5-factory.bin</a></td><td>WiFi 6, 2.4 + 5 GHz; the installer may not support it yet</td></tr>
-    <tr><td>ESP32-H2</td><td><a href="firmware/slink-esp32h2-factory.bin">slink-esp32h2-factory.bin</a></td><td>no WiFi: USB serial and Bluetooth LE only (no web portal)</td></tr>
-  </table>
+    <label class="opt"><input type="radio" name="src" value="local"> <strong>A firmware from this computer</strong></label>
+    <div style="margin-left:24px">
+      <div class="muted">A <em>factory</em> image (bootloader + partition table + application in one file, like <code>slink-esp32s3-factory.bin</code> or the <code>out/</code> folder made by <code>tools/ci_build.sh</code>).</div>
+      <div class="row">
+        <button class="btn" id="pickdir">Choose a folder…</button>
+        <button class="btn" id="pickfile">Choose a file…</button>
+        <input type="file" id="fileinput" accept=".bin" hidden>
+      </div>
+      <div class="row" id="candrow" hidden><label>Image: <select id="cand"></select></label></div>
+      <div class="muted" id="localinfo"></div>
+    </div>
+  </div>
 
-  <h2>After the first installation</h2>
-  <p>Boards with WiFi: open the serial console (<em>Logs &amp; Console</em>, or any terminal) and type <code>WIFI "NetworkName" "password"</code> then <code>WEB ON</code>; <code>NET</code> shows the address, and the portal opens at <code>http://slink.local/</code>. The next updates can be done over WiFi from the portal (Settings › Firmware update), without the cable. The wiring to the amplifier is described in the <a href="https://github.com/Ircama/esp32-sony-slink/blob/main/docs/WIRING.md">wiring guide</a>.</p>
-  <p class="muted">The firmware is flashed with <a href="https://github.com/esphome/esp-web-tools">ESP Web Tools</a> (Apache-2.0). The images are the ones of the latest <a href="https://github.com/Ircama/esp32-sony-slink/releases/latest">release</a>, copied here when the site is built (checksums in <code>SHA256SUMS.txt</code> of the release).</p>
+  <div class="card">
+    <h2>3 · Install</h2>
+    <div id="instwrap">
+      <esp-web-install-button id="inst" manifest="firmware/manifest.json">
+        <button slot="activate" class="btn primary">Connect and install</button>
+        <span slot="unsupported">Your browser does not support Web Serial (use Chrome, Edge or Opera).</span>
+        <span slot="not-allowed">This page must be opened over HTTPS.</span>
+      </esp-web-install-button>
+    </div>
+    <p class="muted" id="instmsg"></p>
+    <p class="muted">The image is written at address <code>0x0</code>. Leave <em>Erase device</em> <strong>off</strong> to keep the settings of a board that already runs this firmware (WiFi, stations, titles); turn it on for a clean start. If the board is not listed, hold <strong>BOOT</strong> while plugging it in (or while pressing <strong>RESET</strong>) and try again. Boards with a native USB port need no driver on current Windows, macOS and Linux. The <em>Logs &amp; Console</em> button shows the output of the board after the installation.</p>
+  </div>
+
+  <div class="card">
+    <h2>What the site offers</h2>
+    <table>
+      <tr><th>Chip</th><td>Image · notes</td></tr>
+      <tr><th>ESP32-S3</th><td><a href="firmware/slink-esp32s3-factory.bin">slink-esp32s3-factory.bin</a> · the board the project was developed on</td></tr>
+      <tr><th>ESP32-C3</th><td><a href="firmware/slink-esp32c3-factory.bin">slink-esp32c3-factory.bin</a> · builds; not tried on the amplifier</td></tr>
+      <tr><th>ESP32-C6</th><td><a href="firmware/slink-esp32c6-factory.bin">slink-esp32c6-factory.bin</a> · WiFi 6; not tried on a board</td></tr>
+      <tr><th>ESP32-C5</th><td><a href="firmware/slink-esp32c5-factory.bin">slink-esp32c5-factory.bin</a> · WiFi 6, 2.4 + 5 GHz; the installer may not support it yet</td></tr>
+      <tr><th>ESP32-H2</th><td><a href="firmware/slink-esp32h2-factory.bin">slink-esp32h2-factory.bin</a> · no WiFi: USB serial and Bluetooth LE only (no web portal)</td></tr>
+    </table>
+    <p class="muted">Where the images come from: a browser cannot download the files of a GitHub release directly (GitHub does not allow it from another site), so when this site is built the workflow copies the factory images of the <a href="https://github.com/Ircama/esp32-sony-slink/releases/latest">latest release</a> into <code>firmware/</code> and checks them against its <code>SHA256SUMS.txt</code>. <em>Verify against GitHub</em> repeats the check in your browser: it computes the SHA-256 of the copy and compares it with the digest GitHub reports for the release file, live.</p>
+    <p class="muted">After the first installation, boards with WiFi: open the serial console and type <code>WIFI "NetworkName" "password"</code> then <code>WEB ON</code>; <code>NET</code> shows the address and the portal opens at <code>http://slink.local/</code>. Later updates can be done over WiFi from the portal (Settings › Firmware update). Wiring: <a href="https://github.com/Ircama/esp32-sony-slink/blob/main/docs/WIRING.md">wiring guide</a>. Flashing uses <a href="https://github.com/esphome/esp-web-tools">ESP Web Tools</a> and <a href="https://github.com/espressif/esptool-js">esptool-js</a> (Apache-2.0).</p>
+  </div>
 </main>
-<script>
-  if (!('serial' in navigator)) document.getElementById('nosupport').style.display = 'block';
-  fetch('firmware/manifest.json').then(r => r.json()).then(m => { document.getElementById('ver').textContent = 'Firmware version: ' + m.version; }).catch(() => {});
+
+<script type="module">
+import { ESPLoader, Transport } from 'https://unpkg.com/esptool-js@0.5.7/bundle.js';
+
+const REPO = 'Ircama/esp32-sony-slink';
+const $ = id => document.getElementById(id);
+const FAMILIES = ['ESP32-S3', 'ESP32-C3', 'ESP32-C6', 'ESP32-C5', 'ESP32-H2'];       // the chips the project builds for
+const CHIP_IDS = { 0x00: 'ESP32', 0x02: 'ESP32-S2', 0x05: 'ESP32-C3', 0x09: 'ESP32-S3', 0x0C: 'ESP32-C2', 0x0D: 'ESP32-C6', 0x10: 'ESP32-H2', 0x12: 'ESP32-P4', 0x14: 'ESP32-C61', 0x17: 'ESP32-C5' };
+const fileOf = fam => 'slink-' + fam.toLowerCase().replace('-', '') + '-factory.bin';
+const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+const sha256 = async buf => hex(await crypto.subtle.digest('SHA-256', buf));
+const kb = n => n >= 1024 ? (n / 1024) + ' MB' : n + ' KB';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+if (!('serial' in navigator)) $('nosupport').style.display = 'block';
+
+let detected = null;                   // { family, ... } from the board
+let release = null;                    // { tag, published, digests: { name: sha256 } } from the GitHub API
+let mirrorVersion = '';                // the version written in firmware/manifest.json by the site build
+let local = null;                      // { name, size, family, sha, bytes } the file chosen by the user
+let blobUrls = [];
+
+/* ---------- the release published on GitHub (API: CORS allowed) and the copy kept on this site ---------- */
+async function loadRelease() {
+  try { mirrorVersion = (await (await fetch('firmware/manifest.json', { cache: 'no-store' })).json()).version || ''; } catch (e) {}
+  try {
+    const r = await fetch('https://api.github.com/repos/' + REPO + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    release = { tag: j.tag_name, published: j.published_at, url: j.html_url, digests: {} };
+    for (const a of j.assets || []) if (a.digest && a.digest.startsWith('sha256:')) release.digests[a.name] = a.digest.slice(7);
+    const same = mirrorVersion === release.tag;
+    $('ghinfo').innerHTML = 'GitHub release <a href="' + esc(release.url) + '"><strong>' + esc(release.tag) + '</strong></a>, published ' + esc(release.published.slice(0, 10)) +
+      '. Copy on this site: <strong>' + esc(mirrorVersion || '?') + '</strong>' + (same ? ' <span class="ok">(same version)</span>' : ' <span class="warn">(the site copy is not the latest release yet: the site is rebuilt after every release)</span>');
+  } catch (e) {
+    $('ghinfo').innerHTML = 'Copy on this site: <strong>' + esc(mirrorVersion || '?') + '</strong>. <span class="warn">GitHub could not be reached (' + esc(e.message) + '): the live check is not available.</span>';
+  }
+}
+
+async function verifyMirror(family) {
+  const out = $('vermsg'); out.className = 'muted';
+  const fams = family ? [family] : FAMILIES;
+  if (!release || !Object.keys(release.digests).length) { out.className = 'warn'; out.textContent = 'GitHub did not give the file digests: cannot compare.'; return false; }
+  let allOk = true; const lines = [];
+  for (const fam of fams) {
+    const name = fileOf(fam);
+    out.textContent = 'Checking ' + name + '…';
+    try {
+      const r = await fetch('firmware/' + name, { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const sum = await sha256(await r.arrayBuffer());
+      const want = release.digests[name];
+      if (!want) { allOk = false; lines.push(name + ': not in the GitHub release'); }
+      else if (sum === want) lines.push(name + ': identical to the file of release ' + release.tag);
+      else { allOk = false; lines.push(name + ': DIFFERS from GitHub release ' + release.tag + ' (site copy ' + sum.slice(0, 12) + '…, GitHub ' + want.slice(0, 12) + '…)'); }
+    } catch (e) { allOk = false; lines.push(name + ': ' + e.message); }
+  }
+  out.className = allOk ? 'ok' : 'err';
+  out.innerHTML = (allOk ? '✔ ' : '✘ ') + lines.map(esc).join('<br>');
+  return allOk;
+}
+
+/* ---------- hardware detection (esptool-js, read only) ---------- */
+$('detect').onclick = async () => {
+  const msg = $('detmsg'); msg.className = 'muted'; msg.textContent = 'Choose the serial port in the browser window…';
+  $('stats').hidden = true;
+  let port, transport;
+  try {
+    port = await navigator.serial.requestPort();
+    const info = port.getInfo ? port.getInfo() : {};
+    transport = new Transport(port, false);
+    const loader = new ESPLoader({ transport, baudrate: 115200, romBaudrate: 115200, terminal: { clean() {}, writeLine() {}, write() {} } });
+    msg.textContent = 'Talking to the chip…';
+    const t0 = performance.now();
+    const description = await loader.main();
+    const chip = loader.chip;
+    const family = chip.CHIP_NAME;
+    let features = [], crystal = '', mac = '', flash = '';
+    try { features = await chip.getChipFeatures(loader); } catch (e) {}
+    try { crystal = await chip.getCrystalFreq(loader); } catch (e) {}
+    try { mac = await chip.readMac(loader); } catch (e) {}
+    try { const k = await loader.getFlashSize(); flash = k ? kb(k) : ''; } catch (e) {}
+    detected = { family, description };
+    const usb = info.usbVendorId !== undefined ? '0x' + info.usbVendorId.toString(16).padStart(4, '0') + ':0x' + info.usbProductId.toString(16).padStart(4, '0') +
+      (info.usbVendorId === 0x303a ? ' (Espressif native USB: USB Serial/JTAG)' : '') : 'not reported (a USB-to-serial bridge or a virtual port)';
+    const supported = FAMILIES.includes(family);
+    const rows = [
+      ['Chip', esc(description)],
+      ['Family', esc(family) + (supported ? ' <span class="ok">· firmware available</span>' : ' <span class="err">· no firmware of this project for this chip</span>')],
+      ['Features', esc(features.join(', ') || '—')],
+      ['Crystal', crystal ? esc(crystal) + ' MHz' : '—'],
+      ['MAC address', esc(mac || '—')],
+      ['Flash size', esc(flash || '—')],
+      ['USB id', esc(usb)],
+      ['Detected in', ((performance.now() - t0) / 1000).toFixed(1) + ' s']
+    ];
+    if (supported) rows.push(['Firmware selected', '<code>' + fileOf(family) + '</code>' + (family === 'ESP32-H2' ? ' · no WiFi on this chip: USB serial and Bluetooth LE only' : '')]);
+    $('stats').innerHTML = rows.map(r => '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>').join('');
+    $('stats').hidden = false;
+    msg.className = supported ? 'ok' : 'err';
+    msg.textContent = supported ? 'Board recognised: ' + family : family + ' is not supported by this project.';
+    try { await loader.after('hard_reset'); } catch (e) {}
+  } catch (e) {
+    detected = null;
+    msg.className = 'err';
+    msg.textContent = (e && e.name === 'NotFoundError') ? 'No port chosen.' : 'Could not talk to the board: ' + (e && e.message || e) + ' (hold BOOT while plugging it in and try again)';
+  } finally {
+    try { if (transport) await transport.disconnect(); } catch (e) {}
+    refresh();
+    if (detected && FAMILIES.includes(detected.family) && source() === 'github' && release) verifyMirror(detected.family);
+  }
+};
+
+/* ---------- the firmware chosen by the user (file or folder) ---------- */
+const source = () => document.querySelector('input[name=src]:checked').value;
+
+function imageFamily(bytes) {                 // a factory image: partition table (0xAA50) at 0x8000 and an ESP image header (0xE9) at 0, 0x1000 or 0x2000
+  if (bytes.length < 0x9000 || bytes[0x8000] !== 0xAA || bytes[0x8001] !== 0x50) return null;
+  for (const off of [0, 0x1000, 0x2000]) if (bytes[off] === 0xE9) return CHIP_IDS[bytes[off + 12] | (bytes[off + 13] << 8)] || ('chip id ' + (bytes[off + 12] | (bytes[off + 13] << 8)));
+  return null;
+}
+
+async function useBytes(name, buf) {
+  const bytes = new Uint8Array(buf);
+  const family = imageFamily(bytes);
+  local = { name, size: bytes.length, family, bytes: buf, sha: await sha256(buf) };
+  const info = $('localinfo');
+  if (!family) { info.className = 'err'; info.innerHTML = esc(name) + ': <strong>not a factory image</strong> (no bootloader + partition table at the start). An application-only file cannot be written at 0x0.'; local = null; }
+  else {
+    info.className = 'muted';
+    info.innerHTML = esc(name) + ' · ' + bytes.length.toLocaleString() + ' bytes · built for <strong>' + esc(family) + '</strong> · SHA-256 <code>' + local.sha + '</code>';
+  }
+  refresh();
+}
+
+$('pickfile').onclick = () => { document.querySelector('input[value=local]').checked = true; $('fileinput').click(); };
+$('fileinput').onchange = async e => { const f = e.target.files[0]; if (f) { $('candrow').hidden = true; await useBytes(f.name, await f.arrayBuffer()); } e.target.value = ''; };
+$('pickdir').onclick = async () => {
+  document.querySelector('input[value=local]').checked = true;
+  if (!window.showDirectoryPicker) { $('localinfo').className = 'warn'; $('localinfo').textContent = 'This browser cannot open a folder: use "Choose a file…".'; return; }
+  try {
+    const dir = await window.showDirectoryPicker({ mode: 'read' });
+    const found = [];
+    const scan = async (d, prefix) => { for await (const [name, h] of d.entries()) if (h.kind === 'file' && /\.bin$/i.test(name)) found.push({ label: prefix + name, handle: h }); };
+    await scan(dir, '');
+    try { await scan(await dir.getDirectoryHandle('out'), 'out/'); } catch (e) {}
+    const cands = found.filter(f => /factory/i.test(f.label));
+    const sel = $('cand'); sel.innerHTML = '';
+    if (!cands.length) { $('candrow').hidden = true; $('localinfo').className = 'err'; $('localinfo').textContent = 'No *factory*.bin file in that folder (nor in its out/ subfolder).'; local = null; refresh(); return; }
+    cands.forEach((c, i) => { const o = document.createElement('option'); o.value = i; o.textContent = c.label; sel.appendChild(o); });
+    const want = detected ? fileOf(detected.family) : '';
+    const best = cands.findIndex(c => c.label.endsWith(want)); if (best >= 0) sel.value = best;
+    $('candrow').hidden = cands.length < 2;
+    sel.onchange = async () => useBytes(cands[sel.value].label, await (await cands[sel.value].handle.getFile()).arrayBuffer());
+    await useBytes(cands[sel.value].label, await (await cands[sel.value].handle.getFile()).arrayBuffer());
+  } catch (e) { if (e && e.name !== 'AbortError') { $('localinfo').className = 'err'; $('localinfo').textContent = 'Could not read the folder: ' + e.message; } }
+};
+
+document.querySelectorAll('input[name=src]').forEach(r => r.onchange = refresh);
+$('verify').onclick = () => verifyMirror(detected && FAMILIES.includes(detected.family) ? detected.family : null);
+
+/* ---------- what the install button will do ---------- */
+function refresh() {
+  const wrap = $('instwrap'), inst = $('inst'), msg = $('instmsg');
+  let ok = true, text = '', cls = 'muted';
+  blobUrls.forEach(u => URL.revokeObjectURL(u)); blobUrls = [];
+  if (source() === 'github') {
+    inst.manifest = 'firmware/manifest.json';
+    if (detected && !FAMILIES.includes(detected.family)) { ok = false; cls = 'err'; text = detected.family + ' has no firmware in this project.'; }
+    else text = detected ? 'Will install ' + fileOf(detected.family) + ' (' + (mirrorVersion || 'latest release') + ') on the ' + detected.family + ' that was detected.'
+                         : 'The installer will read the chip type when you press the button and pick the matching image of the latest GitHub release.';
+  } else if (!local) { ok = false; text = 'Choose a firmware file or folder first.'; }
+  else if (detected && local.family !== detected.family) { ok = false; cls = 'err'; text = 'This image is for the ' + local.family + ' but the board detected is a ' + detected.family + ': not installing it.'; }
+  else if (!FAMILIES.includes(local.family) && !CHIP_IDS_VALUES.includes(local.family)) { ok = false; cls = 'err'; text = 'Unknown chip in the image.'; }
+  else {
+    const fileUrl = URL.createObjectURL(new Blob([local.bytes], { type: 'application/octet-stream' }));
+    const manUrl = URL.createObjectURL(new Blob([JSON.stringify({ name: local.name, version: 'local file', new_install_prompt_erase: true, new_install_improv_wait_time: 0,
+      builds: [{ chipFamily: local.family, parts: [{ path: fileUrl, offset: 0 }] }] })], { type: 'application/json' }));
+    blobUrls.push(fileUrl, manUrl);
+    inst.manifest = manUrl;
+    text = 'Will install ' + local.name + ' (built for the ' + local.family + ') from this computer' + (detected ? ' on the ' + detected.family + ' that was detected.' : '; the installer checks the chip when you press the button.');
+  }
+  wrap.toggleAttribute('inert', !ok);
+  msg.className = cls; msg.textContent = text;
+}
+const CHIP_IDS_VALUES = Object.values(CHIP_IDS);
+
+loadRelease().then(refresh);
+refresh();
 </script>
 <script type="module" src="https://unpkg.com/esp-web-tools@10.5.2/dist/web/install-button.js?module"></script>
 </body>
