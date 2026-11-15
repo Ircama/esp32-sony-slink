@@ -1806,6 +1806,14 @@ let userAt = 0, userLine = '', busyRetry = 0, infoAt = 0;                       
 const BUS_GAP = 600, BUS_MAXWAIT = 4000;
 const LOCAL_CMD = /^(VOLCFG|UITITLE|DECODE|LOOPBACK|PAD|WIFIPWR|CFG|HELP|NET|NAME|OTA)\b/i;     /* NAME (RDS) is a slow read that never errors with 0F: it does not hold the queue */
 let busQ = [], busTimer = null, busAt = 0, busSentAt = 0, busPend = 0, busUser = false;   /* busAt: last completion; busPend: sent, not yet completed */
+/* Compound commands of the device (STATUS, SETUP, MODEL, INPUTS ...) send many frames, and some of them are answered with "error" BY DESIGN (a code the
+ * amplifier does not have, a tuner that is not selected): those errors must not be shown as "Comando non supportato" for the click. busFifo remembers, in the
+ * order the lines were sent, which ones are compound; busActAt is the last time the device wrote anything: the "no completion line" time-out counts from
+ * the last activity, not from the send, so a long command (SETUP takes ~15 s) is not given up on while it is still working. */
+const COMPOUND = /^(STATUS|SETUP|MODEL|INPUTS|PRESETS|STATIONS|FMSCAN|EQ|EQCURVE|NAME|ALLOFF)$/i;
+let busFifo = [], busMultiPend = 0, busMultiAt = 0, busActAt = 0, busBurst = false;   /* busBurst: a compound command was sent and the line has not been quiet for BUS_QUIET since */
+const BUS_QUIET = 4000;
+const busReset = () => { busPend = 0; busFifo = []; busMultiPend = 0; };
 function wsSend(line) { ws.send(line); log('me', '> ' + maskLine(line)); }
 /* hourglass in the header from the click until the command has really been transmitted: still in the queue, or sent to the device and not yet
  * executed (its OK / ERR line not back), or waiting for the one retry after "busy". Shown after 200 ms, so a short wait does not flicker. */
@@ -1821,19 +1829,27 @@ function glassUpd() {
 function busPump() { busPump0(); glassUpd(); }
 function busPump0() {
   clearTimeout(busTimer); busTimer = null;
-  if (busPend > 0 && Date.now() - busSentAt > BUS_MAXWAIT) busPend = 0;          /* no completion line: do not wait for ever */
+  if (busPend > 0 && Date.now() - Math.max(busSentAt, busActAt) > BUS_MAXWAIT) busReset();          /* no completion line and no activity for BUS_MAXWAIT: do not wait for ever */
   if (!busQ.length) return;
-  if (!ws || ws.readyState !== 1) { busQ = []; busPend = 0; return; }
+  if (!ws || ws.readyState !== 1) { busQ = []; busReset(); return; }
   const it = busQ[0];
   let wait = 0;
-  if (busSentAt && it.user !== busUser) wait = busPend > 0 ? Math.min(250, busSentAt + BUS_MAXWAIT - Date.now()) : busAt + BUS_GAP - Date.now();
+  if (busSentAt && it.user !== busUser) wait = busPend > 0 ? Math.min(250, Math.max(busSentAt, busActAt) + BUS_MAXWAIT - Date.now()) : busAt + BUS_GAP - Date.now();
   if (wait > 0) {
     busTimer = setTimeout(busPump, wait); return;
   }
   busQ.shift(); wsSend(it.line); busSentAt = Date.now(); busUser = it.user; busPend++;
+  const multi = COMPOUND.test(it.line.trim()); busFifo.push(multi); if (multi) busMultiPend++;
+  if (Date.now() - busActAt > BUS_QUIET) busBurst = false;       /* the line was quiet before this command: what comes back belongs to it */
+  if (multi) busBurst = true;
+  busActAt = Date.now();
   busPump0();
 }
-function busDone() { if (busPend > 0) busPend--; busAt = Date.now(); busPump(); }
+function busDone() {
+  if (busPend > 0) busPend--;
+  if (busFifo.length && busFifo.shift()) { if (busMultiPend > 0) busMultiPend--; busMultiAt = Date.now(); }
+  busAt = Date.now(); busPump();
+}
 function cmd(line, opts) {
   opts = opts || {};
   if (!opts.auto) { userAt = Date.now(); userLine = line; }
@@ -1923,7 +1939,7 @@ function connect() {
   if (!S.connected) setConn(false, retry ? 'Riconnessione…' : 'Connessione…');
   const s = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
   ws = s;
-  s.onopen = () => { if (ws !== s) return; busQ = []; glassUpd(); busAt = 0; busSentAt = 0; busPend = 0; retry = 0; lastRx = Date.now(); loadedInfo = Date.now() - infoAt < 30000; rdsAsked = 0; sfSt = null; setConn(true, 'Connesso'); setTimeout(() => { if (ws === s && !linkReady) { linkReady = true; setConn(true, 'Connesso'); } }, 3000); cmd('STATUS', { auto: true }); setTimeout(() => { cmd('VOLCFG', { auto: true }); cmd('UITITLE', { auto: true }); cmd('DECODE', { auto: true }); cmd('LOOPBACK', { auto: true }); cmd('PAD', { auto: true }); cmd('WIFIPWR', { auto: true }); cmd('C0 0E', { auto: true }); setTimeout(jbProbe, 1500); }, 2200); };
+  s.onopen = () => { if (ws !== s) return; busQ = []; glassUpd(); busAt = 0; busSentAt = 0; busReset(); busActAt = 0; retry = 0; lastRx = Date.now(); loadedInfo = Date.now() - infoAt < 30000; rdsAsked = 0; sfSt = null; setConn(true, 'Connesso'); setTimeout(() => { if (ws === s && !linkReady) { linkReady = true; setConn(true, 'Connesso'); } }, 3000); cmd('STATUS', { auto: true }); setTimeout(() => { cmd('VOLCFG', { auto: true }); cmd('UITITLE', { auto: true }); cmd('DECODE', { auto: true }); cmd('LOOPBACK', { auto: true }); cmd('PAD', { auto: true }); cmd('WIFIPWR', { auto: true }); cmd('C0 0E', { auto: true }); setTimeout(jbProbe, 1500); }, 2200); };
   s.onmessage = e => { if (ws === s) onMsg(e.data); };
   s.onclose = () => { if (ws !== s) return; setConn(false, 'Riconnessione…'); if (!reconnectTimer) reconnectTimer = setTimeout(connect, Math.min(1000 * (++retry), 5000)); };
   s.onerror = () => { try { s.close(); } catch (e) {} };
@@ -1960,6 +1976,8 @@ function onMsg(d) {
 }
 function logClass(d) { return d.startsWith('RX') ? 'rx' : d.startsWith('TX') ? 'tx' : d.startsWith('OK') ? 'ok' : d.startsWith('ERR') ? 'err' : 'info'; }
 function handleLine(d) {
+  if (Date.now() - busActAt > BUS_QUIET) busBurst = false;       /* silence: the compound command is over */
+  busActAt = Date.now();                                 /* the device is writing: a command is still running */
   if (/^(OK|ERR)\b/.test(d)) busDone();                /* the device finished a command */
   if (CAP) { if (CAP.re.test(d)) CAP.lines.push(d); if (CAP.end.test(d)) CAP.done(); }
   jbLine(d);
@@ -1967,7 +1985,7 @@ function handleLine(d) {
   const dl = /^(?:OK )?(decode|loopback)\s+(on|off)\b/i.exec(d);
   if (dl) { const k = dl[1].toLowerCase() === 'decode' ? 'dgDec' : 'dgLoop', on = dl[2].toLowerCase() === 'on'; $('#' + k + 'On').setAttribute('aria-pressed', on); $('#' + k + 'Off').setAttribute('aria-pressed', !on); }
   /* a unit answered "error" (0F) to something the user just did: say it (background reads do not count) */
-  if (/^RX (C8|C9|CB|B8|98|99|9A) 0F\b/.test(d) && busUser && Date.now() - Math.max(busAt, busSentAt) < 2500) toast('Comando non supportato da questo apparecchio', 'err');
+  if (/^RX (C8|C9|CB|B8|98|99|9A) 0F\b/.test(d) && busUser && !busBurst && !busMultiPend && Date.now() - busMultiAt > BUS_GAP + 900 && Date.now() - Math.max(busAt, busSentAt) < 2500) toast('Comando non supportato da questo apparecchio', 'err');   /* not while a compound command runs: its "error" answers are expected */
   const otm = /^OTA: (.*)/.exec(d); if (otm) otaLine(otm[1]);
   if (/^NAME: no RDS name/.test(d)) rdsNone = rdsAsked;            /* a station without RDS: stop asking while it stays tuned (the device is busy ~15 s on each ask) */
   const ln = /^LINE (\d)/.exec(d); if (ln) toast(tr('Livello linea: {v}', { v: tr(ln[1] === '1' ? 'a riposo (alta)' : 'bassa') }));
