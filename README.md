@@ -227,6 +227,7 @@ On plain `http://` a browser treats the portal as an insecure page: it will not 
 The device makes its own certificate authority the first time (an EC P-256 key generated on the chip, kept in the flash; a few seconds) and signs the server certificate with it:
 
 1. `HTTPS ON`, then open `http://slink.local/ca.crt` (or the *Download the CA certificate* link under the switch) to get `slink-ca.crt`.
+   If the app is already installed on the phone, Android opens every link to its host name inside the app instead of downloading the file: use the **IP address** (`http://<ip>/ca.crt`, see `NET`) or another name of the device (for example `slink.local` when the app was installed from `slink.fritz.box`).
 2. Install it. **Android**: *Settings › Security (or Biometrics and security) › Other security settings › Install from device storage › CA certificate*. **Windows**: double-click the file › *Install certificate* › *Local machine*, store *Trusted Root Certification Authorities*. **macOS**: add it to *Keychain Access* and set *Always trust*. **iOS**: open the file, install the profile, then *Settings › General › About › Certificate Trust Settings*.
 3. Open `https://slink.local/` (or the host name / IP address): the lock is shown, and *Install app* / *Add to home screen* now creates a real app that starts full screen. Uninstall and install again if the app was installed from `http://` (it is another origin).
 
