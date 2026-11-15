@@ -25,6 +25,7 @@
 #include "slink.h"
 #include "settings.h"
 #include "slinke.h"
+#include "decode.h"
 
 #define PORT 2325
 #define MAX_CLIENTS 2
@@ -84,7 +85,9 @@ static void flush_tx(cl_t *c)
             if (rc == 0) {
                 char line[8 + 3 * SLINK_MAX_FRAME]; int k = snprintf(line, sizeof line, "TX");
                 for (int i = 0; i < c->txn; i++) k += snprintf(line + k, sizeof line - k, " %02X", c->txb[i]);
-                cli_out("%s   ; Slink-e\r\n", line);
+                char dec[120] = "";
+                if (cli_decode_on() && c->txn >= 2) slink_decode(c->txb, c->txn, dec, sizeof dec);
+                cli_out("%s   ; Slink-e%s%s\r\n", line, dec[0] ? ": " : "", dec);
             } else { resp(c, 0, 0x81, NULL, 0); c->resume = true; }              /* line never idle / line test active */
         }
     }

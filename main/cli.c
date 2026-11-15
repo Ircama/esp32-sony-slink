@@ -96,6 +96,8 @@ static void out(const char *fmt, ...)
     va_end(ap);
 }
 
+bool cli_decode_on(void) { return s_decode; }
+
 void cli_out(const char *fmt, ...)               /* the same output as the commands' own, for the other modules (ota.c) */
 {
     va_list ap;
