@@ -161,6 +161,58 @@ static esp_err_t h_ca(httpd_req_t *r)
     return httpd_resp_send(r, pem, HTTPD_RESP_USE_STRLEN);
 }
 
+/* The PWA manifest is made here, not served as a file, so that the name of the installed app follows the titles set in Settings (UITITLE):
+ *   name       = page title (UITITLE PAGE), else "S-Link · Sony ES"
+ *   short_name = header title (UITITLE APP), else the page title, else "S-Link": it is the label under the icon on the phone
+ * (the rest is the same as main/web/manifest.webmanifest, which is no longer served) */
+static size_t json_str(char *o, size_t sz, const char *s)
+{
+    size_t k = 0;
+    for (; *s && k + 7 < sz; s++) {
+        unsigned char c = (unsigned char)*s;
+        if (c == '"' || c == '\\') { o[k++] = '\\'; o[k++] = (char)c; }
+        else if (c < 0x20) { k += (size_t)snprintf(o + k, sz - k, "\\u%04x", c); }
+        else o[k++] = (char)c;
+    }
+    o[k] = 0;
+    return k;
+}
+
+static esp_err_t h_manifest(httpd_req_t *r)
+{
+    char name[120], shrt[120], buf[1400];
+    const char *page = g_set.title_page[0] ? g_set.title_page : "S-Link \xC2\xB7 Sony ES";
+    const char *app = g_set.title_app[0] ? g_set.title_app : g_set.title_page[0] ? g_set.title_page : "S-Link";
+    json_str(name, sizeof name, page); json_str(shrt, sizeof shrt, app);
+    int n = snprintf(buf, sizeof buf,
+        "{\n"
+        "  \"id\": \"./\",\n"
+        "  \"name\": \"%s\",\n"
+        "  \"short_name\": \"%s\",\n"
+        "  \"description\": \"Control and monitor Sony S-Link / Control-A1 hi-fi gear (amplifier, tuner) from your phone or PC.\",\n"
+        "  \"start_url\": \"./\",\n"
+        "  \"scope\": \"./\",\n"
+        "  \"display\": \"standalone\",\n"
+        "  \"display_override\": [\"standalone\", \"minimal-ui\"],\n"
+        "  \"orientation\": \"any\",\n"
+        "  \"background_color\": \"#0d0e11\",\n"
+        "  \"theme_color\": \"#0d0e11\",\n"
+        "  \"lang\": \"it\",\n"
+        "  \"dir\": \"ltr\",\n"
+        "  \"categories\": [\"utilities\", \"music\", \"lifestyle\"],\n"
+        "  \"icons\": [\n"
+        "    { \"src\": \"./icon-192.png\", \"sizes\": \"192x192\", \"type\": \"image/png\", \"purpose\": \"any\" },\n"
+        "    { \"src\": \"./icon-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"any\" },\n"
+        "    { \"src\": \"./icon-maskable-512.png\", \"sizes\": \"512x512\", \"type\": \"image/png\", \"purpose\": \"maskable\" },\n"
+        "    { \"src\": \"./icon.svg\", \"sizes\": \"any\", \"type\": \"image/svg+xml\", \"purpose\": \"any\" }\n"
+        "  ]\n"
+        "}\n", name, shrt);
+    if (n <= 0 || n >= (int)sizeof buf) { httpd_resp_send_500(r); return ESP_FAIL; }
+    httpd_resp_set_type(r, "application/manifest+json");
+    httpd_resp_set_hdr(r, "Cache-Control", "no-cache");
+    return httpd_resp_send(r, buf, n);
+}
+
 static esp_err_t h_nocontent(httpd_req_t *r)
 {
     httpd_resp_set_status(r, "204 No Content");
@@ -290,10 +342,12 @@ static void reg_all(httpd_handle_t srv)
         { .uri = "/api/ota",      .method = HTTP_GET,  .handler = ota_http_info },
         { .uri = "/api/ota",      .method = HTTP_POST, .handler = ota_http_push },
         { .uri = "/ca.crt",       .method = HTTP_GET,  .handler = h_ca },
+        { .uri = "/manifest.webmanifest", .method = HTTP_GET, .handler = h_manifest },
         { .uri = "/favicon.ico",  .method = HTTP_GET,  .handler = h_nocontent },
     };
     for (size_t i = 0; i < sizeof uris / sizeof uris[0]; i++) httpd_register_uri_handler(srv, &uris[i]);
     for (size_t i = 0; i < web_assets_n; i++) {
+        if (!strcmp(web_assets[i].uri, "/manifest.webmanifest")) continue;      /* made by h_manifest() */
         httpd_uri_t u = { .uri = web_assets[i].uri, .method = HTTP_GET, .handler = h_asset, .user_ctx = (void *)&web_assets[i] };
         httpd_register_uri_handler(srv, &u);
     }
