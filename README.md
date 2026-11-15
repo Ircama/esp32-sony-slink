@@ -13,20 +13,67 @@ Beyond the amplifier, the firmware (written in C with ESP-IDF) implements the S-
 
 **Supported hardware:** ESP32-C3, ESP32-S3, ESP32-H2, ESP32-C6, ESP32-C5.
 
+## Features
+
+**S-Link / Control-A1 bus**
+- Sends and receives S-Link frames on a single GPIO (open-drain; one N-channel MOSFET or direct wiring, see [`docs/WIRING.md`](docs/WIRING.md)): RMT-based transmitter, edge-timing receiver, line-free check, frame repeats and gap, LED that mirrors the traffic, loopback and line-level tests.
+- **Real-time decoding** of every frame (amplifier, tuner, surround processor, CD players and changers, MiniDisc recorders), with a text comment on received *and* sent lines (`DECODE ON|OFF`).
+- Catalogue of **225 documented commands** with parameter widgets, live frame preview and confirmation for destructive ones; every command and reply is mapped in [`docs/WEB_COVERAGE.md`](docs/WEB_COVERAGE.md).
+- Amplifier: power, source, volume and mute, 5.1 input, recording source, sound fields, 3-band front/rear equaliser, surround levels, speaker configuration. Volume with a motorised-knob model (three scales, calibration, configurable safety limit).
+- Tuner: FM/AM tuning, seek, RDS name, signal level, FM scan with station table, up to 30 presets kept by the bridge (shared by every client), read-only view of the amplifier's own presets.
+- Jukebox: CD changers and MD recorders are detected on the bus and get their own tab (transport, disc/track lists, memos, CD Text, MD titles). Written from published documentation, **not tried on real units**.
+
+**Network**
+- **Web portal** embedded in the firmware: one page, light/dark theme, phone and desktop layouts, five languages (it/en/fr/de/es), installable as a home-screen app, with a demo mode that needs no amplifier ([GitHub Pages demo](https://ircama.github.io/esp32-sony-slink/)).
+- **mDNS (Bonjour / Avahi)**: the device announces itself as `<hostname>.local` (default `slink`, set with `HOSTNAME <name>`), so the portal opens at `http://slink.local/` as well as at its IP address. It also advertises the services `_http._tcp` (port 80, while the portal is on) and `_slink._tcp` (port 2323, while the TCP console is on), which service browsers and Home Assistant can discover. mDNS is multicast on the local network and does not need the router to do anything, as long as the router or access point does not block multicast or isolate WiFi clients; it works out of the box on Windows 10/11, macOS, iOS and Linux with Avahi, while some Android versions do not resolve `.local` names in the browser. The host name is also sent to the router with the DHCP request, so many routers resolve it by themselves (for example `slink.fritz.box` on a FRITZ!Box); when neither works, use the IP address shown by `NET`.
+- **REST and WebSocket API** (`/ws`, `/api/state`, `/api/cmd`, ...) for integrations and real-time state.
+- **MQTT** client with automatic **Home Assistant** discovery (power, mute, input, sound field, volume, FM frequency, station name, signal level).
+- **Raw TCP console** (port 2323), same text protocol as USB.
+- **Slink-e protocol on TCP** (port 2325) so programs written for the Nirvis Slink-e interface can use the bridge; read-only by default.
+- **Bluetooth LE** UART (Nordic UART Service), **USB serial** (USB Serial/JTAG) always available for logging and commands.
+- WiFi client (WPA2/WPA3) configured over USB or BLE; **power saving** profile (modem sleep, 20 MHz channel, reduced TX power, Target Wake Time on WiFi 6 chips) on by default.
+
+**Maintenance**
+- **Over-the-air update** with two firmware slots, automatic rollback, optional upload password, pull from GitHub releases or push from a computer; both off or user-triggered by default (see [Firmware update over WiFi](#firmware-update-over-wifi-ota)).
+- Settings kept in flash (NVS); **backup and restore** of the amplifier configuration, the bridge's data and the browser preferences in one JSON file.
+- Statistics page: uptime, reset reason, chip temperature, memory, WiFi quality, clients, S-Link counters.
+- Every interface is **opt-in**: web, TCP console, MQTT, Slink-e, BLE, push update and sending from Slink-e are off until enabled; the network interfaces have no authentication, so use them only on a trusted network (see *Security* below).
+- Builds for ESP32-C3, S3, C6, C5 and H2 (the H2 has no WiFi: USB and BLE only); GitHub Actions builds every chip and publishes releases.
+
 ## Build and flash
 
-PlatformIO (latest `espressif32` platform, Python ≥ 3.10):
+You do not need to build anything to try the firmware: every [release](https://github.com/Ircama/esp32-sony-slink/releases) has a ready `slink-<chip>-factory.bin` (bootloader, partition table and application in one file) that you flash at address `0x0` with `esptool` (`pip install esptool`, then `esptool --chip esp32s3 write_flash 0x0 slink-esp32s3-factory.bin`). To build it yourself, choose one of the two toolchains below; both need **git**, **Python 3.10 or newer** and an internet connection for the first build (toolchains and the managed components `mdns` and `mqtt` are downloaded).
+
+| Chip | Board used / typical | PlatformIO environment | Status |
+|---|---|---|---|
+| ESP32-S3 | S3 Super Mini or DevKitC, 4 MB flash | `esp32s3` | built and run on the real amplifier |
+| ESP32-C3 | C3 Super Mini | `esp32c3` | builds |
+| ESP32-C6 | WiFi 6 | `esp32c6` | builds, not tried on a board yet |
+| ESP32-C5 | WiFi 6, 2.4 + 5 GHz | – (ESP-IDF only) | builds in CI, not tried |
+| ESP32-H2 | no WiFi, USB + BLE only | – (ESP-IDF only) | builds in CI, see [`docs/ESP32-H2.md`](docs/ESP32-H2.md) |
+
+**Option A: PlatformIO** (simplest). Install either the *PlatformIO IDE* extension for VS Code, or the command line tool with `pip install platformio` (the `pio` command; on Windows it may be in `%USERPROFILE%\.platformio\penv\Scripts`). The `espressif32` platform, the ESP-IDF framework and the compilers are fetched automatically on the first build (several GB, about 15 minutes; later builds take about a minute). Then, from the project folder:
 
 ```
-pio run -e esp32s3 -t upload --upload-port COM3     # ESP32-S3 (4 MB flash)
-pio run -e esp32c3 -t upload --upload-port COMx     # ESP32-C3 Super Mini
-pio run -e esp32c6                                   # ESP32-C6 (WiFi 6): builds, not tried on a board yet
-# ESP32-H2 (no WiFi, USB + BLE only) and ESP32-C5 (WiFi 6, 2.4 + 5 GHz): build with ESP-IDF (PlatformIO's platform does not support them yet),
-# see docs/ESP32-H2.md; the GitHub workflow builds both (.github/workflows/firmware.yml)
+pio run -e esp32s3                  # build
+pio run -e esp32s3 -t upload        # build and flash over USB (add --upload-port COM3 or /dev/ttyACM0 if several boards are connected)
+pio device monitor                  # serial console (115200 is only nominal: USB Serial/JTAG ignores the baud rate)
 ```
 
-or ESP-IDF: `idf.py set-target esp32c3 && idf.py menuconfig && idf.py build flash`
-(menu *S-Link interface*: GPIO, default device ID, LED GPIO).
+Replace `esp32s3` with the environment of your chip (`esp32c3`, `esp32c6`; they are defined in `platformio.ini`).
+
+**Option B: ESP-IDF 6.x** (needed for ESP32-C5 and ESP32-H2, which PlatformIO's platform does not support yet; also fine for the other chips). Install ESP-IDF with the [Espressif installer or VS Code extension](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) (on Linux/macOS: clone ESP-IDF, run `./install.sh`, then `. ./export.sh`; the `espressif/idf` Docker image works too), open an ESP-IDF shell and run:
+
+```
+python tools/gen_web.py                                   # embeds main/web/ into the firmware
+idf.py set-target esp32s3                                 # or esp32c3 / esp32c5 / esp32c6 / esp32h2
+idf.py menuconfig                                         # optional: menu "S-Link interface" (GPIO, default device ID, LED GPIO)
+idf.py -p COM3 flash monitor                              # /dev/ttyACM0 on Linux
+```
+
+`tools/ci_build.sh <chip>` does the same without the menu and is what the GitHub workflow runs (`.github/workflows/firmware.yml`).
+
+**First flash over USB.** The ESP32-S3 / C3 / C6 / H2 boards used here have a native USB port: no driver is needed on current Windows, macOS and Linux. If the board does not show up as a serial port, hold the **BOOT** button while plugging it in (download mode). The first installation, and any change of partition table, must go through USB; after that the firmware can be updated over WiFi (see [OTA](#firmware-update-over-wifi-ota)).
 
 Status: built and flashed on an **ESP32-S3** board (S3FH4R2); CLI, TX, BLINK/LEVEL
 verified on the board. **Tried with a real amplifier: Sony STR-DA50ES** (it powers on with `C0 2E` and answers `C8 ..`; ID 0xC0).
