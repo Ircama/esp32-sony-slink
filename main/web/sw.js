@@ -4,10 +4,10 @@
  *   - the shell (page, manifest, icons, help) is served from the cache AT ONCE and refreshed in the background ("stale while revalidate"): the next
  *     start has the version the device served last time. The page itself asks the device which build it serves (/api/ota) and, when the cached copy
  *     is an old one, reloads once with ?r=<build>; a request with ?r= always goes to the network first.
- *   - the live data (WebSocket /ws, /api/*) is never cached.
+ *   - the live data (WebSocket /ws, /api/*), the manifest and the CA download are never cached.
  * Change VERSION to flush the cache. */
-const VERSION = 'slink-v2';
-const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+const VERSION = 'slink-v3';
+const SHELL = ['/', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => Promise.all(SHELL.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))).then(() => self.skipWaiting()));
@@ -17,7 +17,7 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   const r = e.request, u = new URL(r.url);
-  if (r.method !== 'GET' || u.origin !== location.origin || u.pathname.startsWith('/api/') || u.pathname === '/ws' || u.pathname === '/sw.js' || u.pathname === '/ca.crt') return;
+  if (r.method !== 'GET' || u.origin !== location.origin || u.pathname.startsWith('/api/') || u.pathname === '/ws' || u.pathname === '/sw.js' || u.pathname === '/ca.crt' || u.pathname === '/manifest.webmanifest') return;   /* the manifest carries the app name (Settings): always from the device, never from the cache */
   const key = u.origin + u.pathname;                                    /* one copy per path: the query string (?tab=, ?r=) is not part of the key */
   const fromNet = () => fetch(r, { cache: 'no-cache' }).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(key, copy)); }
