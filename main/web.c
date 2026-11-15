@@ -155,7 +155,7 @@ static esp_err_t h_ca(httpd_req_t *r)
 {
     const char *pem = tls_ca_pem();
     if (!pem) { httpd_resp_send_err(r, HTTPD_404_NOT_FOUND, "no CA yet: turn HTTPS on (HTTPS ON) first"); return ESP_OK; }
-    httpd_resp_set_type(r, "application/x-x509-ca-cert");
+    httpd_resp_set_type(r, "application/octet-stream");        /* not application/x-x509-ca-cert: Chrome for Android would hand it to the system installer (which does nothing on recent Android) instead of downloading it */
     httpd_resp_set_hdr(r, "Content-Disposition", "attachment; filename=\"slink-ca.crt\"");
     httpd_resp_set_hdr(r, "Cache-Control", "no-store");
     return httpd_resp_send(r, pem, HTTPD_RESP_USE_STRLEN);
