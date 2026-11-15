@@ -1780,6 +1780,7 @@ let ws = null, retry = 0, ackUntil = 0, lastRx = 0, loadedInfo = false, rdsAsked
 const UIDEF = { allOff: 1, codes: 1, quick: 1, kmode: 1, vchips: 1, hx: 0, navScroll: 0, navMore: 1, navCompress: 1, tabs: { home: 1, radio: 1, sound: 1, stats: 1, console: 1, jukebox: 1, help: 1 } };
 let UI = (() => { let o = {}; try { o = JSON.parse(store.get('ui', '{}')) || {}; } catch (e) {} return Object.assign({}, UIDEF, o, { tabs: Object.assign({}, UIDEF.tabs, o.tabs || {}) }); })();
 let HID = (() => { try { const a = JSON.parse(store.get('hid', '[]')); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
+let titleSaveUntil = 0;     /* while the title form is being saved, the device's replies must not overwrite what was typed */
 let TITLE = { app: store.get('t_app', ''), page: store.get('t_page', ''), pwa: store.get('t_pwa', 'APP'), name: store.get('t_name', '') };
 const codeTxt = c => (UI.codes ? ' (' + c + ')' : '');
 let rdsAt = 0, rdsLastF = 0, rdsFAt = 0;
@@ -1974,11 +1975,12 @@ function handleLine(d) {
   const wpm = /^WIFIPWR tx=(\S+) ps=(\S+) listen=(\S+)/.exec(d);
   if (wpm) { $('#wpTx').value = wpm[1]; $('#wpPs').value = wpm[2]; $('#wpLi').value = wpm[3]; }
   const pwm = /^UITITLE PWA (APP|PAGE)\b/.exec(d);
-  if (pwm) { TITLE.pwa = pwm[1]; store.set('t_pwa', pwm[1]); const sel = $('#tPwa'); if (sel) sel.value = pwm[1]; }
+  if (pwm) { TITLE.pwa = pwm[1]; store.set('t_pwa', pwm[1]); const sel = $('#tPwa'); if (sel && Date.now() > titleSaveUntil) sel.value = pwm[1]; }
   const nmm = /^UITITLE NAME "(.*)"/.exec(d);
-  if (nmm) { TITLE.name = nmm[1]; store.set('t_name', nmm[1]); const inp = $('#tName'); if (inp) inp.value = nmm[1]; }
+  if (nmm) { TITLE.name = nmm[1]; store.set('t_name', nmm[1]); const inp = $('#tName'); if (inp && Date.now() > titleSaveUntil) inp.value = nmm[1]; }
   const ttm = /^UITITLE (APP|PAGE) "(.*)"/.exec(d);
   if (ttm) { TITLE[ttm[1].toLowerCase()] = ttm[2]; store.set('t_' + ttm[1].toLowerCase(), ttm[2]); applyTitles(); }
+  if (ttm && Date.now() > titleSaveUntil) { const ip = $(ttm[1] === 'APP' ? '#tApp' : '#tPage'); if (ip) ip.value = ttm[2]; }   /* another browser sees the titles the device keeps */
   if (/^ERR busy/.test(d)) {            /* the single command worker was occupied: retry the user's own command once, say nothing for background reads */
     if (userLine && Date.now() - userAt < 3000 && Date.now() - busyRetry > 2500) { busyRetry = Date.now(); const l = userLine; userRetry = true; glassUpd(); setTimeout(() => { userRetry = false; cmd(l); }, 1500); }
     else if (Date.now() - userAt < 3000) toast(d.replace(/^ERR\s*/, ''), 'err');
@@ -3814,7 +3816,15 @@ function initUiOptions() {
   $('#vcDef').onclick = () => { $('#vcUp').value = 420; $('#vcDn').value = 445; $('#vcMg').value = 10; $('#vcSet').click(); };
   /* titles */
   $('#tApp').value = TITLE.app; $('#tPage').value = TITLE.page; $('#tPwa').value = TITLE.pwa; $('#tName').value = TITLE.name;
-  $('#titleForm').onsubmit = e => { e.preventDefault(); cmd('UITITLE APP ' + qt($('#tApp').value.trim())); setTimeout(() => cmd('UITITLE PAGE ' + qt($('#tPage').value.trim())), 400); setTimeout(() => cmd('UITITLE NAME ' + qt($('#tName').value.trim())), 800); setTimeout(() => cmd('UITITLE PWA ' + $('#tPwa').value, { ack: true }), 1200); };
+  $('#titleForm').onsubmit = e => {
+    e.preventDefault();
+    const v = { app: $('#tApp').value.trim(), page: $('#tPage').value.trim(), name: $('#tName').value.trim(), pwa: $('#tPwa').value };   /* read now: the replies to the first commands carry the old values */
+    titleSaveUntil = Date.now() + 4000;
+    cmd('UITITLE APP ' + qt(v.app));
+    setTimeout(() => cmd('UITITLE PAGE ' + qt(v.page)), 400);
+    setTimeout(() => cmd('UITITLE NAME ' + qt(v.name)), 800);
+    setTimeout(() => { cmd('UITITLE PWA ' + v.pwa, { ack: true }); setTimeout(() => { titleSaveUntil = 0; }, 1500); }, 1200);
+  };
   new MutationObserver(scheduleHide).observe(document.body, { childList: true, subtree: true });
   applyUI(); applyHide(); applyTitles();
 }
