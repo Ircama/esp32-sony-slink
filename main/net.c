@@ -14,6 +14,7 @@
 #include "esp_wifi_he.h"
 #endif
 #include "mdns.h"
+#include "esp_mac.h"
 #include "lwip/sockets.h"
 #include "net.h"
 #include "settings.h"
@@ -311,8 +312,10 @@ static size_t net_json(char *b, size_t sz)
     const char *wifi = !g_set.ssid[0] ? "none" : !NET_WANTED ? "idle" : s_have_ip ? "connected" : "connecting";
     wifi_ap_record_t ap;
     int rssi = s_have_ip && esp_wifi_sta_get_ap_info(&ap) == ESP_OK ? ap.rssi : 0;
-    P("{\"t\":\"net\",\"ble\":%d,\"web\":%d,\"app\":%d,\"eco\":%d,\"bleConn\":%d,\"bleName\":", g_set.ble, g_set.web, g_set.app, g_set.eco, ble_nus_connected());
+    P("{\"t\":\"net\",\"ble\":%d,\"web\":%d,\"app\":%d,\"eco\":%d,\"bleConn\":%d,\"bleCustom\":%d,\"bleName\":", g_set.ble, g_set.web, g_set.app, g_set.eco, ble_nus_connected(), g_set.ble_name[0] != 0);
     J(ble_nus_name());
+    { char bm[20], wm[20]; uint8_t m[6] = {0}; ble_nus_mac(bm, sizeof bm); esp_read_mac(m, ESP_MAC_WIFI_STA);
+      snprintf(wm, sizeof wm, "%02X:%02X:%02X:%02X:%02X:%02X", m[0], m[1], m[2], m[3], m[4], m[5]); P(",\"bleMac\":\"%s\",\"wifiMac\":\"%s\"", bm, wm); }
     P(",\"wifi\":\"%s\",\"rssi\":%d,\"ip\":\"", wifi, rssi);
     if (s_have_ip) P(IPSTR, IP2STR(&s_ip));
     P("\",\"dns\":"); J(s_dns_name);

@@ -45,6 +45,7 @@ void settings_load(void)
     get_str(h, "tpg", g_set.title_page, sizeof g_set.title_page, "");
     if (nvs_get_u8(h, "pwas", &v) == ESP_OK) g_set.pwa_src = v > 2 ? 0 : v;
     get_str(h, "tpwa", g_set.title_pwa, sizeof g_set.title_pwa, "");
+    get_str(h, "blen", g_set.ble_name, sizeof g_set.ble_name, "");
     if (nvs_get_u8(h, "pwav", &v) != ESP_OK && g_set.title_pwa[0]) g_set.pwa_src = 2;      /* before the choice existed a filled-in name always won */
     get_str(h, "ourl", g_set.ota_url, sizeof g_set.ota_url, "");
     get_str(h, "otok", g_set.ota_token, sizeof g_set.ota_token, "");
@@ -83,6 +84,7 @@ void settings_save(void)
     nvs_set_u8(h, "pwas", g_set.pwa_src);
     nvs_set_u8(h, "pwav", 1);
     nvs_set_str(h, "tpwa", g_set.title_pwa);
+    nvs_set_str(h, "blen", g_set.ble_name);
     nvs_set_str(h, "ourl", g_set.ota_url);
     nvs_set_str(h, "otok", g_set.ota_token);
     nvs_set_str(h, "opw", g_set.ota_pass);

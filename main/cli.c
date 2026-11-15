@@ -416,6 +416,7 @@ static void help(void)
         "  ECHO ON|OFF (now %s)   DECODE ON|OFF (now %s)   LOOPBACK ON|OFF (own frames as RX)" CRLF
         "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF, slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
     out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
+        "  BLENAME [text|DEFAULT]   Bluetooth LE name shown in the list of devices (max 20 characters; default S-Link-<MAC>; saved)" CRLF
         "  HTTPS ON|OFF|RESET   web portal also on https (port 443, certificate from the device's own CA, download it at /ca.crt); RESET makes a new CA (saved)" CRLF
         "  SLINKE ON|OFF   SLINKETX ON|OFF   Slink-e serial protocol on TCP port 2325 (off by default); SLINKETX allows sending to the bus (saved)" CRLF
         "  ALLOFF             power off every Sony unit on the bus (CD 1-3, MD, tuner, then the amplifier): the remote's SYSTEM/STANDBY \"ALL OFF\"" CRLF
@@ -1059,7 +1060,7 @@ static void handle_cmd(char *line)
         do_send(b, 4);
     }
     else if (!strcmp(c0, "BLE") || !strcmp(c0, "WEB") || !strcmp(c0, "APP") || !strcmp(c0, "SLINKE") || !strcmp(c0, "SLINKETX") || !strcmp(c0, "HTTPS") || !strcmp(c0, "WIFI") ||
-             !strcmp(c0, "MQTT") || !strcmp(c0, "HOSTNAME") || !strcmp(c0, "NET") || !strcmp(c0, "ECO") ||
+             !strcmp(c0, "MQTT") || !strcmp(c0, "HOSTNAME") || !strcmp(c0, "BLENAME") || !strcmp(c0, "NET") || !strcmp(c0, "ECO") ||
              !strcmp(c0, "VOLCFG") || !strcmp(c0, "UITITLE") || !strcmp(c0, "CFG") || !strcmp(c0, "WIFIPWR")) handle_net(raw, tok, nt);
     else if (!parse_hex_line(line)) out("ERR unknown command (try HELP)\r\n");
 }
@@ -1205,6 +1206,7 @@ static void handle_net(char *raw, char **tok, int nt)
             else if (!strcmp(k, "title_app") && strlen(vv) < sizeof g_set.title_app) strcpy(g_set.title_app, vv);
             else if (!strcmp(k, "title_page") && strlen(vv) < sizeof g_set.title_page) strcpy(g_set.title_page, vv);
             else if (!strcmp(k, "slinke")) g_set.slinke = n != 0;
+            else if (!strcmp(k, "ble_name") && strlen(vv) < sizeof g_set.ble_name) strcpy(g_set.ble_name, vv);
             else if (!strcmp(k, "slinke_tx")) g_set.slinke_tx = n != 0;
             else if (!strcmp(k, "https")) g_set.https = n != 0;
             else if (!strcmp(k, "ota_push")) g_set.ota_push = n != 0;
@@ -1226,7 +1228,7 @@ static void handle_net(char *raw, char **tok, int nt)
             out("CFG vol_up %d" CRLF "CFG vol_down %d" CRLF "CFG vol_margin %d" CRLF, (int)g_set.vol_up, (int)g_set.vol_down, (int)g_set.vol_margin);
             out("CFG host \"%s\"" CRLF "CFG ssid \"%s\"" CRLF "CFG mqtt_uri \"%s\"" CRLF "CFG mqtt_user \"%s\"" CRLF, g_set.host, g_set.ssid, g_set.mqtt_uri, g_set.mqtt_user);
             out("CFG title_app \"%s\"" CRLF "CFG title_page \"%s\"" CRLF, g_set.title_app, g_set.title_page);
-            out("CFG slinke %d" CRLF "CFG slinke_tx %d" CRLF "CFG https %d" CRLF, g_set.slinke, g_set.slinke_tx, g_set.https);
+            out("CFG slinke %d" CRLF "CFG slinke_tx %d" CRLF "CFG https %d" CRLF "CFG ble_name \"%s\"" CRLF, g_set.slinke, g_set.slinke_tx, g_set.https, g_set.ble_name);
             out("CFG ota_url \"%s\"" CRLF "CFG ota_push %d" CRLF "CFG ota_pull %d" CRLF, g_set.ota_url, g_set.ota_push, g_set.ota_pull);
             if (pw) out("CFG pass \"%s\"" CRLF "CFG mqtt_pass \"%s\"" CRLF "CFG ota_pass \"%s\"" CRLF "CFG ota_token \"%s\"" CRLF, g_set.pass, g_set.mqtt_pass, g_set.ota_pass, g_set.ota_token);
             out("OK cfg end%s" CRLF, pw ? " (with passwords)" : "");
@@ -1275,6 +1277,21 @@ static void handle_net(char *raw, char **tok, int nt)
             settings_save();
         }
         out("UITITLE APP \"%s\"" CRLF "UITITLE PAGE \"%s\"" CRLF "UITITLE NAME \"%s\"" CRLF "UITITLE PWA %s" CRLF, g_set.title_app, g_set.title_page, g_set.title_pwa, g_set.pwa_src == 2 ? "NAME" : g_set.pwa_src == 1 ? "PAGE" : "APP");
+    }
+    else if (!strcmp(c0, "BLENAME")) {                              /* Bluetooth name: BLENAME [text|DEFAULT] */
+        if (na >= 2) {
+            const char *t = av[1];
+            size_t l = strlen(t);
+            if (!strcasecmp(t, "DEFAULT")) { g_set.ble_name[0] = 0; }
+            else {
+                bool ok = l >= 1 && l <= 20;
+                for (size_t i = 0; ok && i < l; i++) ok = (unsigned char)t[i] >= 32 && (unsigned char)t[i] < 127 && t[i] != '"';
+                if (!ok) { out("ERR blename: 1-20 printable characters, no quotes (BLENAME DEFAULT restores S-Link-<MAC>)" CRLF); return; }
+                memcpy(g_set.ble_name, t, l + 1);
+            }
+            settings_save(); ble_nus_rename();
+            out("OK blename %s (saved%s)" CRLF, ble_nus_name(), ble_nus_connected() ? "; it is advertised again when this connection ends" : "");
+        } else out("BLENAME %s%s" CRLF, ble_nus_name(), g_set.ble_name[0] ? "" : " (default)");
     }
     else if (!strcmp(c0, "HOSTNAME")) {
         if (na < 2) { out("HOSTNAME %s (reachable as %s.local)" CRLF, g_set.host, g_set.host); return; }

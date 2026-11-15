@@ -97,6 +97,7 @@ size_t stats_json(char *b, size_t sz)
     char host[40]; jesc(host, sizeof host, g_set.host);
     P("\"host\":\"%s\",\"mac\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"gpio\":%d,\"gap\":%d,\"loop\":%d,", host, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
       slink_get_gpio(), slink_get_gap_ms(), slink_get_loopback());
+    { char bm[20], bn[48]; ble_nus_mac(bm, sizeof bm); jesc(bn, sizeof bn, ble_nus_name()); char dg[200]; ble_nus_diag(dg, sizeof dg); P("\"bleMac\":\"%s\",\"bleName\":\"%s\",\"bleDiag\":\"%s\",", bm, bn, dg); }
 
     /* WiFi */
     wifi_ap_record_t ap;

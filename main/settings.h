@@ -21,6 +21,7 @@ typedef struct {
     unsigned char wps;      /* WiFi power save: 0 auto (eco: max modem, else min modem), 1 none, 2 min modem, 3 max modem */
     unsigned char lis;      /* WiFi listen interval in beacons (1-10), 0 = automatic (3 in eco, DTIM otherwise) */
     char title_app[33];     /* web interface: header title (empty = amplifier name) */
+    char ble_name[21];      /* Bluetooth LE name (empty = "S-Link-" + the last two bytes of the BT MAC); BLENAME */
     char title_pwa[33];     /* name of the installed app (PWA manifest), free text (UITITLE NAME "text") */
     uint8_t pwa_src;        /* what names the installed app: 0 header title, 1 page title, 2 the free text above (UITITLE PWA APP|PAGE|NAME) */
     char title_page[33];    /* web interface: page title (tabs, bookmarks) */

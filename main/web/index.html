@@ -822,6 +822,10 @@ body.hxon .hx{display:block}
         <div class="card">
           <h2>Interfacce</h2>
           <div class="set"><div class="t"><b>UART su Bluetooth LE</b><span id="bleSub">Console seriale via Nordic UART Service</span></div><button class="sw" role="switch" aria-checked="false" id="swBle" aria-label="UART su BLE"></button></div>
+          <form class="form" id="bleNameForm" autocomplete="off" style="margin:4px 0 10px">
+            <label>Nome Bluetooth<input id="bleNameIn" maxlength="20" placeholder="vuoto = S-Link-<MAC>"></label>
+            <div class="row"><button class="btn sm" type="submit">Salva</button><span class="hint" id="bleMacTxt"></span></div>
+          </form>
           <div class="set"><div class="t"><b>Portale web</b><span>Questa pagina</span></div><button class="sw" role="switch" aria-checked="true" id="swWeb" aria-label="Portale web"></button></div>
           <div class="set"><div class="t"><b>Portale web HTTPS</b><span id="httpsSub">Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)</span><span id="httpsCaRow" hidden><a id="httpsCa" href="/ca.crt">Scarica il certificato CA</a></span></div><button class="sw" role="switch" aria-checked="false" id="swHttps" aria-label="Portale web HTTPS"></button></div>
           <div class="set"><div class="t"><b>Interfaccia applicativa WiFi</b><span id="appSub">Console TCP (porta 2323) e MQTT per Home Assistant</span></div><button class="sw" role="switch" aria-checked="false" id="swApp" aria-label="Interfaccia applicativa WiFi"></button></div>
@@ -1546,6 +1550,11 @@ const TRX = [
   ['Connessione persa. Ricollega il dispositivo.', 'Connection lost. Connect the device again.', 'Connexion perdue. Reconnectez l’appareil.', 'Verbindung verloren. Gerät erneut verbinden.', 'Conexión perdida. Vuelva a conectar el dispositivo.'],
   ['Installa il firmware', 'Install the firmware', 'Installer le firmware', 'Firmware installieren', 'Instalar el firmware'],
   ['Demo del portale', 'Portal demo', 'Démo du portail', 'Demo des Portals', 'Demo del portal'],
+  ['Indirizzo MAC WiFi', 'WiFi MAC address', 'Adresse MAC WiFi', 'WLAN-MAC-Adresse', 'Dirección MAC WiFi'],
+  ['Nome Bluetooth', 'Bluetooth name', 'Nom Bluetooth', 'Bluetooth-Name', 'Nombre Bluetooth'],
+  ['Collegamento Bluetooth', 'Bluetooth link', 'Liaison Bluetooth', 'Bluetooth-Verbindung', 'Enlace Bluetooth'],
+  ['Indirizzo MAC Bluetooth', 'Bluetooth MAC address', 'Adresse MAC Bluetooth', 'Bluetooth-MAC-Adresse', 'Dirección MAC Bluetooth'],
+  ['Indirizzo Bluetooth', 'Bluetooth address', 'Adresse Bluetooth', 'Bluetooth-Adresse', 'Dirección Bluetooth'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -2016,7 +2025,7 @@ function bleOpen() {
 function connect() {
   if (DEMO) { linkReady = true; setConn(true, 'Modalità demo'); demoStart(); return; }
   if (BLEMODE && !bleDev) { setConn(false, 'Connessione…'); bleLanding(true); return; }                 /* nothing chosen yet: the landing page */
-  if (BLEMODE && bleLostAt && Date.now() - bleLostAt > 20000) { bleLanding(true, tr('Connessione persa. Ricollega il dispositivo.')); }
+  if (BLEMODE && bleLostAt && Date.now() - bleLostAt > 60000) { bleLanding(true, tr('Connessione persa. Ricollega il dispositivo.')); }
   clearTimeout(reconnectTimer); reconnectTimer = null;
   if (!S.connected) setConn(false, retry ? 'Riconnessione…' : 'Connessione…');
   const s = BLEMODE ? bleOpen() : new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
@@ -2577,7 +2586,7 @@ const otaStateName = st => ({ valid: tr('valido'), pending: tr('in prova: non an
 function kvRows(sel, rows) { $(sel).innerHTML = rows.map(r => '<dt>' + tr(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join(''); }
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
-  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC', j.mac || '—'], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
+  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', j.mac || '—'], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', j.bleMac || '—'], ['Collegamento Bluetooth', j.bleDiag || '—'], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
     ['Firmware', j.fw], ['Compilato', fmtBuilt(j.built)], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['Memoria libera', fmtKb(j.heap) + ' / ' + fmtKb(j.heapTotal)], ['Minimo storico', fmtKb(j.heapMin)], ['Blocco più grande', fmtKb(j.heapBlock)], ['Task attivi', j.tasks]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
@@ -2623,6 +2632,7 @@ function renderNet() {
   $('#httpsCaRow').hidden = !n.https;
   $('#slkeSub').textContent = n.slke ? tr('Attivo · porta 2325 · {n} client', { n: n.slkeN || 0 }) : tr('Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)');
   $('#slkeTxSub').textContent = n.slkeTx ? tr('Acceso: il programma collegato può inviare comandi all’impianto') : tr('Spento: la connessione è un monitor di sola lettura');
+  { const bi = $('#bleNameIn'); if (bi && document.activeElement !== bi) bi.value = n.bleCustom ? (n.bleName || '') : ''; $('#bleMacTxt').textContent = n.bleMac ? tr('Indirizzo Bluetooth') + ' ' + n.bleMac + (n.wifiMac ? ' · WiFi ' + n.wifiMac : '') : ''; }
   $('#bleSub').textContent = n.ble ? (n.bleConn ? tr('Attivo · client connesso') : tr('Attivo · visibile come {n}', { n: n.bleName || 'S-Link' })) : tr('Console seriale via Nordic UART Service');
   $('#appSub').textContent = n.app ? tr('Attiva · TCP porta 2323 ({n} client) · MQTT {m}', { n: n.tcp, m: tr(n.mqtt ? (n.mqttOk ? 'connesso' : 'in connessione…') : 'non configurato') }) : tr('Console TCP (porta 2323) e MQTT per Home Assistant');
   const wifi = n.wifi === 'connected' ? tr('Connesso · {r} dBm', { r: n.rssi }) : n.wifi === 'connecting' ? tr('In connessione…') : n.wifi === 'idle' ? tr('Inattivo') : tr('Non configurato');
@@ -3919,6 +3929,7 @@ function initUiOptions() {
   /* titles */
   $('#tApp').value = TITLE.app; $('#tPage').value = TITLE.page; $('#tPwa').value = TITLE.pwa; $('#tName').value = TITLE.name;
   $('#tName').oninput = () => { if ($('#tName').value.trim()) $('#tPwa').value = 'NAME'; };   /* typing a name selects it */
+  $('#bleNameForm').onsubmit = e => { e.preventDefault(); const v = $('#bleNameIn').value.trim(); cmd('BLENAME ' + (v ? '"' + v.replace(/"/g, '') + '"' : 'DEFAULT'), { ack: true }); setTimeout(() => cmd('NET', { auto: true }), 600); };
   $('#titleForm').onsubmit = e => {
     e.preventDefault();
     const v = { app: $('#tApp').value.trim(), page: $('#tPage').value.trim(), name: $('#tName').value.trim(), pwa: $('#tPwa').value };   /* read now: the replies to the first commands carry the old values */

@@ -44,5 +44,8 @@ void ble_nus_stop(void);
 bool ble_nus_running(void);
 bool ble_nus_connected(void);
 const char *ble_nus_name(void);
+void ble_nus_diag(char *out, size_t n);     /* counters of the Bluetooth link as text */
+void ble_nus_rename(void);                  /* BLENAME changed: advertise the new name */
+void ble_nus_mac(char *out, size_t n);      /* Bluetooth address as text */
 void ble_nus_state_changed(void);           /* tell the Bluetooth page (GitHub Pages) that the state changed */
 size_t net_json_get(char *buf, size_t sz);  /* {"t":"net",...}: interfaces and addresses, as the portal shows them */

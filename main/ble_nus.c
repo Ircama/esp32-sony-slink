@@ -16,6 +16,7 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "esp_mac.h"
+#include "esp_bt.h"
 #include "net.h"
 #include "settings.h"
 #include "cli.h"
@@ -33,12 +34,29 @@ static volatile uint16_t s_conn = BLE_HS_CONN_HANDLE_NONE;
 static volatile bool s_sub;
 static uint16_t s_tx_handle;
 static uint8_t s_own_addr_type;
-static char s_name[16];
+static char s_name[24];
 static StreamBufferHandle_t s_sb;
 static MessageBufferHandle_t s_mb;         /* JSON lines for the web page on GitHub Pages (@UI), each one sent whole between two chunks of text */
 static TaskHandle_t s_tx_task, s_json_task;
+static volatile uint32_t s_dg_conn, s_dg_disc, s_dg_fail, s_dg_enomem, s_dg_notify_err, s_dg_upd;   /* counters for "BLE" and the Statistics page */
+static volatile int s_dg_reason = -1, s_dg_upd_status = -1, s_dg_itvl;                                /* last disconnect reason (HCI code, 8 = supervision timeout, 19 = the phone hung up, 22 = we hung up), result of the parameter update, interval (1.25 ms units) */
 static volatile bool s_ui;                 /* the client asked for the JSON frames of the portal ("@UI"): the Bluetooth page of the project */
 static SemaphoreHandle_t s_stop_done;
+
+static void make_name(void)
+{
+    if (g_set.ble_name[0]) { snprintf(s_name, sizeof s_name, "%s", g_set.ble_name); return; }
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_BT);
+    snprintf(s_name, sizeof s_name, "S-Link-%02X%02X", mac[4], mac[5]);
+}
+
+void ble_nus_mac(char *out, size_t n)                /* the Bluetooth address, "E0:72:A1:E9:F7:DA" */
+{
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_BT);
+    snprintf(out, n, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
 
 bool ble_nus_running(void) { return s_running; }
 const char *ble_nus_name(void) { return s_name; }
@@ -65,13 +83,14 @@ static bool send_all(const uint8_t *buf, size_t n)
     if (!n || conn == BLE_HS_CONN_HANDLE_NONE || !s_sub) return true;
     size_t chunk = ble_att_mtu(conn);
     chunk = chunk > 3 ? chunk - 3 : 20;
+    if (chunk > 160) chunk = 160;                    /* one mbuf per notification (a 244-byte one takes two blocks): the pool is shared with the ATT answers to the phone, which must never find it empty */
     for (size_t off = 0; off < n; ) {
         size_t k = n - off < chunk ? n - off : chunk;
         struct os_mbuf *om = ble_hs_mbuf_from_flat(buf + off, (uint16_t)k);
         if (!om) { vTaskDelay(pdMS_TO_TICKS(10)); continue; }
         int rc = ble_gatts_notify_custom(conn, s_tx_handle, om);
-        if (rc == BLE_HS_ENOMEM || rc == BLE_HS_EBUSY) { vTaskDelay(pdMS_TO_TICKS(15)); continue; }   /* mbuf consumed on failure too */
-        if (rc != 0) return false;
+        if (rc == BLE_HS_ENOMEM || rc == BLE_HS_EBUSY) { s_dg_enomem++; vTaskDelay(pdMS_TO_TICKS(15)); continue; }   /* mbuf consumed on failure too */
+        if (rc != 0) { s_dg_notify_err++; return false; }
         off += k;
         vTaskDelay(1);
     }
@@ -197,10 +216,19 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
 {
     switch (ev->type) {
     case BLE_GAP_EVENT_CONNECT:
-        if (ev->connect.status == 0) { s_conn = ev->connect.conn_handle; s_sub = false; s_ui = false; }
-        else advertise();
+        if (ev->connect.status == 0) {
+            s_conn = ev->connect.conn_handle; s_sub = false; s_ui = false; s_dg_conn++;
+            /* the S3/C3/C6 share the radio with the WiFi: a relaxed link (45-60 ms, 6 s supervision) survives the moments in which the WiFi has the air; some phones/PCs start at 7.5 ms */
+            struct ble_gap_upd_params up = { .itvl_min = BLE_GAP_CONN_ITVL_MS(45), .itvl_max = BLE_GAP_CONN_ITVL_MS(60), .latency = 0, .supervision_timeout = BLE_GAP_SUPERVISION_TIMEOUT_MS(6000) };
+            s_dg_upd_status = ble_gap_update_params(s_conn, &up); s_dg_upd++;
+        } else { s_dg_fail++; advertise(); }
         break;
+    case BLE_GAP_EVENT_CONN_UPDATE: {
+        struct ble_gap_conn_desc d;
+        if (ble_gap_conn_find(ev->conn_update.conn_handle, &d) == 0) s_dg_itvl = d.conn_itvl;
+        break; }
     case BLE_GAP_EVENT_DISCONNECT:
+        s_dg_disc++; s_dg_reason = ev->disconnect.reason & 0xFF;
         s_conn = BLE_HS_CONN_HANDLE_NONE;
         s_sub = false; s_ui = false;
         if (s_running) advertise();
@@ -233,7 +261,7 @@ static void advertise(void)
     struct ble_gap_adv_params p = {0};
     p.conn_mode = BLE_GAP_CONN_MODE_UND;
     p.disc_mode = BLE_GAP_DISC_MODE_GEN;
-    if (g_set.eco) { p.itvl_min = BLE_GAP_ADV_ITVL_MS(500); p.itvl_max = BLE_GAP_ADV_ITVL_MS(700); }   /* eco: advertise 5x less often (default 100 ms) */
+    if (g_set.eco) { p.itvl_min = BLE_GAP_ADV_ITVL_MS(150); p.itvl_max = BLE_GAP_ADV_ITVL_MS(250); }   /* eco: a little less often than the default 100 ms (500-700 ms made a connection attempt fail most of the time) */
     ble_gap_adv_start(s_own_addr_type, NULL, BLE_HS_FOREVER, &p, gap_event, NULL);
 }
 
@@ -241,6 +269,10 @@ static void on_sync(void)
 {
     ble_hs_util_ensure_addr(0);
     ble_hs_id_infer_auto(0, &s_own_addr_type);
+    /* the board sits inside the amplifier: the signal at the PC was -83 dBm (the H2 on the desk, -53). More power for the announcements and for the link */
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_CONN_HDL0, ESP_PWR_LVL_P9);
     s_synced = true;
     advertise();
 }
@@ -261,9 +293,7 @@ void ble_nus_start(void)
     if (!s_json_task) xTaskCreate(json_task, "slink_blej", 4096, NULL, 3, &s_json_task);
     if (!s_stop_done) s_stop_done = xSemaphoreCreateBinary();
     if (!s_tx_task) xTaskCreate(tx_task, "slink_ble", 3072, NULL, 4, &s_tx_task);
-    uint8_t mac[6];
-    esp_read_mac(mac, ESP_MAC_BT);
-    snprintf(s_name, sizeof s_name, "S-Link-%02X%02X", mac[4], mac[5]);
+    make_name();
     s_conn = BLE_HS_CONN_HANDLE_NONE;
     s_sub = false;
     s_synced = false;
@@ -278,6 +308,20 @@ void ble_nus_start(void)
     s_running = true;
     cli_sink_add(ble_sink);
     nimble_port_freertos_init(host_task);
+}
+
+void ble_nus_diag(char *out, size_t n)              /* what the Bluetooth link did: for "BLE" and the Statistics */
+{
+    snprintf(out, n, "connections %u, hang-ups %u, failed %u, last reason %d, interval %.1f ms, update %d, buffer full %u, notify errors %u",
+             (unsigned)s_dg_conn, (unsigned)s_dg_disc, (unsigned)s_dg_fail, s_dg_reason, s_dg_itvl * 1.25, s_dg_upd_status, (unsigned)s_dg_enomem, (unsigned)s_dg_notify_err);
+}
+
+void ble_nus_rename(void)                           /* BLENAME: the new name is advertised at once, or after the current connection ends */
+{
+    make_name();
+    if (!s_running) return;
+    ble_svc_gap_device_name_set(s_name);
+    if (s_synced && s_conn == BLE_HS_CONN_HANDLE_NONE) { ble_gap_adv_stop(); advertise(); }
 }
 
 void ble_nus_stop(void)

@@ -16,6 +16,9 @@ CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
 CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
 CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
 CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=247
+# mbuf pool of the BLE host: shared by the notifications we send and by the answers to the phone (service discovery): 12 blocks ran dry during the first burst of JSON frames
+CONFIG_BT_NIMBLE_MSYS_1_BLOCK_COUNT=24
+CONFIG_BT_NIMBLE_MSYS_1_BLOCK_SIZE=256
 
 # WiFi + BLE coexistence (STA only)
 CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
