@@ -75,14 +75,24 @@ static void tx_task(void *arg)
 {
     static uint8_t jb[2100];
     uint8_t buf[244];
+    bool at_bol = true, pad = false;               /* at_bol: the text sent so far ended a line */
     for (;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         for (;;) {
-            size_t n = s_mb ? xMessageBufferReceive(s_mb, jb, sizeof jb, 0) : 0;      /* a JSON line goes out whole */
-            if (n) { send_all(jb, n); continue; }
-            n = xStreamBufferReceive(s_sb, buf, sizeof buf, 0);
+            bool json = s_mb && !xMessageBufferIsEmpty(s_mb);
+            if (json && !at_bol) {                  /* a JSON line is never put inside a line of text: finish the line first */
+                size_t t = xStreamBufferReceive(s_sb, buf, sizeof buf, pdMS_TO_TICKS(150));
+                if (t) { send_all(buf, t); at_bol = buf[t - 1] == '\n'; continue; }
+                at_bol = true; pad = true;          /* the rest of the line did not come: close it here */
+            }
+            if (json) {
+                size_t n = xMessageBufferReceive(s_mb, jb, sizeof jb, 0);                  /* a JSON line goes out whole */
+                if (n) { if (pad) { send_all((const uint8_t *)"\n", 1); pad = false; } send_all(jb, n); continue; }
+            }
+            size_t n = xStreamBufferReceive(s_sb, buf, sizeof buf, 0);
             if (!n) break;
             send_all(buf, n);
+            at_bol = buf[n - 1] == '\n';
         }
     }
 }

@@ -1544,7 +1544,6 @@ const TRX = [
   ['Collega il dispositivo', 'Connect the device', 'Connecter l’appareil', 'Gerät verbinden', 'Conectar el dispositivo'],
   ['Questo browser non supporta Web Bluetooth.', 'This browser does not support Web Bluetooth.', 'Ce navigateur ne gère pas Web Bluetooth.', 'Dieser Browser unterstützt Web Bluetooth nicht.', 'Este navegador no admite Web Bluetooth.'],
   ['Connessione persa. Ricollega il dispositivo.', 'Connection lost. Connect the device again.', 'Connexion perdue. Reconnectez l’appareil.', 'Verbindung verloren. Gerät erneut verbinden.', 'Conexión perdida. Vuelva a conectar el dispositivo.'],
-  ['Il firmware di questo dispositivo non supporta la pagina Bluetooth: aggiornalo (vedi «Installa il firmware»).', 'The firmware of this device does not support the Bluetooth page: update it (see “Install the firmware”).', 'Le firmware de cet appareil ne gère pas la page Bluetooth : mettez-le à jour (voir « Installer le firmware »).', 'Die Firmware dieses Geräts unterstützt die Bluetooth-Seite nicht: bitte aktualisieren (siehe „Firmware installieren“).', 'El firmware de este dispositivo no admite la página Bluetooth: actualícelo (vea «Instalar el firmware»).'],
   ['Installa il firmware', 'Install the firmware', 'Installer le firmware', 'Firmware installieren', 'Instalar el firmware'],
   ['Demo del portale', 'Portal demo', 'Démo du portail', 'Demo des Portals', 'Demo del portal'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
@@ -2005,12 +2004,11 @@ function bleOpen() {
     const dec = new TextDecoder(); let buf = '';
     tx.addEventListener('characteristicvaluechanged', e => {
       buf += dec.decode(e.target.value, { stream: true });
-      let i; while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1); if (line && ws === s && s.onmessage) { if (line[0] === '{') s.gotJson = true; s.onmessage({ data: line }); } }
+      let i; while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1); if (line && ws === s && s.onmessage) s.onmessage({ data: line }); }
     });
     await tx.startNotifications();
     s.readyState = 1; bleLostAt = 0; if (s.onopen) s.onopen();
     bleWrite('@UI\n');                                      /* send me the JSON frames of the portal */
-    setTimeout(() => { if (ws === s && s.readyState === 1 && !s.gotJson) bleLanding(true, tr('Il firmware di questo dispositivo non supporta la pagina Bluetooth: aggiornalo (vedi «Installa il firmware»).')); }, 6000);
   })().catch(() => { if (s.readyState !== 3) { s.readyState = 3; if (s.onclose) s.onclose(); } });
   return s;
 }
@@ -2088,7 +2086,7 @@ function handleLine(d) {
     if (userLine && Date.now() - userAt < 3000 && Date.now() - busyRetry > 2500) { busyRetry = Date.now(); const l = userLine; userRetry = true; glassUpd(); setTimeout(() => { userRetry = false; cmd(l); }, 1500); }
     else if (Date.now() - userAt < 3000) toast(d.replace(/^ERR\s*/, ''), 'err');
   }
-  else if (d.startsWith('ERR')) toast(d.replace(/^ERR\s*/, ''), 'err');
+  else if (d.startsWith('ERR')) { if (!(/^ERR not available: this chip/.test(d) && Date.now() - userAt > 5000)) toast(d.replace(/^ERR\s*/, ''), 'err'); }   /* an automatic read (WIFIPWR) on a chip without WiFi is not an error for the user */
   else if (d.startsWith('OK') && Date.now() < ackUntil) { toast(d.replace(/^OK\s*/, '').replace(/^./, c => c.toUpperCase()), 'ok'); ackUntil = 0; }
   if (volCalUntil && (/^OK volume (MIN|MAX)/.test(d) || /^ERR volume/.test(d))) { const okc = /^OK/.test(d); volCalUntil = 0; renderVol(); if (okc) toast('Calibrazione completata: volume al minimo', 'ok'); }
   if (/^OK fav added/.test(d)) { toast('Stazione memorizzata', 'ok'); fetchJson('/api/favs'); }
