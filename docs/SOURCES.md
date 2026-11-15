@@ -49,6 +49,8 @@ The documents, projects and pages used for the S-Link / Control-A1 decoder, the 
 
 [woudy.org/slinke, low-level pages](http://www.woudy.org/slinke/help/fp/Slinke/lowlevel/lowlevel.htm) (Nirvis Systems): the host protocol of the Slink-e interface (port send / receive, port enable, version, serial number, baud ...), not the bus. Implemented over TCP on port 2325, off by default: see the README, "Slink-e protocol over TCP". The IR, parallel and S-Link bit-mode commands are not implemented.
 
+The Perl driver [`Slinke`](https://metacpan.org/module/Slinke/source) (B. Paulsen, 1.00) lists the same command and response codes as those pages (ports 0-7; system `0B 0C 0D 0E 0F AA FF`; serial `08 09`; IR `04`-`13`; parallel `10`-`14`). Compared with the firmware: the system, serial and enable/disable codes are handled; the IR and parallel ones (and `0D`, set serial number) are not, because the board has neither port: they are answered with *illegal command* like any code the device does not have. Nothing was added.
+
 ## Other protocols (not S-Link)
 
 Read and set aside: nothing to add to the decoder.
