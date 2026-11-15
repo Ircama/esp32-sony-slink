@@ -150,7 +150,7 @@ typedef struct { char host[40]; uint32_t ip; bool ok; SemaphoreHandle_t done; } 
 static void gen_task(void *arg)
 {
     job_t *j = arg;
-    char *ca_pem = nvs_load("tls_ca_c"), *ca_k = nvs_load("tls_ca_k"), *sv_id = nvs_load("tls_sv_id"), *sv_c = nvs_load("tls_sv_c"), *sv_k = nvs_load("tls_sv_k");
+    char *ca_pem = nvs_load("tls_ca_c"), *ca_k = nvs_load("tls_ca_k"), *sv_id = nvs_load("tls_sv_id"), *sv_c = nvs_load("tls_sv_c"), *sv_k = nvs_load("tls_sv_k"), *ca_n = nvs_load("tls_ca_n");
     char cn_ca[64], id_now[80], cn_sv[64];
     uint8_t mac[6] = {0}, raw[32], nc[400], san[400];
     mbedtls_pk_context capk, svpk;
@@ -161,14 +161,14 @@ static void gen_task(void *arg)
     j->ok = false;
     if (psa_crypto_init() != PSA_SUCCESS) goto done;
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
-    snprintf(cn_ca, sizeof cn_ca, "CN=S-Link bridge CA %02X%02X%02X", mac[3], mac[4], mac[5]);
+    snprintf(cn_ca, sizeof cn_ca, "CN=esp32-sony-slink CA %02X%02X%02X", mac[3], mac[4], mac[5]);
     snprintf(id_now, sizeof id_now, "%s|%u.%u.%u.%u", j->host, (unsigned)(j->ip & 255), (unsigned)((j->ip >> 8) & 255), (unsigned)((j->ip >> 16) & 255), (unsigned)(j->ip >> 24));
     snprintf(cn_sv, sizeof cn_sv, "CN=%s.local", j->host);
     pem = malloc(CERT_MAX);
     if (!pem) goto done;
 
     /* the CA: made once; its key is kept raw (32 bytes) in a string of hex digits */
-    if (!(ca_pem && ca_k && strlen(ca_k) == 64)) {
+    if (!(ca_pem && ca_k && strlen(ca_k) == 64 && ca_n && !strcmp(ca_n, cn_ca))) {      /* also made again when its name changed (older firmware) */
         free(ca_pem); free(ca_k); ca_pem = ca_k = NULL;
         ca_id = key_new();
         if (!ca_id || psa_export_key(ca_id, raw, sizeof raw, &rl) != PSA_SUCCESS || rl != 32) { ESP_LOGE(TAG, "CA key"); goto done; }
@@ -177,7 +177,7 @@ static void gen_task(void *arg)
         int r = mk_cert(cn_ca, cn_ca, &capk, &capk, true, nc, n, NULL, 0, pem, CERT_MAX);
         if (r != 0) { ESP_LOGE(TAG, "CA cert -0x%04x", -r); goto done; }
         char hex[65]; for (int i = 0; i < 32; i++) sprintf(hex + 2 * i, "%02x", raw[i]);
-        if (!nvs_save_str("tls_ca_k", hex) || !nvs_save_str("tls_ca_c", pem)) { ESP_LOGE(TAG, "CA save"); goto done; }
+        if (!nvs_save_str("tls_ca_k", hex) || !nvs_save_str("tls_ca_c", pem) || !nvs_save_str("tls_ca_n", cn_ca)) { ESP_LOGE(TAG, "CA save"); goto done; }
         ca_pem = strdup(pem); ca_k = strdup(hex);
         memset(raw, 0, sizeof raw); memset(hex, 0, sizeof hex);
         ESP_LOGI(TAG, "new CA: %s", cn_ca);
@@ -214,7 +214,7 @@ done:
     mbedtls_pk_free(&capk); mbedtls_pk_free(&svpk);
     if (ca_id) psa_destroy_key(ca_id);
     if (sv_id_k) psa_destroy_key(sv_id_k);
-    free(pem); free(ca_pem); free(ca_k); free(sv_id); free(sv_c); free(sv_k);
+    free(pem); free(ca_pem); free(ca_k); free(ca_n); free(sv_id); free(sv_c); free(sv_k);
     xSemaphoreGive(j->done);
     vTaskDelete(NULL);
 }
@@ -247,7 +247,7 @@ void tls_forget(void)
 {
     nvs_handle_t h;
     if (nvs_open("slink", NVS_READWRITE, &h) == ESP_OK) {
-        nvs_erase_key(h, "tls_ca_k"); nvs_erase_key(h, "tls_ca_c");
+        nvs_erase_key(h, "tls_ca_k"); nvs_erase_key(h, "tls_ca_c"); nvs_erase_key(h, "tls_ca_n");
         nvs_erase_key(h, "tls_sv_c"); nvs_erase_key(h, "tls_sv_k"); nvs_erase_key(h, "tls_sv_id");
         nvs_commit(h); nvs_close(h);
     }
