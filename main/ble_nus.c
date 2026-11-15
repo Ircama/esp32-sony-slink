@@ -48,7 +48,14 @@ bool ble_nus_connected(void) { return s_conn != BLE_HS_CONN_HANDLE_NONE; }
 
 static void ble_sink(const char *d, size_t n)
 {
-    if (s_sb && s_sub) { xStreamBufferSend(s_sb, d, n, 0); if (s_tx_task) xTaskNotifyGive(s_tx_task); }       /* drop when the phone cannot keep up */
+    if (s_sb && s_sub) {                                       /* a long output (HELP, SETUP) is bigger than the buffer: wait for room instead of cutting the text; give up if the phone is gone or too slow */
+        size_t left = n;
+        for (int i = 0; i < 20 && left && s_sub; i++) {
+            size_t k = xStreamBufferSend(s_sb, d + (n - left), left, pdMS_TO_TICKS(50));
+            left -= k;
+            if (s_tx_task) xTaskNotifyGive(s_tx_task);
+        }
+    }
 }
 
 /* send n bytes as notifications of at most MTU-3 bytes; false when the link is gone */
@@ -249,7 +256,7 @@ static void host_task(void *arg)
 void ble_nus_start(void)
 {
     if (s_running) return;
-    if (!s_sb) s_sb = xStreamBufferCreate(2048, 1);
+    if (!s_sb) s_sb = xStreamBufferCreate(3072, 1);
     if (!s_mb) s_mb = xMessageBufferCreate(4600);
     if (!s_json_task) xTaskCreate(json_task, "slink_blej", 4096, NULL, 3, &s_json_task);
     if (!s_stop_done) s_stop_done = xSemaphoreCreateBinary();
