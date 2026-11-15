@@ -74,10 +74,17 @@ void cli_sink_remove(cli_sink_t fn)
 
 static void vout(const char *fmt, va_list ap)
 {
-    char buf[1400];
-    int n = vsnprintf(buf, sizeof buf, fmt, ap);
-    if (n <= 0) return;
-    if (n > (int)sizeof buf - 1) n = sizeof buf - 1;
+    char sbuf[1400], *buf = sbuf;
+    va_list ap2;
+    va_copy(ap2, ap);
+    int n = vsnprintf(sbuf, sizeof sbuf, fmt, ap);
+    if (n >= (int)sizeof sbuf) {                         /* a long text (HELP is ~3 KB): format it again into a buffer of the right size instead of cutting it */
+        char *big = malloc((size_t)n + 1);
+        if (big) { vsnprintf(big, (size_t)n + 1, fmt, ap2); buf = big; }
+        else n = sizeof sbuf - 1;
+    }
+    va_end(ap2);
+    if (n <= 0) { if (buf != sbuf) free(buf); return; }
     xSemaphoreTake(s_out_mtx, portMAX_DELAY);
     for (int i = 0; i < MAX_SINKS; i++) if (s_sinks[i]) s_sinks[i](buf, (size_t)n);
     if (usb_serial_jtag_is_connected()) {
@@ -89,6 +96,7 @@ static void vout(const char *fmt, va_list ap)
         }
     }
     xSemaphoreGive(s_out_mtx);
+    if (buf != sbuf) free(buf);
 }
 
 static void out(const char *fmt, ...)
@@ -406,8 +414,8 @@ static void help(void)
     out("  PAD [ODPU|OD|PP]   bus pin mode: open-drain + internal pull-up (default) | open-drain | push-pull (saved)" CRLF
         "  SLINK <gpio>       GPIO connected to S-Link (now %d);  LED <gpio> [INV] | LED OFF  traffic LED" CRLF
         "  ECHO ON|OFF (now %s)   DECODE ON|OFF (now %s)   LOOPBACK ON|OFF (own frames as RX)" CRLF
-        "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF
-        "  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
+        "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF, slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
+    out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
         "  HTTPS ON|OFF|RESET   web portal also on https (port 443, certificate from the device's own CA, download it at /ca.crt); RESET makes a new CA (saved)" CRLF
         "  SLINKE ON|OFF   SLINKETX ON|OFF   Slink-e serial protocol on TCP port 2325 (off by default); SLINKETX allows sending to the bus (saved)" CRLF
         "  ALLOFF             power off every Sony unit on the bus (CD 1-3, MD, tuner, then the amplifier): the remote's SYSTEM/STANDBY \"ALL OFF\"" CRLF
@@ -415,8 +423,8 @@ static void help(void)
         "  WIFI <ssid> [pass] | WIFI CLEAR   MQTT <mqtt://host> [user] [pass] | MQTT CLEAR   HOSTNAME <name>   NET (status)" CRLF
         "  OTA [UPDATE [url] [FORCE] | URL [url|DEFAULT] | PASS [text|OFF] | TOKEN [text|OFF] | ROLLBACK]   firmware update over WiFi: from the GitHub release or a URL; PASS protects the upload (POST /api/ota); (WiFi chips)" CRLF
         "  HELP" CRLF
-        "Replies: 'TX ..' echo, 'OK', 'ERR ..', 'RX ..  ; decoded text' for every bus frame." CRLF,
-        slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
+        "Replies: 'TX ..' echo, 'OK', 'ERR ..', 'RX ..  ; decoded text' for every bus frame." CRLF
+);
 }
 
 
