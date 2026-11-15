@@ -17,6 +17,9 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "esp_mac.h"
 #include "esp_bt.h"
+#if SOC_WIFI_SUPPORTED
+#include "esp_coexist.h"
+#endif
 #include "net.h"
 #include "settings.h"
 #include "cli.h"
@@ -218,6 +221,9 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
     case BLE_GAP_EVENT_CONNECT:
         if (ev->connect.status == 0) {
             s_conn = ev->connect.conn_handle; s_sub = false; s_ui = false; s_dg_conn++;
+#if SOC_WIFI_SUPPORTED
+            esp_coex_preference_set(ESP_COEX_PREFER_BT);        /* the link broke with "supervision timeout" a second or two after it was made: the WiFi had the air */
+#endif
             /* the S3/C3/C6 share the radio with the WiFi: a relaxed link (45-60 ms, 6 s supervision) survives the moments in which the WiFi has the air; some phones/PCs start at 7.5 ms */
             struct ble_gap_upd_params up = { .itvl_min = BLE_GAP_CONN_ITVL_MS(45), .itvl_max = BLE_GAP_CONN_ITVL_MS(60), .latency = 0, .supervision_timeout = BLE_GAP_SUPERVISION_TIMEOUT_MS(6000) };
             s_dg_upd_status = ble_gap_update_params(s_conn, &up); s_dg_upd++;
@@ -269,6 +275,9 @@ static void on_sync(void)
 {
     ble_hs_util_ensure_addr(0);
     ble_hs_id_infer_auto(0, &s_own_addr_type);
+#if SOC_WIFI_SUPPORTED
+    esp_coex_preference_set(ESP_COEX_PREFER_BT);          /* the board shares the radio with the WiFi: with BLE on, Bluetooth has the air first (announcements, connection request, link events) */
+#endif
     /* the board sits inside the amplifier: the signal at the PC was -83 dBm (the H2 on the desk, -53). More power for the announcements and for the link */
     esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
     esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
@@ -328,6 +337,9 @@ void ble_nus_stop(void)
 {
     if (!s_running) return;
     s_running = false;
+#if SOC_WIFI_SUPPORTED
+    esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
+#endif
     cli_sink_remove(ble_sink);
     if (s_conn != BLE_HS_CONN_HANDLE_NONE) {
         ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM);
