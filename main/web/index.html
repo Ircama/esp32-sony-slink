@@ -940,8 +940,8 @@ body.hxon .hx{display:block}
           <form class="form" id="titleForm" autocomplete="off">
             <label>Titolo dell'applicazione<input id="tApp" maxlength="32" placeholder="vuoto = nome dell'amplificatore"></label>
             <label>Titolo della pagina<input id="tPage" maxlength="32" placeholder="S-Link · Sony ES"></label>
-            <label>Nome della app installata<input id="tName" maxlength="32" placeholder="vuoto = segue la scelta qui sotto"></label>
-            <label>Se il nome è vuoto, la app si chiama come<select id="tPwa"><option value="APP">Titolo dell'applicazione</option><option value="PAGE">Titolo della pagina</option></select></label>
+            <label>La app installata si chiama come<select id="tPwa"><option value="APP">Titolo dell'applicazione</option><option value="PAGE">Titolo della pagina</option><option value="NAME">Nome della app installata</option></select></label>
+            <label>Nome della app installata<input id="tName" maxlength="32" placeholder="es. Ampli (usato se scelto sopra)"></label>
             <div class="row"><button class="btn primary" type="submit">Salva</button></div>
           </form>
           <p class="hint">Il titolo dell'applicazione è l'intestazione in alto; quello della pagina è il nome proposto dal browser per schede e segnalibri.</p>
@@ -1505,7 +1505,8 @@ const TRX = [
   ['Riduci', 'Restore', 'Réduire', 'Verkleinern', 'Reducir'],
   ['Ultimo stato noto, {t}: in attesa del dispositivo…', 'Last known state, {t}: waiting for the device…', 'Dernier état connu, {t} : en attente de l’appareil…', 'Letzter bekannter Zustand, {t}: warte auf das Gerät…', 'Último estado conocido, {t}: esperando al dispositivo…'],
   ['Nome della app installata', 'Name of the installed app', 'Nom de l’application installée', 'Name der installierten App', 'Nombre de la aplicación instalada'],
-  ['Se il nome è vuoto, la app si chiama come', 'If the name is empty, the app is called like', 'Si le nom est vide, l’application porte le nom du', 'Ist der Name leer, heißt die App wie der', 'Si el nombre está vacío, la aplicación se llama como el'],
+  ['La app installata si chiama come', 'The installed app is called like', 'L’application installée porte le nom', 'Die installierte App heißt wie', 'La aplicación instalada se llama como'],
+  ['es. Ampli (usato se scelto sopra)', 'e.g. Amp (used when chosen above)', 'p. ex. Ampli (utilisé si choisi ci-dessus)', 'z. B. Amp (wenn oben gewählt)', 'p. ej. Ampli (si se elige arriba)'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -1974,7 +1975,7 @@ function handleLine(d) {
   if (vcm) { $('#vcUp').value = vcm[1]; $('#vcDn').value = vcm[2]; $('#vcMg').value = vcm[3]; }
   const wpm = /^WIFIPWR tx=(\S+) ps=(\S+) listen=(\S+)/.exec(d);
   if (wpm) { $('#wpTx').value = wpm[1]; $('#wpPs').value = wpm[2]; $('#wpLi').value = wpm[3]; }
-  const pwm = /^UITITLE PWA (APP|PAGE)\b/.exec(d);
+  const pwm = /^UITITLE PWA (APP|PAGE|NAME)\b/.exec(d);
   if (pwm) { TITLE.pwa = pwm[1]; store.set('t_pwa', pwm[1]); const sel = $('#tPwa'); if (sel && Date.now() > titleSaveUntil) sel.value = pwm[1]; }
   const nmm = /^UITITLE NAME "(.*)"/.exec(d);
   if (nmm) { TITLE.name = nmm[1]; store.set('t_name', nmm[1]); const inp = $('#tName'); if (inp && Date.now() > titleSaveUntil) inp.value = nmm[1]; }
@@ -3816,6 +3817,7 @@ function initUiOptions() {
   $('#vcDef').onclick = () => { $('#vcUp').value = 420; $('#vcDn').value = 445; $('#vcMg').value = 10; $('#vcSet').click(); };
   /* titles */
   $('#tApp').value = TITLE.app; $('#tPage').value = TITLE.page; $('#tPwa').value = TITLE.pwa; $('#tName').value = TITLE.name;
+  $('#tName').oninput = () => { if ($('#tName').value.trim()) $('#tPwa').value = 'NAME'; };   /* typing a name selects it */
   $('#titleForm').onsubmit = e => {
     e.preventDefault();
     const v = { app: $('#tApp').value.trim(), page: $('#tPage').value.trim(), name: $('#tName').value.trim(), pwa: $('#tPwa').value };   /* read now: the replies to the first commands carry the old values */

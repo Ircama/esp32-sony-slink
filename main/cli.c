@@ -392,7 +392,7 @@ static void help(void)
         "  INPUT AV <audio> <video>  audio-only input (TUNER PHONO CD MD TAPE) + a different video input (VIDEO1-3 DVD SAT TV)" CRLF
         "  VOLCFG [up down margin]   knob travel in steps (default 420 / 445 / 10; saved)" CRLF
         "  CFG [PASS] | CFG SET <key> <value> | CFG APPLY   settings kept in flash (web backup/restore); STATION CLEAR|ADD|SAVE, FAV CLEAR|PUT: station tables" CRLF
-        "  UITITLE [APP|PAGE \"text\"]   header / page title of the web interface (saved); UITITLE NAME \"text\": name of the installed app (empty = UITITLE PWA APP|PAGE: the header or the page title)" CRLF
+        "  UITITLE [APP|PAGE \"text\"]   header / page title of the web interface (saved); UITITLE NAME \"text\": own name for the installed app; UITITLE PWA APP|PAGE|NAME: which of the three names it" CRLF
         "  INPUT <name|hex>   TUNER PHONO CD MD DAT TAPE VIDEO1-3 DVD TV" CRLF
         "  TUNER FM|AM|SCAN+|SCAN-|PRESET+|PRESET-|MONO|STEREO  TUNE FM <MHz>|AM <kHz>  PRESET <bank 1-3> <n 1-10>" CRLF
         "  FAV [ADD [FM <MHz>|AM <kHz>] | DEL <n> | <n>]  presets kept by the bridge (max 30; the amp's own presets can only be stored from its panel)" CRLF
@@ -1253,12 +1253,12 @@ static void handle_net(char *raw, char **tok, int nt)
     else if (!strcmp(c0, "UITITLE")) {
         /* titles of the web interface: UITITLE [APP|PAGE "text"] (empty text = default) */
         if (na >= 2 && !strcasecmp(av[1], "PWA")) {                       /* which title names the installed app: UITITLE PWA APP|PAGE */
-            if (na < 3 || (strcasecmp(av[2], "APP") && strcasecmp(av[2], "PAGE"))) { out("ERR usage: UITITLE PWA APP|PAGE" CRLF); return; }
-            g_set.pwa_page = !strcasecmp(av[2], "PAGE");
+            if (na < 3 || (strcasecmp(av[2], "APP") && strcasecmp(av[2], "PAGE") && strcasecmp(av[2], "NAME"))) { out("ERR usage: UITITLE PWA APP|PAGE|NAME" CRLF); return; }
+            g_set.pwa_src = !strcasecmp(av[2], "NAME") ? 2 : !strcasecmp(av[2], "PAGE") ? 1 : 0;
             settings_save();
         } else if (na >= 2) {
             char *dst = !strcasecmp(av[1], "APP") ? g_set.title_app : !strcasecmp(av[1], "PAGE") ? g_set.title_page : !strcasecmp(av[1], "NAME") ? g_set.title_pwa : NULL;
-            if (!dst) { out("ERR usage: UITITLE [APP|PAGE|NAME \"text\"] | UITITLE PWA APP|PAGE" CRLF); return; }
+            if (!dst) { out("ERR usage: UITITLE [APP|PAGE|NAME \"text\"] | UITITLE PWA APP|PAGE|NAME" CRLF); return; }
             const char *t = na > 2 ? av[2] : "";
             if (strlen(t) > 32) { out("ERR title too long (max 32 bytes)" CRLF); return; }
             size_t k = 0;
@@ -1266,7 +1266,7 @@ static void handle_net(char *raw, char **tok, int nt)
             dst[k] = 0;
             settings_save();
         }
-        out("UITITLE APP \"%s\"" CRLF "UITITLE PAGE \"%s\"" CRLF "UITITLE NAME \"%s\"" CRLF "UITITLE PWA %s" CRLF, g_set.title_app, g_set.title_page, g_set.title_pwa, g_set.pwa_page ? "PAGE" : "APP");
+        out("UITITLE APP \"%s\"" CRLF "UITITLE PAGE \"%s\"" CRLF "UITITLE NAME \"%s\"" CRLF "UITITLE PWA %s" CRLF, g_set.title_app, g_set.title_page, g_set.title_pwa, g_set.pwa_src == 2 ? "NAME" : g_set.pwa_src == 1 ? "PAGE" : "APP");
     }
     else if (!strcmp(c0, "HOSTNAME")) {
         if (na < 2) { out("HOSTNAME %s (reachable as %s.local)" CRLF, g_set.host, g_set.host); return; }
