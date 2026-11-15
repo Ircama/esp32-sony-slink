@@ -2067,10 +2067,14 @@ async function bleKnownDevice(id) {                        /* a device the brows
   return null;
 }
 async function bleAuto() {
-  const known = bleList(); if (!known.length) return false;
-  const last = store.get('ble-last', '');
-  const d = (await bleKnownDevice(last)) || (await (async () => { for (const k of known) { const x = await bleKnownDevice(k.id); if (x) return x; } return null; })());
-  if (!d) return false;
+  /* the browser's own list of the devices this page may use (getDevices) decides, not only what was saved here: a device chosen by an older version of the page, or with the
+   * storage cleared, is still granted. One device: connect to it at once; the one used last time, if there are several; else the landing page lists them */
+  let devs = [];
+  try { if (navigator.bluetooth && navigator.bluetooth.getDevices) devs = await navigator.bluetooth.getDevices(); } catch (e) {}
+  if (!devs.length) return false;
+  const known = bleList(), last = store.get('ble-last', '');
+  const d = devs.find(x => x.id === last) || devs.find(x => known.some(k => k.id === x.id)) || (devs.length === 1 ? devs[0] : null);
+  if (!d) { const l = devs.map(x => ({ id: x.id, name: x.name || 'S-Link', at: 0 })).concat(known.filter(k => !devs.some(x => x.id === k.id))); store.set('ble-devs', JSON.stringify(l.slice(0, 8))); bleRenderDevices(); return false; }
   bleAdopt(d); return true;
 }
 async function bleConnectKnown(id) {
@@ -4214,6 +4218,12 @@ $('#otaRb').onclick = () => {                      /* two clicks: no confirm() d
 
 restoreLast(); showTab((t => t === 'jukebox' ? 'home' : t)(QP('tab') || store.get('tab', 'home'))); render(); renderPresets(); renderStations(); initUiOptions(); initJukebox(); initBackup(); if (JB.demo) setTimeout(jbProbe, 800); connect();
 if (BLEMODE) {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {        /* sw-ble.js found a newer page on the server: use it now, once */
+    const t = e.data && e.data.type === 'slink-new-page' && String(e.data.tag || '');
+    if (!t) return;
+    try { if (sessionStorage.getItem('upd-' + t)) return; sessionStorage.setItem('upd-' + t, '1'); } catch (er) { return; }
+    location.reload();
+  });
   $('#bleGo').onclick = () => bleChoose();
   bleApplyManifest(); bleRenderDevices();
   $('#bleAppName').value = store.get('ble-appname', '');
