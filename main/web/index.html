@@ -405,7 +405,15 @@ input.cc{width:44px;height:30px;padding:0;border:1px solid var(--line2);border-r
 #bleLanding .err{color:var(--err);font-size:13px;min-height:1.2em;margin:10px 0 0}
 #bleLanding .links{margin-top:16px;font-size:13px}
 #bleLanding .links a{margin-right:14px;color:var(--accent)}
-body.ble #otaCard,body.ble #bkCard{display:none}
+body.ble #otaCard,body.ble #bkCard,body.ble .noble{display:none}
+.bleonly{display:none}
+body.ble .bleonly{display:block}
+.bledev{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)}
+.bledev b{flex:1 1 140px;font-weight:600}
+.bledev .cur{color:var(--ok);font-size:12px}
+#bleLandList{margin:12px 0}
+#bleLandList:empty{display:none}
+#bleLandList h2{font-size:14px;margin:0 0 4px}
 .stalebar{margin:0 -16px;padding:6px 16px;font-size:12px;text-align:center;color:var(--warn);background:var(--surface2);border-bottom:1px solid var(--line)}
 .skins{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .sk{width:32px;height:32px;border-radius:50%;border:2px solid var(--line2);background:var(--c);padding:0;position:relative;cursor:pointer;flex:none}
@@ -535,6 +543,7 @@ body.hxon .hx{display:block}
       <li>Il dispositivo deve essere acceso, con il BLE attivo, e non collegato ad altre app.</li>
       <li>Non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.</li>
     </ul>
+    <div id="bleLandList"></div>
     <button class="go" id="bleGo">Collega il dispositivo</button> <button class="go alt" id="bleInstall" hidden>Installa come app</button>
     <div class="err" id="bleErr" role="alert"></div>
     <div class="links"><a href="install.html">Installa il firmware</a><a href="./">Demo del portale</a><a href="https://github.com/Ircama/esp32-sony-slink">GitHub</a></div>
@@ -836,6 +845,16 @@ body.hxon .hx{display:block}
           <p class="hint">Le impostazioni sono salvate nella memoria del dispositivo e restano dopo il riavvio.</p>
         </div>
 
+        <div class="card bleonly" id="bleCard">
+          <h2>Dispositivi Bluetooth</h2>
+          <div id="bleDevList"></div>
+          <div class="row" style="margin-top:10px"><button class="btn primary sm" id="bleAdd">Collega un altro dispositivo</button><button class="btn sm" id="bleForgetAll">Dimentica i dispositivi</button></div>
+          <form class="form" id="bleAppForm" autocomplete="off" style="margin-top:14px">
+            <label>Nome della app Bluetooth<input id="bleAppName" maxlength="24" placeholder="S-Link BLE"></label>
+            <div class="row"><button class="btn primary" type="submit">Salva</button><button class="btn" type="button" id="bleResetAll">Reimposta la configurazione</button></div>
+          </form>
+          <p class="hint">Il browser ricorda i dispositivi scelti e il nome della app: alla prossima apertura si ricollega da solo, senza la pagina iniziale. Il nome della app va cambiato prima di installarla (o reinstallarla) per distinguerla dalla app WiFi.</p>
+        </div>
         <div class="card" id="wpCard">
           <h2>Potenza WiFi</h2>
           <div class="set"><div class="t"><b>Potenza di trasmissione</b><span>Più bassa = meno consumo e meno interferenze; troppo bassa = segnale debole</span></div><select class="cp" id="wpTx" aria-label="Potenza di trasmissione"><option value="AUTO">Automatica</option><option>2</option><option>5</option><option>8</option><option>11</option><option>14</option><option>17</option><option>20</option></select></div>
@@ -971,8 +990,8 @@ body.hxon .hx{display:block}
           <form class="form" id="titleForm" autocomplete="off">
             <label>Titolo dell'applicazione<input id="tApp" maxlength="32" placeholder="vuoto = nome dell'amplificatore"></label>
             <label>Titolo della pagina<input id="tPage" maxlength="32" placeholder="S-Link · Sony ES"></label>
-            <label>La app installata si chiama come<select id="tPwa"><option value="APP">Titolo dell'applicazione</option><option value="PAGE">Titolo della pagina</option><option value="NAME">Nome della app installata</option></select></label>
-            <label>Nome della app installata<input id="tName" maxlength="32" placeholder="es. Ampli (usato se scelto sopra)"></label>
+            <label class="noble">La app installata si chiama come<select id="tPwa"><option value="APP">Titolo dell'applicazione</option><option value="PAGE">Titolo della pagina</option><option value="NAME">Nome della app installata</option></select></label>
+            <label class="noble">Nome della app installata<input id="tName" maxlength="32" placeholder="es. Ampli (usato se scelto sopra)"></label>
             <div class="row"><button class="btn primary" type="submit">Salva</button></div>
           </form>
           <p class="hint">Il titolo dell'applicazione è l'intestazione in alto; quello della pagina è il nome proposto dal browser per schede e segnalibri.</p>
@@ -1544,6 +1563,23 @@ const TRX = [
   ['indirizzo casuale (amministrato localmente)', 'random address (locally administered)', 'adresse aléatoire (administrée localement)', 'Zufallsadresse (lokal verwaltet)', 'dirección aleatoria (administrada localmente)'],
   ['produttore sconosciuto', 'unknown vendor', 'fabricant inconnu', 'Hersteller unbekannt', 'fabricante desconocido'],
   ['Installa come app', 'Install as an app', 'Installer comme application', 'Als App installieren', 'Instalar como aplicación'],
+  ['Dispositivi Bluetooth', 'Bluetooth devices', 'Appareils Bluetooth', 'Bluetooth-Geräte', 'Dispositivos Bluetooth'],
+  ['Dispositivi già usati', 'Devices used before', 'Appareils déjà utilisés', 'Bereits verwendete Geräte', 'Dispositivos usados antes'],
+  ['Nessun dispositivo salvato', 'No saved device', 'Aucun appareil enregistré', 'Kein Gerät gespeichert', 'Ningún dispositivo guardado'],
+  ['Collega', 'Connect', 'Connecter', 'Verbinden', 'Conectar'],
+  ['Collegato', 'Connected', 'Connecté', 'Verbunden', 'Conectado'],
+  ['Dimentica', 'Forget', 'Oublier', 'Vergessen', 'Olvidar'],
+  ['Collega un altro dispositivo', 'Connect another device', 'Connecter un autre appareil', 'Anderes Gerät verbinden', 'Conectar otro dispositivo'],
+  ['Dimentica i dispositivi', 'Forget the devices', 'Oublier les appareils', 'Geräte vergessen', 'Olvidar los dispositivos'],
+  ['Nome della app Bluetooth', 'Bluetooth app name', 'Nom de l’application Bluetooth', 'Name der Bluetooth-App', 'Nombre de la aplicación Bluetooth'],
+  ['Reimposta la configurazione', 'Reset the configuration', 'Réinitialiser la configuration', 'Konfiguration zurücksetzen', 'Restablecer la configuración'],
+  ['Il browser ricorda i dispositivi scelti e il nome della app: alla prossima apertura si ricollega da solo, senza la pagina iniziale. Il nome della app va cambiato prima di installarla (o reinstallarla) per distinguerla dalla app WiFi.', 'The browser remembers the devices chosen and the app name: the next time it opens it reconnects by itself, without the first page. Change the app name before installing (or reinstalling) the app to tell it from the WiFi app.', 'Le navigateur se souvient des appareils choisis et du nom de l’application : à la prochaine ouverture il se reconnecte seul, sans la page d’accueil. Changez le nom avant d’installer (ou de réinstaller) l’application pour la distinguer de l’application WiFi.', 'Der Browser merkt sich die gewählten Geräte und den App-Namen: beim nächsten Öffnen verbindet er sich selbst, ohne Startseite. Den App-Namen vor dem Installieren (oder Neuinstallieren) ändern, um die App von der WLAN-App zu unterscheiden.', 'El navegador recuerda los dispositivos elegidos y el nombre de la aplicación: la próxima vez se reconecta solo, sin la página inicial. Cambie el nombre antes de instalar (o reinstalar) la aplicación para distinguirla de la aplicación WiFi.'],
+  ['Nome salvato: vale per la prossima installazione della app', 'Name saved: it applies the next time the app is installed', 'Nom enregistré : il vaut pour la prochaine installation de l’application', 'Name gespeichert: gilt bei der nächsten Installation der App', 'Nombre guardado: vale para la próxima instalación de la aplicación'],
+  ['Dimenticare i dispositivi?', 'Forget the devices?', 'Oublier les appareils ?', 'Geräte vergessen?', '¿Olvidar los dispositivos?'],
+  ['Il browser non si ricollegherà più da solo: dovrai sceglierli di nuovo.', 'The browser will no longer reconnect by itself: you will have to choose them again.', 'Le navigateur ne se reconnectera plus seul : il faudra les choisir à nouveau.', 'Der Browser verbindet sich nicht mehr selbst: Sie müssen sie erneut auswählen.', 'El navegador ya no se reconectará solo: tendrá que elegirlos de nuevo.'],
+  ['Reimpostare la configurazione?', 'Reset the configuration?', 'Réinitialiser la configuration ?', 'Konfiguration zurücksetzen?', '¿Restablecer la configuración?'],
+  ['Dispositivi, nome della app e preferenze di questa pagina vengono cancellati.', 'Devices, app name and the preferences of this page are deleted.', 'Les appareils, le nom de l’application et les préférences de cette page sont effacés.', 'Geräte, App-Name und Einstellungen dieser Seite werden gelöscht.', 'Se borran los dispositivos, el nombre de la aplicación y las preferencias de esta página.'],
+  ['Reimposta', 'Reset', 'Réinitialiser', 'Zurücksetzen', 'Restablecer'],
   ['Controllo via Bluetooth', 'Control over Bluetooth', 'Contrôle par Bluetooth', 'Steuerung über Bluetooth', 'Control por Bluetooth'],
   ['Questa pagina controlla il tuo dispositivo S-Link direttamente via Bluetooth LE, senza WiFi e senza il portale web del dispositivo. Serve soprattutto per l’ESP32-H2, che non ha il WiFi, e per ogni scheda con il BLE acceso (comando BLE ON).', 'This page controls your S-Link device directly over Bluetooth LE, with no WiFi and without the device’s own web portal. It is mainly meant for the ESP32-H2, which has no WiFi, and for any board with BLE turned on (command BLE ON).', 'Cette page pilote votre appareil S-Link directement en Bluetooth LE, sans WiFi et sans le portail web de l’appareil. Elle sert surtout pour l’ESP32-H2, qui n’a pas de WiFi, et pour toute carte dont le BLE est activé (commande BLE ON).', 'Diese Seite steuert Ihr S-Link-Gerät direkt über Bluetooth LE, ohne WLAN und ohne das Webportal des Geräts. Sie ist vor allem für den ESP32-H2 gedacht, der kein WLAN hat, und für jede Platine mit eingeschaltetem BLE (Befehl BLE ON).', 'Esta página controla su dispositivo S-Link directamente por Bluetooth LE, sin WiFi y sin el portal web del dispositivo. Sirve sobre todo para el ESP32-H2, que no tiene WiFi, y para cualquier placa con el BLE activado (comando BLE ON).'],
   ['Servono Chrome, Edge o Opera (PC o Android): Firefox e Safari non supportano Web Bluetooth.', 'You need Chrome, Edge or Opera (PC or Android): Firefox and Safari do not support Web Bluetooth.', 'Il faut Chrome, Edge ou Opera (PC ou Android) : Firefox et Safari ne gèrent pas Web Bluetooth.', 'Erforderlich: Chrome, Edge oder Opera (PC oder Android); Firefox und Safari unterstützen Web Bluetooth nicht.', 'Se necesita Chrome, Edge u Opera (PC o Android): Firefox y Safari no admiten Web Bluetooth.'],
@@ -1987,7 +2023,74 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) saveL
 let reconnectTimer = null;
 /* ---- Bluetooth transport: a WebSocket look-alike over the Nordic UART Service. The device sends the portal's JSON frames as text lines after "@UI". ---- */
 const BLE_NUS = '6e400001-b5a3-f393-e0a9-e50e24dcca9e', BLE_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e', BLE_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-let bleDev = null, bleRx = null, bleOut = Promise.resolve(), bleLostAt = 0;
+let bleDev = null, bleRx = null, bleOut = Promise.resolve(), bleLostAt = 0, bleNoAuto = false, bleAutoTried = false;
+/* what the browser remembers of the Bluetooth side: the devices chosen so far and the name of the app (localStorage; a cookie would travel to the server with every request and hold nothing more) */
+const BLE_DEF_NAME = 'S-Link BLE';
+const bleList = () => { try { const l = JSON.parse(store.get('ble-devs', '[]')); return Array.isArray(l) ? l : []; } catch (e) { return []; } };
+const bleAppName = () => (store.get('ble-appname', '') || '').trim() || BLE_DEF_NAME;
+function bleRemember(d) { const l = bleList().filter(x => x.id !== d.id); l.unshift({ id: d.id, name: d.name || 'S-Link', at: Date.now() }); store.set('ble-devs', JSON.stringify(l.slice(0, 8))); store.set('ble-last', d.id); bleRenderDevices(); }
+/* the manifest of this page is made here, so the name of the installed app can be chosen (and told apart from the WiFi app); an absolute address for everything: the manifest is a blob */
+function bleApplyManifest() {
+  const link = document.querySelector('link[rel=manifest]'); if (!link) return;
+  const base = location.origin + location.pathname.replace(/[^/]*$/, ''), nm = bleAppName();
+  const m = { id: base + 'ble.html', name: nm, short_name: nm, description: 'Sony S-Link / Control-A1 bridge over Bluetooth LE', start_url: base + 'ble.html', scope: base + 'ble.html', display: 'standalone',
+    orientation: 'any', background_color: '#0d0e11', theme_color: '#0d0e11', lang: 'it',
+    icons: [{ src: base + 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: base + 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: base + 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }, { src: base + 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }] };
+  const old = link.href; link.href = URL.createObjectURL(new Blob([JSON.stringify(m)], { type: 'application/manifest+json' }));
+  if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+  document.title = nm;
+}
+function bleRenderDevices() {
+  const known = bleList();
+  const row = (c, k, landing) => {
+    const r = document.createElement('div'); r.className = 'bledev';
+    const n = document.createElement('b'); n.textContent = k.name; r.appendChild(n);
+    if (bleDev && bleDev.id === k.id) { const cur = document.createElement('span'); cur.className = 'cur'; cur.textContent = tr('Collegato'); r.appendChild(cur); }
+    else if (landing) { const b = document.createElement('button'); b.className = 'btn sm primary'; b.textContent = tr('Collega'); b.onclick = () => bleConnectKnown(k.id); r.appendChild(b); }
+    else { const b = document.createElement('button'); b.className = 'btn sm'; b.textContent = tr('Collega'); b.onclick = () => bleConnectKnown(k.id); r.appendChild(b); }
+    const f = document.createElement('button'); f.className = 'btn sm'; f.textContent = tr('Dimentica'); f.onclick = () => bleForget(k.id); r.appendChild(f);
+    c.appendChild(r);
+  };
+  const land = $('#bleLandList'), set = $('#bleDevList');
+  if (land) { land.textContent = ''; if (known.length) { const h = document.createElement('h2'); h.textContent = tr('Dispositivi già usati'); land.appendChild(h); known.forEach(k => row(land, k, true)); } }
+  if (set) { set.textContent = ''; if (known.length) known.forEach(k => row(set, k, false)); else { const e = document.createElement('div'); e.className = 'muted'; e.textContent = tr('Nessun dispositivo salvato'); set.appendChild(e); } }
+}
+function bleAdopt(d) {
+  if (bleDev && bleDev !== d) { try { bleDev.gatt.disconnect(); } catch (e) {} }
+  bleDev = d; bleNoAuto = false; bleLostAt = 0;
+  if (!d.__slink) { d.__slink = true; d.addEventListener('gattserverdisconnected', () => { if (bleDev !== d) return; if (!bleLostAt) bleLostAt = Date.now(); const s = ws; if (s && s.readyState !== 3) { s.readyState = 3; if (s.onclose) s.onclose(); } }); }
+  bleRemember(d);
+}
+async function bleKnownDevice(id) {                        /* a device the browser still has the permission for: no window to choose from */
+  try { if (navigator.bluetooth && navigator.bluetooth.getDevices) { const devs = await navigator.bluetooth.getDevices(); return devs.find(x => x.id === id) || null; } } catch (e) {}
+  return null;
+}
+async function bleAuto() {
+  const known = bleList(); if (!known.length) return false;
+  const last = store.get('ble-last', '');
+  const d = (await bleKnownDevice(last)) || (await (async () => { for (const k of known) { const x = await bleKnownDevice(k.id); if (x) return x; } return null; })());
+  if (!d) return false;
+  bleAdopt(d); return true;
+}
+async function bleConnectKnown(id) {
+  const d = await bleKnownDevice(id);
+  if (d) { bleAdopt(d); bleLanding(false, ''); connect(); } else bleChoose();                        /* permission gone: choose it again */
+}
+async function bleForget(id) {
+  const d = await bleKnownDevice(id);
+  try { if (d && d.forget) await d.forget(); } catch (e) {}
+  store.set('ble-devs', JSON.stringify(bleList().filter(x => x.id !== id)));
+  if (store.get('ble-last', '') === id) store.set('ble-last', '');
+  if (bleDev && bleDev.id === id) bleSwitch(); else bleRenderDevices();
+}
+function bleSwitch() {                                     /* leave this device: the landing page (known devices + search for another one) */
+  bleNoAuto = true; const d = bleDev; bleDev = null;
+  clearTimeout(reconnectTimer); reconnectTimer = null;
+  try { if (ws && ws.close) ws.close(); } catch (e) {}
+  ws = null; try { if (d && d.gatt.connected) d.gatt.disconnect(); } catch (e) {}
+  setConn(false, 'Connessione…'); bleLanding(true, ''); bleRenderDevices();
+}
 function bleLanding(show, msg) { const l = $('#bleLanding'); if (!l) return; l.hidden = !show; if (msg !== undefined) $('#bleErr').textContent = msg; }
 function bleWrite(str) {                                   /* 20-byte writes, one after the other: the device puts the lines together */
   const data = new TextEncoder().encode(str);
@@ -2000,9 +2103,7 @@ async function bleChoose() {
   if (!navigator.bluetooth) { bleLanding(true, tr('Questo browser non supporta Web Bluetooth.')); return; }
   try {
     const d = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'S-Link' }, { services: [BLE_NUS] }], optionalServices: [BLE_NUS] });
-    if (bleDev && bleDev !== d) { try { bleDev.gatt.disconnect(); } catch (e) {} }
-    bleDev = d;
-    d.addEventListener('gattserverdisconnected', () => { if (bleDev !== d) return; if (!bleLostAt) bleLostAt = Date.now(); const s = ws; if (s && s.readyState !== 3) { s.readyState = 3; if (s.onclose) s.onclose(); } });
+    bleAdopt(d);
   } catch (e) { bleLanding(true, e && e.name === 'NotFoundError' ? '' : (e && e.message || String(e))); return; }
   bleLanding(false, ''); bleLostAt = 0; connect();
 }
@@ -2020,7 +2121,7 @@ function bleOpen() {
       let i; while ((i = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1); if (line && ws === s && s.onmessage) s.onmessage({ data: line }); }
     });
     await tx.startNotifications();
-    s.readyState = 1; bleLostAt = 0; if (s.onopen) s.onopen();
+    s.readyState = 1; bleLostAt = 0; bleLanding(false, ''); if (s.onopen) s.onopen();
     bleWrite('@UI\n');                                      /* send me the JSON frames of the portal */
   })().catch(() => { if (s.readyState !== 3) { s.readyState = 3; if (s.onclose) s.onclose(); } });
   return s;
@@ -2028,7 +2129,12 @@ function bleOpen() {
 
 function connect() {
   if (DEMO) { linkReady = true; setConn(true, 'Modalità demo'); demoStart(); return; }
-  if (BLEMODE && !bleDev) { setConn(false, 'Connessione…'); bleLanding(true); return; }                 /* nothing chosen yet: the landing page */
+  if (BLEMODE && !bleDev) {                                                                              /* nothing chosen yet: the device used last time, else the landing page */
+    setConn(false, 'Connessione…');
+    if (!bleNoAuto && !bleAutoTried) { bleAutoTried = true; bleAuto().then(ok => { if (ok) connect(); else bleLanding(true); }).catch(() => bleLanding(true)); }
+    else bleLanding(true);
+    return;
+  }
   if (BLEMODE && bleLostAt && Date.now() - bleLostAt > 60000) { bleLanding(true, tr('Connessione persa. Ricollega il dispositivo.')); }
   clearTimeout(reconnectTimer); reconnectTimer = null;
   if (!S.connected) setConn(false, retry ? 'Riconnessione…' : 'Connessione…');
@@ -3854,7 +3960,7 @@ const saveUI = () => store.set('ui', JSON.stringify(UI));
 const qt = t => '"' + t.replace(/"/g, '') + '"';
 const TABS = [['home', 'Ascolto'], ['radio', 'Radio'], ['sound', 'Suono'], ['stats', 'Statistiche'], ['console', 'Console'], ['jukebox', 'Jukebox'], ['help', 'Help']];
 function applyTitles() {
-  document.title = TITLE.page || (BLEMODE ? 'S-Link · Bluetooth' : 'S-Link · Sony ES');
+  document.title = BLEMODE ? bleAppName() : (TITLE.page || 'S-Link · Sony ES');
   let m = $('meta[name=apple-mobile-web-app-title]'); if (!m) { m = document.createElement('meta'); m.name = 'apple-mobile-web-app-title'; document.head.appendChild(m); }
   m.content = TITLE.page || 'S-Link';
   render();
@@ -4107,7 +4213,16 @@ $('#otaRb').onclick = () => {                      /* two clicks: no confirm() d
 };
 
 restoreLast(); showTab((t => t === 'jukebox' ? 'home' : t)(QP('tab') || store.get('tab', 'home'))); render(); renderPresets(); renderStations(); initUiOptions(); initJukebox(); initBackup(); if (JB.demo) setTimeout(jbProbe, 800); connect();
-if (BLEMODE) $('#bleGo').onclick = bleChoose;
+if (BLEMODE) {
+  $('#bleGo').onclick = () => bleChoose();
+  bleApplyManifest(); bleRenderDevices();
+  $('#bleAppName').value = store.get('ble-appname', '');
+  $('#bleAppForm').onsubmit = e => { e.preventDefault(); store.set('ble-appname', $('#bleAppName').value.trim()); bleApplyManifest(); toast(tr('Nome salvato: vale per la prossima installazione della app'), 'ok'); };
+  $('#bleAdd').onclick = () => bleSwitch();
+  const forgetAll = async () => { for (const k of bleList()) { const d = await bleKnownDevice(k.id); try { if (d && d.forget) await d.forget(); } catch (e) {} } };
+  $('#bleForgetAll').onclick = async () => { if (!await confirmDlg(tr('Dimenticare i dispositivi?'), tr('Il browser non si ricollegherà più da solo: dovrai sceglierli di nuovo.'), tr('Dimentica'))) return; await forgetAll(); store.set('ble-devs', '[]'); store.set('ble-last', ''); bleSwitch(); };
+  $('#bleResetAll').onclick = async () => { if (!await confirmDlg(tr('Reimpostare la configurazione?'), tr('Dispositivi, nome della app e preferenze di questa pagina vengono cancellati.'), tr('Reimposta'))) return; await forgetAll(); try { localStorage.clear(); } catch (e) {} location.reload(); };
+}
 document.body.dataset.ready = '1';
 
 /* PWA: the manifest and the icons make the page installable ("Add to Home screen"); the service worker (sw.js) keeps the app shell, but browsers register
