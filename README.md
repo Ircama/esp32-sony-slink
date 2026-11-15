@@ -190,7 +190,7 @@ on together (ESP-IDF software coexistence).
 
 - *Listen*: power, source (MD/DAT and SAT/TV are one button each; labels read from the amplifier), badges for what the amplifier reports (tape
   loop, 5.1 input, auto function off, input type, 2nd audio input), volume and mute. The volume knob has **three scales** (linear, logarithmic,
-  linear up to the safety limit), 0.1 % resolution, and a mini volume control in the header; the **safety limit** is configurable (default 7.0 of 10,
+  linear up to the safety limit), 0.1 % resolution, and a mini volume control in the header; the **safety limit** is configurable (default 3.0 of 10,
   down to 1.0) and the fixed-volume buttons are derived from it (never above 75 % of it). The volume is an **estimate** (the motorised knob does not
   report its position): while it is unknown the dial is greyed out and offers the calibration. A second card has the **5.1 input** switch, the
   **recording source** (2nd audio) and *Turn off all units* (the remote's “ALL OFF”).
