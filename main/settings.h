@@ -28,6 +28,7 @@ typedef struct {
     bool ota_pull;          /* firmware update: allow the device to download an image, only when the user asks (OTA UPDATE / portal button). ON by default */
     char ota_pass[33];      /* firmware update: optional password for the push upload (POST /api/ota); empty = no password */
     bool slinke;            /* Slink-e serial protocol on TCP port 2325 (programs written for the Nirvis Slink-e). OFF by default */
+    bool https;             /* HTTPS web portal on port 443 with a certificate from the device's own CA (tls.c). OFF by default */
     bool slinke_tx;         /* ... and they may send to the bus (otherwise the connection is a read-only monitor). OFF by default */
 } settings_t;
 

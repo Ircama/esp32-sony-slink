@@ -1,5 +1,6 @@
 #pragma once
 #include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 /* Network layer: WiFi (STA only), mDNS and the optional services, all driven by the persistent settings
@@ -9,6 +10,7 @@ void net_init(void);                        /* after cli_start(): applies the sa
 void net_apply(void);                       /* re-read g_set and start/stop BLE, WiFi and services accordingly */
 void net_status(char *buf, size_t n);       /* multi-line human readable status (CRLF separated) */
 bool net_have_ip(void);
+uint32_t net_ip4(void);                     /* IPv4 address in network byte order (0 = none) */
 void net_notify_state(void);                /* state changed: wake the publisher (any task) */
 void net_notify_ws_client(void);            /* a WebSocket client connected: send it everything */
 
@@ -21,6 +23,7 @@ int net_twt_state(unsigned *interval_ms);   /* NET_TWT_*; interval_ms = agreed w
 void web_start(void);
 void web_stop(void);
 bool web_running(void);
+bool web_https_running(void);
 void web_push(const char *json, size_t n);  /* queue a JSON text frame for every WebSocket client (non blocking) */
 int  web_clients(void);                     /* WebSocket clients connected now */
 size_t stats_json(char *buf, size_t sz);    /* {"t":"stats",...}: device statistics, read on request (stats.c) */

@@ -26,6 +26,7 @@ Beyond the amplifier, the firmware (written in C with ESP-IDF) implements the S-
 **Network**
 - **Web portal** embedded in the firmware: one page, light/dark theme, phone and desktop layouts, five languages (it/en/fr/de/es), installable as a home-screen app, with a demo mode that needs no amplifier ([GitHub Pages demo](https://ircama.github.io/esp32-sony-slink/)).
 - **mDNS (Bonjour / Avahi)**: the device announces itself as `<hostname>.local` (default `slink`, set with `HOSTNAME <name>`), so the portal opens at `http://slink.local/` as well as at its IP address. It also advertises the services `_http._tcp` (port 80, while the portal is on) and `_slink._tcp` (port 2323, while the TCP console is on), which service browsers and Home Assistant can discover. mDNS is multicast on the local network and does not need the router to do anything, as long as the router or access point does not block multicast or isolate WiFi clients; it works out of the box on Windows 10/11, macOS, iOS and Linux with Avahi, while some Android versions do not resolve `.local` names in the browser. The host name is also sent to the router with the DHCP request, so many routers resolve it by themselves (for example `slink.fritz.box` on a FRITZ!Box); when neither works, use the IP address shown by `NET`.
+- **HTTPS (optional)** with a private certificate authority made by the device itself (no certificate to buy or to copy around): install its certificate once on the phone and the portal becomes a trusted secure origin, installable as a real app.
 - **REST and WebSocket API** (`/ws`, `/api/state`, `/api/cmd`, ...) for integrations and real-time state.
 - **Shared state across clients**: the firmware keeps the one state of the system (rebuilt from the frames on the bus) and pushes every `RX`/`TX` line and every state change over the WebSocket to **all** connected browsers, so several pages, phones, MQTT and the consoles always show the same thing, even when a command comes from another client or the remote. Presets, stations and interface preferences live in the device, not in the browser. Up to 6 simultaneous connections.
 - **MQTT** client with automatic **Home Assistant** discovery (power, mute, input, sound field, volume, FM frequency, station name, signal level).
@@ -133,6 +134,7 @@ Host → ESP (one line per command, case-insensitive):
 | `WEB ON\|OFF` | enable/disable the **web portal** (saved) |
 | `APP ON\|OFF` | enable/disable the **WiFi application interface**: TCP console (port 2323) and MQTT bridge with Home Assistant discovery (saved) |
 | `SLINKE ON\|OFF` | enable/disable the **Slink-e serial protocol on TCP** (port 2325, see [Slink-e protocol over TCP](#slink-e-protocol-over-tcp)); **off** by default (saved) |
+| `HTTPS ON\|OFF\|RESET` | also serve the web portal on **https** (port 443) with a certificate from the device's own CA, see [HTTPS and installing the app](#https-and-installing-the-app); `RESET` deletes the CA and makes a new one (saved) |
 | `SLINKETX ON\|OFF` | let a connected Slink-e program **send** to the bus; **off** by default: the connection is then a read-only monitor (saved) |
 | `WIFI <ssid> [password]` / `WIFI CLEAR` | WiFi network (saved). With blanks use quotes: `WIFI "My home" "the password"`. WiFi turns on only if `WEB`, `APP` or `SLINKE` is ON |
 | `MQTT <mqtt://host[:port]> [user] [password]` / `MQTT CLEAR` | MQTT broker (saved; plain TCP only, no TLS) |
@@ -159,6 +161,7 @@ host name) are stored in NVS and **persist**.
 | USB Serial/JTAG | always on, as before |
 | **BLE UART** (`BLE ON`) | Nordic UART Service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; the device advertises as `S-Link-XXXX`. Apps: nRF Toolbox, Serial Bluetooth Terminal, Web Bluetooth. It is not authenticated: enable it only when needed |
 | **Web portal** (`WEB ON`) | `http://slink.local/` (or the IP: `NET`). Single page, light/dark theme, suited to phone and desktop; WebSocket `/ws` for commands and real-time state. Also REST: `GET /api/state`, `/api/presets`, `/api/stations`, `/api/favs`, `/api/stats` and `POST /api/cmd` (body = one command; the output comes over the WebSocket). A WebSocket client is registered when it sends its first frame |
+| **HTTPS** (`HTTPS ON`) | the same portal on `https://slink.local/` (port 443), trusted once the device's CA is installed on the phone / PC: needed to install the portal as an app on Android. See [below](#https-and-installing-the-app) |
 | **Jukebox tab** | appears only while a CD changer (`90`/`91`/`92`) or an MD recorder (`B0`) answers the probe `90 22` / `B0 22`: transport, disc and track lists, memos / CD Text / MD titles, groups and artists. Reading and transport are free; every write (memo, MD titles, artist names, erase track, power off) asks for confirmation. Untested on real units: none is attached to the author's bus. Open `?demo&jb` to see it with an emulated changer and recorder (the GitHub Pages demo always shows it) |
 | **Backup / restore** | Settings › Backup and restore saves one JSON file with the amplifier's configuration (input names, sound field, EQ, surround levels, speaker set-up, 2nd audio, 5.1; its tuner presets are stored for reference only, S-Link cannot write them), what the ESP32 keeps (settings, FM stations, favourites; passwords only if asked) and this browser's interface preferences; the file can be restored selectively. Volume, input and power state are never touched. Only writes verified on the STR-DA50ES are used (sound field, EQ, surround levels, 5.1); input names (`C0 88`), speaker sizes (`C3 53`) and the second audio source (`C0 52`) do not work on it and stay in the file for reference |
 | **Raw TCP** (`APP ON`) | `nc slink.local 2323`: same text protocol as USB (max 2 clients) |
@@ -173,7 +176,7 @@ WEB ON
 NET            # shows the address
 ```
 
-**Security.** The web portal is **HTTP only** (port 80, no HTTPS), and neither the portal nor the TCP console (2323) nor the Slink-e port (2325) nor BLE has any authentication: use them only on a trusted network and do not forward ports from the router. The only configurable credentials are the WPA2/WPA3 WiFi password and the user/password
+**Security.** The web portal is **HTTP** on port 80 (HTTPS on port 443 is optional, see [HTTPS and installing the app](#https-and-installing-the-app); it encrypts but does not authenticate users), and neither the portal nor the TCP console (2323) nor the Slink-e port (2325) nor BLE has any authentication: use them only on a trusted network and do not forward ports from the router. The only configurable credentials are the WPA2/WPA3 WiFi password and the user/password
 of the MQTT broker (`mqtt://` only, no TLS).
 
 **Tab bar on a phone** (Settings › Interface, kept in the device). When the tabs do not fit in portrait: *Compression* (checkbox, on by default) narrows the buttons first; then, according to the two switches (they exclude each other), the bar either **scrolls** sideways, or the last tabs move into an **Altro** (More) menu and are no longer in the bar (e.g. Settings and Help). With neither switch on, the buttons are always compressed. On wide screens the side column is unchanged.
@@ -216,6 +219,22 @@ Build notes: ESP-IDF 6.x (`mdns` and `mqtt` are managed components, downloaded b
 first build); partition table in `partitions.csv` (two app slots of 1.9 MB for the over-the-air update, flash 4 MB). After changing
 `sdkconfig.defaults` delete the generated `sdkconfig.esp32s3` / `sdkconfig.esp32c3` / `sdkconfig.esp32c6` to regenerate them
 (they are git-ignored).
+
+## HTTPS and installing the app
+
+On plain `http://` a browser treats the portal as an insecure page: it will not register the service worker and an Android phone creates only a shortcut (it opens in a browser tab, not as an app). `HTTPS ON` (or *Settings › Interfaces › HTTPS web portal*) starts a second server on port **443** with the same pages, API and WebSocket (`wss://`); port 80 stays as it was.
+
+The device makes its own certificate authority the first time (an EC P-256 key generated on the chip, kept in the flash; a few seconds) and signs the server certificate with it:
+
+1. `HTTPS ON`, then open `http://slink.local/ca.crt` (or the *Download the CA certificate* link under the switch) to get `slink-ca.crt`.
+2. Install it. **Android**: *Settings › Security (or Biometrics and security) › Other security settings › Install from device storage › CA certificate*. **Windows**: double-click the file › *Install certificate* › *Local machine*, store *Trusted Root Certification Authorities*. **macOS**: add it to *Keychain Access* and set *Always trust*. **iOS**: open the file, install the profile, then *Settings › General › About › Certificate Trust Settings*.
+3. Open `https://slink.local/` (or the host name / IP address): the lock is shown, and *Install app* / *Add to home screen* now creates a real app that starts full screen. Uninstall and install again if the app was installed from `http://` (it is another origin).
+
+What the certificate says: the name is the host name (`HOSTNAME`) with the suffixes `.local`, `.fritz.box`, `.lan` and `.home.arpa`, and the **current IPv4 address**. It is made again by itself when the host name or the address changes (so with DHCP the address is better reserved in the router). A bare name such as `https://slink/` does not match: use `slink.local` or the full name.
+
+**Security.** The key of the CA is in the device's flash, not encrypted (the board has no flash encryption by default): whoever has the board in hand could read it. For this reason the CA is limited with *name constraints* to `.local`, `.lan`, `.home.arpa`, `.fritz.box`, `.localdomain`, `.home`, `.internal` and the private IPv4 ranges (10/8, 172.16/12, 192.168/16, 169.254/16): a browser that trusts it will not accept a certificate for any public site signed with that key. The CA is different on every device (its name ends with the last bytes of the WiFi MAC address); install only the certificate of devices you own, and remove it from the phone if you sell the board. `HTTPS RESET` deletes the CA and makes another one. HTTPS protects the traffic from eavesdropping; the portal still has **no login**.
+
+Cost: a TLS session needs tens of KB of RAM (the free heap of the ESP32-S3 goes from about 150 KB to about 110-120 KB with HTTPS on; at most 3 simultaneous https connections, 6 http). Tried on the ESP32-S3 only; the other chips build the same code but have less RAM and were not tried.
 
 ## Slink-e protocol over TCP
 
@@ -324,7 +343,7 @@ outgoing frames.
 - No active collision detection while transmitting (only "line ready" beforehand).
 - The amplifier's answers arrive as asynchronous `RX` lines.
 - The tuner answers only while the TUNER input is selected, and has no band-change or direct-preset-write command.
-- Web portal, TCP console, Slink-e port and BLE are unauthenticated; the portal is HTTP only.
+- Web portal, TCP console, Slink-e port and BLE are unauthenticated; the portal is HTTP, or HTTPS with the device's own CA (encrypted, still no login).
 
 ## Documentation
 - [`docs/SOURCES.md`](docs/SOURCES.md): the sources read (also the Slink-e documentation used for the TCP protocol).

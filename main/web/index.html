@@ -795,6 +795,7 @@ body.hxon .hx{display:block}
           <h2>Interfacce</h2>
           <div class="set"><div class="t"><b>UART su Bluetooth LE</b><span id="bleSub">Console seriale via Nordic UART Service</span></div><button class="sw" role="switch" aria-checked="false" id="swBle" aria-label="UART su BLE"></button></div>
           <div class="set"><div class="t"><b>Portale web</b><span>Questa pagina</span></div><button class="sw" role="switch" aria-checked="true" id="swWeb" aria-label="Portale web"></button></div>
+          <div class="set"><div class="t"><b>Portale web HTTPS</b><span id="httpsSub">Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)</span><span id="httpsCaRow" hidden><a id="httpsCa" href="/ca.crt">Scarica il certificato CA</a></span></div><button class="sw" role="switch" aria-checked="false" id="swHttps" aria-label="Portale web HTTPS"></button></div>
           <div class="set"><div class="t"><b>Interfaccia applicativa WiFi</b><span id="appSub">Console TCP (porta 2323) e MQTT per Home Assistant</span></div><button class="sw" role="switch" aria-checked="false" id="swApp" aria-label="Interfaccia applicativa WiFi"></button></div>
           <div class="set"><div class="t"><b>Protocollo Slink-e su TCP</b><span id="slkeSub">Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)</span></div><button class="sw" role="switch" aria-checked="false" id="swSlke" aria-label="Protocollo Slink-e su TCP"></button></div>
           <div class="set"><div class="t"><b>Slink-e: consenti l’invio sul bus</b><span id="slkeTxSub">Spento: la connessione è un monitor di sola lettura</span></div><button class="sw" role="switch" aria-checked="false" id="swSlkeTx" aria-label="Slink-e: consenti l’invio sul bus"></button></div>
@@ -1498,6 +1499,12 @@ const TRX = [
   ['Lettura del nome RDS in corso…', 'Reading the RDS name…', 'Lecture du nom RDS en cours…', 'RDS-Name wird gelesen…', 'Leyendo el nombre RDS…'],
   ['Massimizza', 'Maximise', 'Agrandir', 'Maximieren', 'Maximizar'],
   ['Riduci', 'Restore', 'Réduire', 'Verkleinern', 'Reducir'],
+  ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
+  ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
+  ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
+  ['Scarica il certificato CA', 'Download the CA certificate', 'Télécharger le certificat de l’autorité', 'CA-Zertifikat herunterladen', 'Descargar el certificado de la CA'],
+  ['il portale HTTPS', 'the HTTPS portal', 'le portail HTTPS', 'das HTTPS-Portal', 'el portal HTTPS'],
+  ['Se stai usando questa pagina via https si spegnerà. Potrai riattivare HTTPS con il comando HTTPS ON da USB, BLE o TCP.', 'If you are using this page over https it will go off. You can turn HTTPS on again with the HTTPS ON command from USB, BLE or TCP.', 'Si vous utilisez cette page en https, elle s’éteindra. Vous pourrez réactiver HTTPS avec la commande HTTPS ON par USB, BLE ou TCP.', 'Wenn Sie diese Seite über https nutzen, geht sie aus. HTTPS lässt sich mit dem Befehl HTTPS ON über USB, BLE oder TCP wieder einschalten.', 'Si usa esta página por https se apagará. Podrá reactivar HTTPS con el comando HTTPS ON por USB, BLE o TCP.'],
   ['Protocollo Slink-e su TCP', 'Slink-e protocol over TCP', 'Protocole Slink-e sur TCP', 'Slink-e-Protokoll über TCP', 'Protocolo Slink-e sobre TCP'],
   ['Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)', 'Port 2325, for programs written for the Slink-e (Nirvis)', 'Port 2325, pour les programmes écrits pour le Slink-e (Nirvis)', 'Port 2325, für Programme, die für den Slink-e (Nirvis) geschrieben wurden', 'Puerto 2325, para programas escritos para el Slink-e (Nirvis)'],
   ['Slink-e: consenti l’invio sul bus', 'Slink-e: allow sending to the bus', 'Slink-e : autoriser l’envoi sur le bus', 'Slink-e: Senden auf den Bus erlauben', 'Slink-e: permitir el envío al bus'],
@@ -2466,7 +2473,9 @@ const allUrls = n => [...new Set([realUrl(n), n.ip && 'http://' + n.ip + '/', n.
 function renderNet() {
   const n = S.net; if (!n) return;
   const set = (id, v) => { const e = $(id); e.setAttribute('aria-checked', !!v); };
-  set('#swBle', n.ble); set('#swWeb', n.web); set('#swApp', n.app); set('#swEco', n.eco); set('#swSlke', n.slke); set('#swSlkeTx', n.slkeTx);
+  set('#swBle', n.ble); set('#swWeb', n.web); set('#swApp', n.app); set('#swEco', n.eco); set('#swSlke', n.slke); set('#swSlkeTx', n.slkeTx); set('#swHttps', n.https);
+  $('#httpsSub').textContent = n.https ? tr('Attivo · porta 443') : tr('Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)');
+  $('#httpsCaRow').hidden = !n.https;
   $('#slkeSub').textContent = n.slke ? tr('Attivo · porta 2325 · {n} client', { n: n.slkeN || 0 }) : tr('Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)');
   $('#slkeTxSub').textContent = n.slkeTx ? tr('Acceso: il programma collegato può inviare comandi all’impianto') : tr('Spento: la connessione è un monitor di sola lettura');
   $('#bleSub').textContent = n.ble ? (n.bleConn ? tr('Attivo · client connesso') : tr('Attivo · visibile come {n}', { n: n.bleName || 'S-Link' })) : tr('Console seriale via Nordic UART Service');
@@ -2594,6 +2603,7 @@ function wire() {
   toggle('#swEco', 'ECO', 'Risparmio energetico'); toggle('#swBle', 'BLE', 'UART su BLE'); toggle('#swApp', 'APP', "l'interfaccia WiFi", 'MQTT e console TCP smetteranno di funzionare.');
   toggle('#swSlke', 'SLINKE', 'il protocollo Slink-e', 'I programmi collegati con il protocollo Slink-e perderanno la connessione.');
   toggle('#swSlkeTx', 'SLINKETX', "l'invio Slink-e");
+  toggle('#swHttps', 'HTTPS', 'il portale HTTPS', 'Se stai usando questa pagina via https si spegnerà. Potrai riattivare HTTPS con il comando HTTPS ON da USB, BLE o TCP.');
   toggle('#swWeb', 'WEB', 'il portale web', 'Questa pagina si spegnerà. Potrai riattivarla con il comando WEB ON da USB, BLE o TCP.');
   const q = s => '"' + s.replace(/"/g, '') + '"';
   $('#wifiForm').onsubmit = async e => { e.preventDefault(); const s = $('#fSsid').value.trim(), p = $('#fPass').value, h = $('#fHost').value.trim();
@@ -3213,7 +3223,7 @@ function demoCmd(line) {
   else if (a === 'PRESETS') { setTimeout(() => say('OK 10 presets read'), 800); return; }
   else if (a === 'STATUS' || a === 'EQ' || a === 'NET') { say('OK ' + a.toLowerCase() + ' requested'); }
   else if (a === 'ECO') { S.net.eco = b === 'OFF' ? 0 : 1; }
-  else if (['DEV', 'REPEAT', 'GAP', 'DECODE', 'LOOPBACK', 'SLINK', 'LED'].includes(a)) { say('OK ' + a.toLowerCase()); }
+  else if (['DEV', 'REPEAT', 'GAP', 'DECODE', 'LOOPBACK', 'SLINK', 'LED', 'HTTPS'].includes(a)) { say('OK ' + a.toLowerCase()); }
   else if (a === 'LINE') { say('LINE 1'); return; }
   else if (a === 'FAV') {
     if (b === 'ADD') { const t = S.tuner, am = t.band === 'AM'; if (S.favs.some(v => !!v.am === am && v.f === t.f)) return say('OK fav already 1');

@@ -29,7 +29,7 @@ static SemaphoreHandle_t s_mtx;
 static TaskHandle_t s_task;
 static esp_netif_t *s_netif;
 static esp_timer_handle_t s_rc_timer;
-static bool s_wifi_inited, s_wifi_started, s_have_ip, s_mdns_inited, s_mdns_web, s_mdns_app;
+static bool s_wifi_inited, s_wifi_started, s_have_ip, s_mdns_inited, s_mdns_web, s_mdns_app, s_mdns_tls;
 static char s_ap_ssid[33], s_ap_pass[65];       /* credentials currently applied to the driver */
 static char s_mqtt_applied[96 + 32 + 64 + 3];   /* uri/user/pass the MQTT bridge was started with */
 static esp_ip4_addr_t s_ip;
@@ -39,6 +39,12 @@ static int s_retry;                             /* consecutive failed connection
 static int s_eco_applied = -1;                  /* eco profile the WiFi driver was configured with */
 
 bool net_have_ip(void) { return s_have_ip; }
+
+uint32_t net_ip4(void)
+{
+    esp_netif_ip_info_t ip;
+    return s_netif && esp_netif_get_ip_info(s_netif, &ip) == ESP_OK ? ip.ip.addr : 0;
+}
 
 /* Low-power profile. CPU frequency scaling only: NO automatic light sleep, because the S-Link receiver time-stamps the bus
  * edges in a GPIO interrupt and a light-sleep wake-up (hundreds of microseconds) would corrupt the 600/1200/2400 us bit timing.
@@ -219,6 +225,9 @@ static void mdns_apply(bool want_web, bool want_app)
     mdns_instance_name_set("S-Link bridge");
     if (want_web && !s_mdns_web) { mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0); s_mdns_web = true; }
     if (!want_web && s_mdns_web) { mdns_service_remove("_http", "_tcp"); s_mdns_web = false; }
+    bool want_tls = want_web && g_set.https && web_https_running();
+    if (want_tls && !s_mdns_tls) { mdns_service_add(NULL, "_https", "_tcp", 443, NULL, 0); s_mdns_tls = true; }
+    if (!want_tls && s_mdns_tls) { mdns_service_remove("_https", "_tcp"); s_mdns_tls = false; }
     if (want_app && !s_mdns_app) { mdns_service_add(NULL, "_slink", "_tcp", 2323, NULL, 0); s_mdns_app = true; }
     if (!want_app && s_mdns_app) { mdns_service_remove("_slink", "_tcp"); s_mdns_app = false; }
 }
@@ -274,6 +283,7 @@ void net_status(char *b, size_t n)
     } else P("APP   OFF\r\n");
     if (g_set.slinke) P("SLKE  ON  Slink-e protocol on tcp port 2325, %d client(s), %s\r\n", slinke_clients(), g_set.slinke_tx ? "sending allowed" : "read-only (SLINKETX ON to allow sending)");
     else P("SLKE  OFF\r\n");
+    P("HTTPS %s%s\r\n", g_set.https ? "ON  port 443, CA at /ca.crt" : "OFF", g_set.https && !web_https_running() ? " (not running: web portal off, or the certificate could not be made)" : "");
     #undef P
     while (k >= 2 && b[k - 1] == '\n') { b[--k] = 0; if (k && b[k - 1] == '\r') b[--k] = 0; }   /* no trailing CRLF */
 }
@@ -310,7 +320,7 @@ static size_t net_json(char *b, size_t sz)
     P(",\"host\":"); J(g_set.host);
     P(",\"mqtt\":"); J(g_set.mqtt_uri);
     P(",\"mqttUser\":"); J(g_set.mqtt_user);
-    P(",\"mqttOk\":%d,\"tcp\":%d,\"slke\":%d,\"slkeTx\":%d,\"slkeN\":%d}", mqtt_bridge_connected(), tcp_srv_clients(), g_set.slinke, g_set.slinke_tx, slinke_clients());
+    P(",\"mqttOk\":%d,\"tcp\":%d,\"slke\":%d,\"slkeTx\":%d,\"slkeN\":%d,\"https\":%d}", mqtt_bridge_connected(), tcp_srv_clients(), g_set.slinke, g_set.slinke_tx, slinke_clients(), g_set.https && web_https_running());
     #undef P
     #undef J
     return n < sz ? n : sz - 1;

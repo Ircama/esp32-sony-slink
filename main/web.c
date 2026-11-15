@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "esp_http_server.h"
+#include "esp_https_server.h"
+#include "tls.h"
+#include "settings.h"
 #include "nvs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -21,8 +24,11 @@
 #define MAX_WS 6
 #define LINE_MAX_OUT 300
 
-static httpd_handle_t s_srv;
+static httpd_handle_t s_srv;           /* http, port 80 */
+static httpd_handle_t s_ssrv;          /* https, port 443 (optional, same pages and API) */
+static uint32_t s_ssrv_ip;             /* the address the https certificate was made for */
 static int s_fds[MAX_WS];
+static httpd_handle_t s_hds[MAX_WS];   /* the server each WebSocket client is connected to */
 static SemaphoreHandle_t s_mtx;
 static MessageBufferHandle_t s_mb;
 static SemaphoreHandle_t s_wmtx;      /* a FreeRTOS message buffer allows ONE writer: serialise the writers */
@@ -31,6 +37,7 @@ static volatile uint32_t s_dbg_q, s_dbg_drop, s_dbg_rx, s_dbg_sent, s_dbg_fail, 
 static volatile int s_dbg_err;
 
 bool web_running(void) { return s_srv != NULL; }
+bool web_https_running(void) { return s_ssrv != NULL; }
 
 int web_clients(void)
 {
@@ -89,13 +96,13 @@ static bool ws_has(int fd)
     return h;
 }
 
-static void ws_add(int fd)
+static void ws_add(int fd, httpd_handle_t hd)
 {
     s_dbg_adds++;
     xSemaphoreTake(s_mtx, portMAX_DELAY);
     bool have = false;
     for (int i = 0; i < MAX_WS; i++) if (s_fds[i] == fd) have = true;
-    for (int i = 0; i < MAX_WS && !have; i++) if (s_fds[i] < 0) { s_fds[i] = fd; have = true; }
+    for (int i = 0; i < MAX_WS && !have; i++) if (s_fds[i] < 0) { s_fds[i] = fd; s_hds[i] = hd; have = true; }
     xSemaphoreGive(s_mtx);
 }
 
@@ -107,18 +114,18 @@ static void tx_task(void *arg)
         if (!n || !s_srv) continue;
         s_dbg_rx++;
         httpd_ws_frame_t f = { .final = true, .type = HTTPD_WS_TYPE_TEXT, .payload = (uint8_t *)msg, .len = n };
-        int fds[MAX_WS];
+        int fds[MAX_WS]; httpd_handle_t hds[MAX_WS];
         xSemaphoreTake(s_mtx, portMAX_DELAY);
-        memcpy(fds, s_fds, sizeof fds);
+        memcpy(fds, s_fds, sizeof fds); memcpy(hds, s_hds, sizeof hds);
         xSemaphoreGive(s_mtx);                                  /* never send while holding the lock */
         for (int i = 0; i < MAX_WS; i++) {
-            if (fds[i] < 0) continue;
-            esp_err_t er = httpd_ws_send_frame_async(s_srv, fds[i], &f);
+            if (fds[i] < 0 || !hds[i]) continue;
+            esp_err_t er = httpd_ws_send_frame_async(hds[i], fds[i], &f);
             if (er == ESP_OK) s_dbg_sent++;
             else {                                              /* dead client: forget it and close */
                 s_dbg_fail++; s_dbg_err = (int)er;
                 ws_remove(fds[i]);
-                httpd_sess_trigger_close(s_srv, fds[i]);
+                httpd_sess_trigger_close(hds[i], fds[i]);
             }
         }
     }
@@ -141,6 +148,17 @@ static esp_err_t h_asset(httpd_req_t *r)
     if (a->gz) { httpd_resp_set_hdr(r, "Content-Encoding", "gzip"); httpd_resp_set_hdr(r, "Vary", "Accept-Encoding"); }
     if (!strcmp(a->uri, "/sw.js")) httpd_resp_set_hdr(r, "Service-Worker-Allowed", "/");
     return httpd_resp_send(r, (const char *)a->data, (ssize_t)a->len);
+}
+
+/* the certificate of the device's own CA (public part), to install on the phone / PC so that the https portal is trusted */
+static esp_err_t h_ca(httpd_req_t *r)
+{
+    const char *pem = tls_ca_pem();
+    if (!pem) { httpd_resp_send_err(r, HTTPD_404_NOT_FOUND, "no CA yet: turn HTTPS on (HTTPS ON) first"); return ESP_OK; }
+    httpd_resp_set_type(r, "application/x-x509-ca-cert");
+    httpd_resp_set_hdr(r, "Content-Disposition", "attachment; filename=\"slink-ca.crt\"");
+    httpd_resp_set_hdr(r, "Cache-Control", "no-store");
+    return httpd_resp_send(r, pem, HTTPD_RESP_USE_STRLEN);
 }
 
 static esp_err_t h_nocontent(httpd_req_t *r)
@@ -228,7 +246,7 @@ static esp_err_t h_ws(httpd_req_t *r)
 {
     int fd = httpd_req_to_sockfd(r);
     if (r->method == HTTP_GET) s_dbg_get++;
-    if (!ws_has(fd)) { ws_add(fd); net_notify_ws_client(); }   /* register on handshake OR on the first frame */
+    if (!ws_has(fd)) { ws_add(fd, r->handle); net_notify_ws_client(); }   /* register on handshake OR on the first frame */
     if (r->method == HTTP_GET) return ESP_OK;                  /* handshake done */
     httpd_ws_frame_t f = {0};
     f.type = HTTPD_WS_TYPE_TEXT;
@@ -256,27 +274,8 @@ static void on_close(httpd_handle_t hd, int fd)
     close(fd);
 }
 
-void web_start(void)
+static void reg_all(httpd_handle_t srv)
 {
-    if (s_srv) return;
-    if (!s_mtx) {
-        s_mtx = xSemaphoreCreateMutex();
-        s_wmtx = xSemaphoreCreateMutex();
-        s_mb = xMessageBufferCreate(8192);
-    }
-    for (int i = 0; i < MAX_WS; i++) s_fds[i] = -1;
-    if (!s_tx_task) xTaskCreate(tx_task, "slink_ws", 4096, NULL, 4, &s_tx_task);
-
-    httpd_config_t c = HTTPD_DEFAULT_CONFIG();
-    c.max_open_sockets = 6;
-    c.lru_purge_enable = true;
-    c.stack_size = 8192;                          /* the firmware upload (flash writes) runs in this task */
-    c.max_uri_handlers = 24;
-    c.close_fn = on_close;
-    c.send_wait_timeout = 3;
-    c.recv_wait_timeout = 5;
-    if (httpd_start(&s_srv, &c) != ESP_OK) { s_srv = NULL; return; }
-
     static const httpd_uri_t uris[] = {
         { .uri = "/ws",           .method = HTTP_GET,  .handler = h_ws, .is_websocket = true, .handle_ws_control_frames = false },
         { .uri = "/api/state",    .method = HTTP_GET,  .handler = h_state },
@@ -290,19 +289,82 @@ void web_start(void)
         { .uri = "/api/cmd",      .method = HTTP_POST, .handler = h_cmd },
         { .uri = "/api/ota",      .method = HTTP_GET,  .handler = ota_http_info },
         { .uri = "/api/ota",      .method = HTTP_POST, .handler = ota_http_push },
+        { .uri = "/ca.crt",       .method = HTTP_GET,  .handler = h_ca },
         { .uri = "/favicon.ico",  .method = HTTP_GET,  .handler = h_nocontent },
     };
-    for (size_t i = 0; i < sizeof uris / sizeof uris[0]; i++) httpd_register_uri_handler(s_srv, &uris[i]);
+    for (size_t i = 0; i < sizeof uris / sizeof uris[0]; i++) httpd_register_uri_handler(srv, &uris[i]);
     for (size_t i = 0; i < web_assets_n; i++) {
         httpd_uri_t u = { .uri = web_assets[i].uri, .method = HTTP_GET, .handler = h_asset, .user_ctx = (void *)&web_assets[i] };
-        httpd_register_uri_handler(s_srv, &u);
+        httpd_register_uri_handler(srv, &u);
     }
-    cli_sink_add(web_sink);
+}
+
+static void https_stop(void)
+{
+    if (!s_ssrv) return;
+    httpd_handle_t h = s_ssrv;
+    s_ssrv = NULL;
+    httpd_ssl_stop(h);
+    xSemaphoreTake(s_mtx, portMAX_DELAY);
+    for (int i = 0; i < MAX_WS; i++) if (s_hds[i] == h) s_fds[i] = -1;
+    xSemaphoreGive(s_mtx);
+}
+
+/* https: a second server on port 443 with the same pages and API; the certificate comes from the device's own CA (tls.c) */
+static void https_start(void)
+{
+    uint32_t ip = net_ip4();
+    if (s_ssrv && ip != s_ssrv_ip) https_stop();                  /* the certificate carries the address: made again for the new one */
+    if (s_ssrv || !ip) return;
+    if (!tls_prepare(g_set.host, ip)) return;
+    size_t cl, kl; const uint8_t *cert = tls_server_cert(&cl), *key = tls_server_key(&kl);
+    if (!cert || !key) return;
+    httpd_ssl_config_t c = HTTPD_SSL_CONFIG_DEFAULT();
+    c.httpd.max_open_sockets = 3;                                 /* a TLS session needs tens of KB of RAM */
+    c.httpd.lru_purge_enable = true;
+    c.httpd.stack_size = 10240;
+    c.httpd.max_uri_handlers = 24;
+    c.httpd.ctrl_port = 32769;                                    /* the http server uses the default one */
+    c.httpd.close_fn = on_close;
+    c.httpd.send_wait_timeout = 5;
+    c.httpd.recv_wait_timeout = 5;
+    c.servercert = cert; c.servercert_len = cl;
+    c.prvtkey_pem = key; c.prvtkey_len = kl;
+    if (httpd_ssl_start(&s_ssrv, &c) != ESP_OK) { s_ssrv = NULL; return; }
+    s_ssrv_ip = ip;
+    reg_all(s_ssrv);
+}
+
+void web_start(void)
+{
+    if (!s_srv) {
+        if (!s_mtx) {
+            s_mtx = xSemaphoreCreateMutex();
+            s_wmtx = xSemaphoreCreateMutex();
+            s_mb = xMessageBufferCreate(8192);
+        }
+        for (int i = 0; i < MAX_WS; i++) { s_fds[i] = -1; s_hds[i] = NULL; }
+        if (!s_tx_task) xTaskCreate(tx_task, "slink_ws", 4096, NULL, 4, &s_tx_task);
+
+        httpd_config_t c = HTTPD_DEFAULT_CONFIG();
+        c.max_open_sockets = 6;
+        c.lru_purge_enable = true;
+        c.stack_size = 8192;                          /* the firmware upload (flash writes) runs in this task */
+        c.max_uri_handlers = 24;
+        c.close_fn = on_close;
+        c.send_wait_timeout = 3;
+        c.recv_wait_timeout = 5;
+        if (httpd_start(&s_srv, &c) != ESP_OK) { s_srv = NULL; return; }
+        reg_all(s_srv);
+        cli_sink_add(web_sink);
+    }
+    if (g_set.https) https_start(); else https_stop();
 }
 
 void web_stop(void)
 {
     if (!s_srv) return;
+    https_stop();
     cli_sink_remove(web_sink);
     httpd_handle_t h = s_srv;
     s_srv = NULL;

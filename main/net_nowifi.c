@@ -55,6 +55,7 @@ int  net_twt_state(unsigned *interval_ms) { if (interval_ms) *interval_ms = 0; r
 void web_start(void) {}
 void web_stop(void) {}
 bool web_running(void) { return false; }
+bool web_https_running(void) { return false; }
 void web_push(const char *json, size_t n) { (void)json; (void)n; }
 int  web_clients(void) { return 0; }
 void tcp_srv_start(void) {}

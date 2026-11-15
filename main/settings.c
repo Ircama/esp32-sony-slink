@@ -50,6 +50,7 @@ void settings_load(void)
     if (nvs_get_u8(h, "opull", &v) == ESP_OK) g_set.ota_pull = v;
     if (nvs_get_u8(h, "slke", &v) == ESP_OK) g_set.slinke = v;
     if (nvs_get_u8(h, "slktx", &v) == ESP_OK) g_set.slinke_tx = v;
+    if (nvs_get_u8(h, "https", &v) == ESP_OK) g_set.https = v;
     nvs_close(h);
 }
 
@@ -83,6 +84,7 @@ void settings_save(void)
     nvs_set_u8(h, "opull", g_set.ota_pull);
     nvs_set_u8(h, "slke", g_set.slinke);
     nvs_set_u8(h, "slktx", g_set.slinke_tx);
+    nvs_set_u8(h, "https", g_set.https);
     nvs_commit(h);
     nvs_close(h);
 }

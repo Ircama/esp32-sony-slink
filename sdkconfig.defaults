@@ -26,7 +26,11 @@ CONFIG_PM_ENABLE=y
 
 # Web portal
 CONFIG_HTTPD_WS_SUPPORT=y
-CONFIG_LWIP_MAX_SOCKETS=12
+CONFIG_LWIP_MAX_SOCKETS=16
+# HTTPS web portal with the device's own CA (tls.c): the https server and the X.509 writer of mbedTLS
+CONFIG_ESP_HTTPS_SERVER_ENABLE=y
+CONFIG_MBEDTLS_X509_CREATE_C=y
+CONFIG_MBEDTLS_X509_CRT_WRITE_C=y
 
 # Over-the-air update (ota.c): two app slots (partitions.csv); the bootloader goes back to the previous firmware when the new one
 # does not confirm itself (main.c / ota.c). http:// sources are accepted for the update URL (a LAN server); https uses the certificate bundle.
