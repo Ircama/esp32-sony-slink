@@ -378,7 +378,11 @@ static void https_start(void)
     size_t cl, kl; const uint8_t *cert = tls_server_cert(&cl), *key = tls_server_key(&kl);
     if (!cert || !key) return;
     httpd_ssl_config_t c = HTTPD_SSL_CONFIG_DEFAULT();
-    c.httpd.max_open_sockets = 3;                                 /* a TLS session needs tens of KB of RAM */
+#if CONFIG_SPIRAM
+    c.httpd.max_open_sockets = 3;                                 /* a TLS session needs tens of KB of RAM (the S3 keeps them in the PSRAM) */
+#else
+    c.httpd.max_open_sockets = 2;                                 /* no PSRAM: three handshakes at the same time exhausted the internal RAM of the C3 */
+#endif
     c.httpd.lru_purge_enable = true;
     c.httpd.stack_size = 10240;
     c.httpd.max_uri_handlers = 24;
@@ -402,7 +406,7 @@ void web_start(void)
             s_mb = xMessageBufferCreate(8192);
         }
         for (int i = 0; i < MAX_WS; i++) { s_fds[i] = -1; s_hds[i] = NULL; }
-        if (!s_tx_task) xTaskCreate(tx_task, "slink_ws", 4096, NULL, 4, &s_tx_task);
+        if (!s_tx_task) xTaskCreate(tx_task, "slink_ws", 3072, NULL, 4, &s_tx_task);
 
         httpd_config_t c = HTTPD_DEFAULT_CONFIG();
         c.max_open_sockets = 6;

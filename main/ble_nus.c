@@ -297,7 +297,7 @@ void ble_nus_start(void)
     if (s_running) return;
     if (!s_sb) s_sb = xStreamBufferCreate(3072, 1);
     if (!s_mb) s_mb = xMessageBufferCreate(4600);
-    if (!s_json_task) xTaskCreate(json_task, "slink_blej", 4096, NULL, 3, &s_json_task);
+    if (!s_json_task) xTaskCreate(json_task, "slink_blej", 3072, NULL, 3, &s_json_task);
     if (!s_stop_done) s_stop_done = xSemaphoreCreateBinary();
     if (!s_tx_task) xTaskCreate(tx_task, "slink_ble", 3072, NULL, 4, &s_tx_task);
     make_name();

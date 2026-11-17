@@ -18,6 +18,7 @@
 #include "lwip/sockets.h"
 #include "net.h"
 #include "matter.h"
+#include "svcmem.h"
 #include "settings.h"
 #include "state.h"
 #include "cli.h"
@@ -181,9 +182,14 @@ static wifi_ps_type_t eff_ps(void)
 static int eff_listen(void) { return g_set.lis ? g_set.lis : (g_set.eco ? 3 : 0); }
 static int pw_key(void) { return (int)g_set.eco | (g_set.txp << 1) | (g_set.wps << 8) | (g_set.lis << 10); }
 
+static uint8_t s_on[SVC_N];                       /* interfaces / functions started by net_apply (the RAM of each is measured at its first start) */
+static bool s_wifi_pend;                           /* WiFi started, its RAM is measured when the IP address arrives */
+static bool s_mdns_measure;
+
 static void wifi_apply(bool want)
 {
     if (want) {
+        if (!s_wifi_started && !s_wifi_pend) { svc_mark(SVC_WIFI); s_wifi_pend = true; }
         wifi_ensure_init();
         bool changed = strcmp(s_ap_ssid, g_set.ssid) || strcmp(s_ap_pass, g_set.pass) || s_eco_applied != pw_key();
         if (changed) s_retry = 0;
@@ -209,6 +215,7 @@ static void wifi_apply(bool want)
         strcpy(s_ap_pass, g_set.pass);
     } else if (s_wifi_started) {
         s_wifi_started = false;
+        s_wifi_pend = false; svc_clear(SVC_WIFI);
         s_have_ip = false;
         esp_timer_stop(s_rc_timer);
         esp_wifi_stop();
@@ -220,8 +227,10 @@ static void mdns_apply(bool want_web, bool want_app)
 {
     if (!s_have_ip) return;
     if (!s_mdns_inited) {
+        svc_mark(SVC_MDNS);
         if (mdns_init() != ESP_OK) return;
         s_mdns_inited = true;
+        s_mdns_measure = true;
     }
     mdns_hostname_set(g_set.host);
     mdns_instance_name_set("S-Link bridge");
@@ -232,30 +241,37 @@ static void mdns_apply(bool want_web, bool want_app)
     if (!want_tls && s_mdns_tls) { mdns_service_remove("_https", "_tcp"); s_mdns_tls = false; }
     if (want_app && !s_mdns_app) { mdns_service_add(NULL, "_slink", "_tcp", 2323, NULL, 0); s_mdns_app = true; }
     if (!want_app && s_mdns_app) { mdns_service_remove("_slink", "_tcp"); s_mdns_app = false; }
+    if (s_mdns_measure) { s_mdns_measure = false; svc_done(SVC_MDNS); }
 }
+
+/* start (or keep) a service; the first time, measure the RAM it takes (svcmem.h); stop it when it is no longer wanted */
+#define SVC(id, want, start, stop) do { \
+    if (want) { bool first_ = !s_on[id]; if (first_) svc_mark(id); start; if (first_) { s_on[id] = 1; vTaskDelay(pdMS_TO_TICKS(250)); svc_done(id); } } \
+    else { stop; if (s_on[id]) { s_on[id] = 0; svc_clear(id); } } } while (0)
 
 void net_apply(void)
 {
     xSemaphoreTake(s_mtx, portMAX_DELAY);
 
     power_apply();
-    if (g_set.ble && !(g_set.matter && matter_available())) ble_nus_start(); else ble_nus_stop();   /* Matter has the Bluetooth host (commissioning) */
+    SVC(SVC_BLE, g_set.ble && !(g_set.matter && matter_available()), ble_nus_start(), ble_nus_stop());   /* Matter has the Bluetooth host (commissioning) */
 
     bool want_wifi = NET_WANTED && g_set.ssid[0];
     wifi_apply(want_wifi);
+    if (s_have_ip && s_wifi_pend) { s_wifi_pend = false; svc_done(SVC_WIFI); }            /* before the services below start */
 
     bool up = want_wifi && s_have_ip;
-    if (up && g_set.web) web_start(); else web_stop();
-    if (up && g_set.app) tcp_srv_start(); else tcp_srv_stop();
-    if (up && g_set.slinke) slinke_start(); else slinke_stop();
-    if (up && g_set.hue && g_set.web) hue_start(); else hue_stop();
+    SVC(SVC_WEB, up && g_set.web, web_start(), web_stop());
+    SVC(SVC_APP, up && g_set.app, tcp_srv_start(), tcp_srv_stop());
+    SVC(SVC_SLKE, up && g_set.slinke, slinke_start(), slinke_stop());
+    SVC(SVC_HUE, up && g_set.hue && g_set.web, hue_start(), hue_stop());
 
     char snap[sizeof s_mqtt_applied];
     snprintf(snap, sizeof snap, "%s\n%s\n%s", g_set.mqtt_uri, g_set.mqtt_user, g_set.mqtt_pass);
     if (up && g_set.app && g_set.mqtt_uri[0]) {
         if (mqtt_bridge_running() && strcmp(snap, s_mqtt_applied)) mqtt_bridge_stop();   /* settings changed: restart */
-        if (!mqtt_bridge_running()) { mqtt_bridge_start(); strcpy(s_mqtt_applied, snap); }
-    } else mqtt_bridge_stop();
+        if (!mqtt_bridge_running()) { svc_mark(SVC_MQTT); mqtt_bridge_start(); strcpy(s_mqtt_applied, snap); vTaskDelay(pdMS_TO_TICKS(250)); svc_done(SVC_MQTT); }
+    } else { mqtt_bridge_stop(); svc_clear(SVC_MQTT); }
 
     mdns_apply(up && g_set.web, up && g_set.app);
     xSemaphoreGive(s_mtx);
@@ -335,6 +351,14 @@ static size_t net_json(char *b, size_t sz)
 }
 
 size_t net_json_get(char *b, size_t sz) { return net_json(b, sz); }
+
+size_t net_svc_json(char *b, size_t n)
+{
+    uint8_t on[SVC_N] = {0};
+    on[SVC_BLE] = ble_nus_running(); on[SVC_WIFI] = s_wifi_started; on[SVC_MDNS] = s_mdns_inited; on[SVC_WEB] = web_running(); on[SVC_HTTPS] = web_https_running();
+    on[SVC_HUE] = hue_running(); on[SVC_APP] = s_on[SVC_APP]; on[SVC_SLKE] = s_on[SVC_SLKE]; on[SVC_MQTT] = mqtt_bridge_running(); on[SVC_MATTER] = matter_running();
+    return svc_json(b, n, on);
+}
 
 /* decode a (possibly compressed) DNS name starting at off into dotted text; returns false on malformed data */
 static bool dns_name(const uint8_t *m, int len, int off, char *out, size_t sz)
@@ -426,6 +450,6 @@ void net_init(void)
 {
     s_mtx = xSemaphoreCreateMutex();
     state_set_listener(net_notify_state);
-    xTaskCreate(net_task, "slink_net", 6144, NULL, 4, &s_task);
+    xTaskCreate(net_task, "slink_net", 4608, NULL, 4, &s_task);
     net_apply();
 }

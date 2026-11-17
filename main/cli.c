@@ -128,6 +128,8 @@ int cli_frame_hook_add(cli_frame_cb_t fn)
 }
 void cli_frame_hook_remove(cli_frame_cb_t fn) { for (int i = 0; i < MAX_FHOOKS; i++) if (s_fh[i] == fn) s_fh[i] = NULL; }
 
+static const char *task_role(const char *n);       /* what a task does: for TASKS */
+
 static void rx_task(void *arg)
 {
     slink_frame_t f;
@@ -417,6 +419,7 @@ static void help(void)
         "  ECHO ON|OFF (now %s)   DECODE ON|OFF (now %s)   LOOPBACK ON|OFF (own frames as RX)" CRLF
         "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF, slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
     out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
+        "  TASKS              every task with what it does and the part of its stack never used (to size the stacks)" CRLF
         "  MATTER ON|OFF | OPEN | MAX <1-100> | NAME <text> | NEWCODE | RESET   amplifier as a Matter light (Google Home, Apple Home ...): only in the esp32s3-matter build, see docs/MATTER.md" CRLF
         "  HUE ON|OFF | MAX <1-100> | NAME <text>   amplifier as a Philips Hue light for Alexa / Hue apps: on-off = power, brightness = volume up to MAX %% of the knob (default 30); off by default (saved)" CRLF
         "  BLENAME [text|DEFAULT]   Bluetooth LE name shown in the list of devices (max 20 characters; default S-Link-<MAC>; saved)" CRLF
@@ -744,6 +747,19 @@ static void handle_cmd(char *line)
         int n = slink_dbg_edges(d, l, 48);
         for (int i = 0; i < n; i++) out("%s%lu%s", l[i] ? "H<" : "L<", (unsigned long)d[i], i % 8 == 7 ? CRLF : " ");
         out(CRLF);
+    }
+    else if (!strcmp(c0, "TASKS")) {                                    /* every task with the part of its stack that was never used: to size the stacks */
+        UBaseType_t n = uxTaskGetNumberOfTasks();
+        TaskStatus_t *t = malloc(n * sizeof *t);
+        if (!t) { out("ERR no memory" CRLF); return; }
+        n = uxTaskGetSystemState(t, n, NULL);
+        unsigned tot = 0;
+        for (UBaseType_t i = 0; i < n; i++) {
+            out("%-14s prio %2u  stack never used %5u B  %s" CRLF, t[i].pcTaskName, (unsigned)t[i].uxCurrentPriority, (unsigned)(t[i].usStackHighWaterMark * sizeof(StackType_t)), task_role(t[i].pcTaskName));
+            tot += (unsigned)(t[i].usStackHighWaterMark * sizeof(StackType_t));
+        }
+        out("%u tasks, %u bytes of stack never used" CRLF, (unsigned)n, tot);
+        free(t);
     }
     else if (!strcmp(c0, "STATS")) {
         uint32_t e, sy, b, f, br[6];
@@ -1404,6 +1420,50 @@ bool cli_submit(const char *line)
     return true;
 }
 
+/* what a task does, by name (prefix): shown by TASKS */
+static const char *task_role(const char *n)
+{
+    static const struct { const char *p, *r; } t[] = {
+        { "slink_rx", "S-Link bus: turns the received pulses into frames" },
+        { "slink_blink", "BLINK test signal on the bus line (made at the first BLINK command)" },
+        { "slink_out", "prints every frame received from the bus (RX lines) and feeds the state" },
+        { "slink_cmd", "executes the command lines of every interface (USB, BLE, web, TCP, MQTT)" },
+        { "slink_cli", "reads the characters typed on the USB serial port" },
+        { "slink_net", "network supervisor: WiFi, services, state publishing" },
+        { "slink_ws", "web portal: sends the frames to the WebSocket clients" },
+        { "slink_ssdp", "Philips Hue: answers the SSDP search" },
+        { "slink_tcp", "raw TCP console (port 2323)" },
+        { "slink_slke", "Slink-e protocol server (port 2325)" },
+        { "slink_blej", "Bluetooth page: builds the JSON frames" },
+        { "slink_ble", "Bluetooth UART: sends the notifications" },
+        { "slink_matter", "Matter: starts the stack (ends by itself)" },
+        { "slink_mtr_rep", "Matter: tells the controllers about changes" },
+        { "slink_rst", "restart after the Matter commands (short lived)" },
+        { "ota_pull", "firmware update: downloads and installs" },
+        { "ota_ok", "firmware update: confirms the new image after the start" },
+        { "ota_rst", "firmware update: restarts after the install (short lived)" },
+        { "tls_gen", "HTTPS: makes the device's CA and certificate (short lived)" },
+        { "IDLE", "idle: runs when nothing else is ready (ESP-IDF)" },
+        { "Tmr Svc", "FreeRTOS software timers" },
+        { "esp_timer", "esp_timer: periodic and delayed callbacks (ESP-IDF)" },
+        { "sys_evt", "default event loop: WiFi and IP events" },
+        { "tiT", "lwIP: the TCP/IP stack" },
+        { "tcpip", "lwIP: the TCP/IP stack" },
+        { "btController", "Bluetooth LE controller (radio)" },
+        { "wifi", "WiFi driver" },
+        { "nimble", "Bluetooth LE host (NimBLE)" },
+        { "httpd", "web server (HTTP or HTTPS)" },
+        { "mdns", "mDNS responder (slink.local)" },
+        { "mqtt", "MQTT client" },
+        { "ipc", "calls between the two cores (ESP-IDF)" },
+        { "main", "app_main (ends once everything is started)" },
+        { "CHIP", "Matter stack" },
+        { "usb", "USB Serial/JTAG" },
+    };
+    for (size_t i = 0; i < sizeof t / sizeof t[0]; i++) if (!strncmp(n, t[i].p, strlen(t[i].p))) return t[i].r;
+    return "-";
+}
+
 static void worker_task(void *arg)
 {
     char line[CLI_LINE_MAX];
@@ -1482,13 +1542,13 @@ void cli_start(void)
     usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
     cfg.tx_buffer_size = 1024;
     usb_serial_jtag_driver_install(&cfg);
-    xTaskCreate(worker_task, "slink_cmd", 7168, NULL, 5, NULL);
+    xTaskCreate(worker_task, "slink_cmd", 5120, NULL, 5, NULL);
     xTaskCreate(cli_task, "slink_cli", 3072, NULL, 5, NULL);
 }
 
 void cli_start_rx(void)
 {
-    xTaskCreate(rx_task, "slink_out", 5120, NULL, 5, NULL);
+    xTaskCreate(rx_task, "slink_out", 3584, NULL, 5, NULL);
 }
 
 void cli_report_error(const char *msg) { out("%s\r\n", msg); }

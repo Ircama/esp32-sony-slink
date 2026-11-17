@@ -20,6 +20,7 @@ void settings_load(void)
     g_set.ble = true;                   /* no WiFi on this chip: BLE is the only wireless interface, on by default */
 #endif
     g_set.vol_up = 420; g_set.vol_down = 445; g_set.vol_margin = 10;
+    g_set.hue_max = 30; g_set.matter_max = 30;          /* also on a device with an empty NVS (the namespace does not exist yet: nothing below runs) */
     nvs_handle_t h;
     if (nvs_open("slink", NVS_READONLY, &h) != ESP_OK) { strcpy(g_set.host, "slink"); return; }
     uint8_t v;

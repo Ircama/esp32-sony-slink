@@ -17,6 +17,7 @@
 #include "esp_chip_info.h"
 #include "esp_app_desc.h"
 #include "net.h"
+#include "svcmem.h"
 #include "settings.h"
 #include "state.h"
 #include "cli.h"
@@ -31,10 +32,27 @@ static void power_apply(void)
     s_pm_rc = esp_pm_configure(&pm);
 }
 
+static bool s_ble_on;
+
 void net_apply(void)
 {
     power_apply();
-    if (g_set.ble) ble_nus_start(); else ble_nus_stop();
+    if (g_set.ble) {
+        bool first = !s_ble_on;
+        if (first) svc_mark(SVC_BLE);
+        ble_nus_start();
+        if (first) { s_ble_on = true; vTaskDelay(pdMS_TO_TICKS(250)); svc_done(SVC_BLE); }      /* the RAM the Bluetooth interface took (Statistics) */
+    } else {
+        ble_nus_stop();
+        if (s_ble_on) { s_ble_on = false; svc_clear(SVC_BLE); }
+    }
+}
+
+size_t net_svc_json(char *b, size_t n)
+{
+    uint8_t on[SVC_N] = {0};
+    on[SVC_BLE] = ble_nus_running();
+    return svc_json(b, n, on);
 }
 
 void net_init(void) { state_set_listener(net_notify_state); net_apply(); }
@@ -92,7 +110,8 @@ size_t stats_json(char *b, size_t sz)
 {
     esp_chip_info_t ci; esp_chip_info(&ci);
     const esp_app_desc_t *ad = esp_app_get_description();
-    char bm[20] = "", bn[48] = "", dg[200] = "";
+    char bm[20] = "", bn[48] = "", dg[200] = "", sv[200] = "";
+    net_svc_json(sv, sizeof sv);
     ble_nus_mac(bm, sizeof bm); snprintf(bn, sizeof bn, "%s", ble_nus_name()); ble_nus_diag(dg, sizeof dg);
     const char *rs = "other";
     switch (esp_reset_reason()) {
@@ -103,11 +122,11 @@ size_t stats_json(char *b, size_t sz)
     int n = snprintf(b, sz,
         "{\"t\":\"stats\",\"inst\":0,\"slot\":\"-\",\"ostate\":\"unknown\",\"fimg\":0,\"fslot\":0,\"fflash\":0,\"up\":%lld,\"reset\":\"%s\",\"chip\":\"esp32h2\",\"rev\":%d,\"cores\":%d,"
         "\"fw\":\"%.31s\",\"built\":\"%.15s %.8s\",\"idf\":\"%.31s\",\"temp\":null,"
-        "\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,\"psram\":0,\"psramFree\":0,\"psramMin\":0,"
+        "\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,\"psram\":0,\"psramFree\":0,\"psramMin\":0,%s"
         "\"cpu\":%u,\"cpuMax\":%d,\"cpuMin\":%d,\"eco\":%d,\"twt\":0,\"twtMs\":0,\"host\":\"\",\"mac\":\"\",\"bleMac\":\"%s\",\"bleName\":\"%s\",\"bleDiag\":\"%s\"}",
         (long long)(esp_timer_get_time() / 1000000), rs, ci.revision, ci.cores, ad->version, ad->date, ad->time, ad->idf_ver,
         (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
         (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_total_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
-        (unsigned)uxTaskGetNumberOfTasks(), (unsigned)esp_rom_get_cpu_ticks_per_us(), g_set.eco ? 48 : 96, g_set.eco ? 32 : 96, g_set.eco, bm, bn, dg);
+        (unsigned)uxTaskGetNumberOfTasks(), sv, (unsigned)esp_rom_get_cpu_ticks_per_us(), g_set.eco ? 48 : 96, g_set.eco ? 32 : 96, g_set.eco, bm, bn, dg);
     return n > 0 && (size_t)n < sz ? (size_t)n : 0;
 }

@@ -70,6 +70,9 @@ header.top::before{content:"";position:absolute;z-index:-1;pointer-events:none;t
   backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
   box-shadow:0 0 0 1px color-mix(in srgb,var(--line2) 40%,transparent),0 14px 34px -14px rgba(0,0,0,.45);opacity:0;transition:opacity .25s ease}
 header.top.scrolled::before{opacity:1}
+header.top.holdable{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+header.top.holding::after{content:"";position:absolute;left:16px;bottom:0;height:3px;border-radius:2px;background:var(--accent);animation:holdbar .7s linear forwards}
+@keyframes holdbar{from{width:0}to{width:calc(100% - 32px)}}
 .brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1}                   /* the status dot is part of the header, left of the title (its text is the tooltip) */
 .brand h1{margin:0;min-width:0;flex:1 1 0;font-size:17px;font-weight:650;letter-spacing:.01em;white-space:nowrap;overflow:hidden}
 #ampT{display:inline-block;vertical-align:bottom;transform-origin:left center}   /* never cut: when it does not fit it is squeezed in width and, if needed, made smaller (fitTitle) */
@@ -743,10 +746,10 @@ body.hxon .hx{display:block}
     <section class="tab" id="tab-stats" role="tabpanel">
       <div class="grid two">
         <div class="card"><h2>Sistema</h2><dl class="kv" id="stSys"></dl>
-          <p class="hint">Sensore interno del chip: indica la temperatura del silicio, non quella dell'ambiente.</p>
-          <p class="hint">La RAM interna contiene stack, driver, buffer radio e le allocazioni piccole: con WiFi, Bluetooth e HTTPS è quasi tutta occupata. La PSRAM esterna, più lenta, riceve solo i buffer grandi (almeno 4 kB): per questo può restare quasi vuota mentre la RAM interna è quasi piena. Conta il «minimo libero» della RAM interna: sotto qualche kB il dispositivo diventa instabile.</p></div>
+          <p class="hint">Sensore interno del chip: indica la temperatura del silicio, non quella dell'ambiente.</p></div>
         <div class="card"><h2>WiFi</h2><dl class="kv" id="stWifi"></dl></div>
         <div class="card"><h2>Connessioni</h2><dl class="kv" id="stConn"></dl></div>
+        <div class="card"><h2>Interfacce e funzioni</h2><dl class="kv" id="stSvc"></dl></div>
         <div class="card"><h2>Bus S-Link</h2><dl class="kv" id="stBus"></dl></div>
         <div class="card"><h2>Dispositivi S-Link</h2><dl class="kv" id="stDev"></dl></div>
         <div class="card span2"><h2>Energia</h2><dl class="kv" id="stPow"></dl></div>
@@ -872,6 +875,7 @@ body.hxon .hx{display:block}
             <label>Nome della app Bluetooth<input id="bleAppName" maxlength="24" placeholder="S-Link BLE"></label>
             <div class="row"><button class="btn primary" type="submit">Salva</button><button class="btn" type="button" id="bleResetAll">Reimposta la configurazione</button></div>
           </form>
+          <p class="hint">Per cambiare dispositivo in qualsiasi momento tieni premuta la barra del titolo (circa un secondo): compare l'elenco dei dispositivi salvati.</p>
           <p class="hint">Il browser ricorda i dispositivi scelti e il nome della app: alla prossima apertura si ricollega da solo, senza la pagina iniziale. Il nome della app va cambiato prima di installarla (o reinstallarla) per distinguerla dalla app WiFi.</p>
         </div>
         <div class="card" id="wpCard">
@@ -1066,6 +1070,14 @@ body.hxon .hx{display:block}
 "use strict";
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+/* The page fills the Settings fields from what the device reports (the net frame every 5 s, the one-time reads at each (re)connection): never over a field the user is in, or has
+ * touched in the last 20 s (over Bluetooth, with a weak link, the reads come again at every reconnection and used to wipe what was being typed). */
+const EDIT_HOLD = 20000;
+['input', 'change'].forEach(t => document.addEventListener(t, e => { const el = e.target; if (el && el.matches && el.matches('input,select,textarea')) el._editAt = Date.now(); }, true));
+document.addEventListener('submit', e => { if (e.target && e.target.elements) [...e.target.elements].forEach(x => { x._editAt = 0; }); }, true);
+const busyField = el => !el || el === document.activeElement || !!(el.form && el.form.contains(document.activeElement)) || Date.now() - (el._editAt || 0) < EDIT_HOLD;
+const fieldSet = (el, v) => { if (el && !busyField(el) && el.value !== String(v)) el.value = v; };
+const htmlSet = (el, h) => { if (el && el._h !== h) { el._h = h; el.innerHTML = h; } };         /* no DOM churn when nothing changed */
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
                 set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} if (PREFS.keys.includes(k)) prefsPush(); } };
 /* Interface preferences are kept IN THE DEVICE (GET/POST /api/prefs), so every browser and phone sees the same ones; localStorage is only the local copy
@@ -1653,7 +1665,6 @@ const TRX = [
   ['PSRAM esterna', 'External PSRAM', 'PSRAM externe', 'Externer PSRAM', 'PSRAM externa'],
   ['PSRAM: minimo libero', 'PSRAM: lowest free', 'PSRAM : minimum libre', 'PSRAM: kleinster freier Wert', 'PSRAM: mínimo libre'],
   ['liberi {f} su {t} · occupati {u} ({p} %)', 'free {f} of {t} · used {u} ({p} %)', 'libres {f} sur {t} · utilisés {u} ({p} %)', 'frei {f} von {t} · belegt {u} ({p} %)', 'libres {f} de {t} · ocupados {u} ({p} %)'],
-  ['La RAM interna contiene stack, driver, buffer radio e le allocazioni piccole: con WiFi, Bluetooth e HTTPS è quasi tutta occupata. La PSRAM esterna, più lenta, riceve solo i buffer grandi (almeno 4 kB): per questo può restare quasi vuota mentre la RAM interna è quasi piena. Conta il «minimo libero» della RAM interna: sotto qualche kB il dispositivo diventa instabile.', 'The internal RAM holds stacks, drivers, radio buffers and the small allocations: with WiFi, Bluetooth and HTTPS it is almost full. The external PSRAM, slower, only receives the big buffers (4 kB or more): that is why it can stay almost empty while the internal RAM is almost full. What matters is the internal RAM "lowest free": below a few kB the device becomes unstable.', 'La RAM interne contient les piles, les pilotes, les tampons radio et les petites allocations : avec WiFi, Bluetooth et HTTPS elle est presque pleine. La PSRAM externe, plus lente, ne reçoit que les gros tampons (4 ko ou plus) : elle peut donc rester presque vide alors que la RAM interne est presque pleine. Ce qui compte est le « minimum libre » de la RAM interne : sous quelques ko l\'appareil devient instable.', 'Der interne RAM enthält Stacks, Treiber, Funkpuffer und die kleinen Allokationen: mit WLAN, Bluetooth und HTTPS ist er fast voll. Der externe, langsamere PSRAM bekommt nur die großen Puffer (ab 4 kB): deshalb kann er fast leer bleiben, während der interne RAM fast voll ist. Entscheidend ist der „kleinste freie Wert“ des internen RAM: unter wenigen kB wird das Gerät instabil.', 'La RAM interna contiene pilas, controladores, búferes de radio y las asignaciones pequeñas: con WiFi, Bluetooth y HTTPS está casi llena. La PSRAM externa, más lenta, solo recibe los búferes grandes (4 kB o más): por eso puede quedar casi vacía con la RAM interna casi llena. Lo que cuenta es el «mínimo libre» de la RAM interna: por debajo de unos kB el dispositivo se vuelve inestable.'],
   ['nessun collegamento dall\'avvio', 'no connection since start-up', 'aucune connexion depuis le démarrage', 'keine Verbindung seit dem Start', 'ninguna conexión desde el arranque'],
   ['collegamenti: {n}', 'connections: {n}', 'connexions : {n}', 'Verbindungen: {n}', 'conexiones: {n}'],
   ['cadute: {n}', 'drops: {n}', 'coupures : {n}', 'Abbrüche: {n}', 'caídas: {n}'],
@@ -1667,6 +1678,15 @@ const TRX = [
   ['chiuso dal dispositivo', 'closed by the device', 'fermé par l\'appareil', 'vom Gerät beendet', 'cerrado por el dispositivo'],
   ['collegamento non riuscito', 'connection could not be set up', 'connexion impossible', 'Verbindung nicht zustande gekommen', 'no se pudo establecer la conexión'],
   ['timeout della risposta', 'response timeout', 'délai de réponse dépassé', 'Antwort-Zeitüberschreitung', 'tiempo de respuesta agotado'],
+  ['Interfacce e funzioni', 'Interfaces and functions', 'Interfaces et fonctions', 'Schnittstellen und Funktionen', 'Interfaces y funciones'],
+  ['Bluetooth (console e pagina)', 'Bluetooth (console and page)', 'Bluetooth (console et page)', 'Bluetooth (Konsole und Seite)', 'Bluetooth (consola y página)'],
+  ['mDNS (nome .local)', 'mDNS (.local name)', 'mDNS (nom .local)', 'mDNS (.local-Name)', 'mDNS (nombre .local)'],
+  ['Portale web (HTTP e WebSocket)', 'Web portal (HTTP and WebSocket)', 'Portail web (HTTP et WebSocket)', 'Webportal (HTTP und WebSocket)', 'Portal web (HTTP y WebSocket)'],
+  ['Console TCP', 'TCP console', 'Console TCP', 'TCP-Konsole', 'Consola TCP'],
+  ['Protocollo Slink-e', 'Slink-e protocol', 'Protocole Slink-e', 'Slink-e-Protokoll', 'Protocolo Slink-e'],
+  ['incluso nel portale', 'included in the portal', 'inclus dans le portail', 'im Portal enthalten', 'incluido en el portal'],
+  ['Totale interfacce attive', 'Total of the active interfaces', 'Total des interfaces actives', 'Summe der aktiven Schnittstellen', 'Total de las interfaces activas'],
+  ['Per cambiare dispositivo in qualsiasi momento tieni premuta la barra del titolo (circa un secondo): compare l\'elenco dei dispositivi salvati.', 'To switch device at any time, press and hold the title bar (about a second): the list of the saved devices appears.', 'Pour changer d\'appareil à tout moment, maintenez appuyée la barre de titre (environ une seconde) : la liste des appareils enregistrés apparaît.', 'Um jederzeit das Gerät zu wechseln, halte die Titelleiste (etwa eine Sekunde) gedrückt: die Liste der gespeicherten Geräte erscheint.', 'Para cambiar de dispositivo en cualquier momento, mantén pulsada la barra de título (aproximadamente un segundo): aparece la lista de los dispositivos guardados.'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -2052,12 +2072,16 @@ if (window.ResizeObserver) new ResizeObserver(fitTitle).observe($('#ampName')); 
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 $('#dot').onclick = () => toast(connTxt);                 /* touch screens have no hover: a tap shows the status */
 let nameTry = 0, linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
+let uiLive = false, offT = null;
 function setConn(ok, txt) {
   S.connected = ok; if (!ok) linkReady = false;
   const live = ok && linkReady;
   $('#dot').className = 'dot ' + (live ? 'live' : 'wait'); connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel();
   /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
-  ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the page, the header's volume buttons and the power button */
+  const apply = () => { offT = null; uiLive = live; ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); }); };   /* the page, the header's volume buttons and the power button */
+  clearTimeout(offT); offT = null;
+  if (BLEMODE && !live && uiLive) offT = setTimeout(apply, 2500);                    /* Bluetooth: the link drops for a moment now and then; the page keeps working (and keeps what is being typed) unless it stays down */
+  else apply();
   if (live) S.stale = 0;
   staleUpd();
 }
@@ -2277,7 +2301,7 @@ function handleLine(d) {
   if (/^(OK|ERR)\b/.test(d)) busDone();                /* the device finished a command */
   if (CAP) { if (CAP.re.test(d)) CAP.lines.push(d); if (CAP.end.test(d)) CAP.done(); }
   jbLine(d);
-  const pm = /^PAD (\d)\b/.exec(d); if (pm) $('#dgPad').value = pm[1];
+  const pm = /^PAD (\d)\b/.exec(d); if (pm) fieldSet($('#dgPad'), pm[1]);
   const dl = /^(?:OK )?(decode|loopback)\s+(on|off)\b/i.exec(d);
   if (dl) { const k = dl[1].toLowerCase() === 'decode' ? 'dgDec' : 'dgLoop', on = dl[2].toLowerCase() === 'on'; $('#' + k + 'On').setAttribute('aria-pressed', on); $('#' + k + 'Off').setAttribute('aria-pressed', !on); }
   /* a unit answered "error" (0F) to something the user just did: say it (background reads do not count) */
@@ -2286,16 +2310,16 @@ function handleLine(d) {
   if (/^NAME: no RDS name/.test(d)) rdsNone = rdsAsked;            /* a station without RDS: stop asking while it stays tuned (the device is busy ~15 s on each ask) */
   const ln = /^LINE (\d)/.exec(d); if (ln) toast(tr('Livello linea: {v}', { v: tr(ln[1] === '1' ? 'a riposo (alta)' : 'bassa') }));
   const vcm = /^VOLCFG up=(\d+) down=(\d+) margin=(\d+)/.exec(d);
-  if (vcm) { $('#vcUp').value = vcm[1]; $('#vcDn').value = vcm[2]; $('#vcMg').value = vcm[3]; }
+  if (vcm) { fieldSet($('#vcUp'), vcm[1]); fieldSet($('#vcDn'), vcm[2]); fieldSet($('#vcMg'), vcm[3]); }
   const wpm = /^WIFIPWR tx=(\S+) ps=(\S+) listen=(\S+)/.exec(d);
-  if (wpm) { $('#wpTx').value = wpm[1]; $('#wpPs').value = wpm[2]; $('#wpLi').value = wpm[3]; }
+  if (wpm) { fieldSet($('#wpTx'), wpm[1]); fieldSet($('#wpPs'), wpm[2]); fieldSet($('#wpLi'), wpm[3]); }
   const pwm = /^UITITLE PWA (APP|PAGE|NAME)\b/.exec(d);
-  if (pwm) { TITLE.pwa = pwm[1]; store.set('t_pwa', pwm[1]); const sel = $('#tPwa'); if (sel && Date.now() > titleSaveUntil) sel.value = pwm[1]; }
+  if (pwm) { TITLE.pwa = pwm[1]; store.set('t_pwa', pwm[1]); const sel = $('#tPwa'); if (Date.now() > titleSaveUntil) fieldSet(sel, pwm[1]); }
   const nmm = /^UITITLE NAME "(.*)"/.exec(d);
-  if (nmm) { TITLE.name = nmm[1]; store.set('t_name', nmm[1]); const inp = $('#tName'); if (inp && Date.now() > titleSaveUntil) inp.value = nmm[1]; }
+  if (nmm) { TITLE.name = nmm[1]; store.set('t_name', nmm[1]); const inp = $('#tName'); if (Date.now() > titleSaveUntil) fieldSet(inp, nmm[1]); }
   const ttm = /^UITITLE (APP|PAGE) "(.*)"/.exec(d);
   if (ttm) { TITLE[ttm[1].toLowerCase()] = ttm[2]; store.set('t_' + ttm[1].toLowerCase(), ttm[2]); applyTitles(); }
-  if (ttm && Date.now() > titleSaveUntil) { const ip = $(ttm[1] === 'APP' ? '#tApp' : '#tPage'); if (ip) ip.value = ttm[2]; }   /* another browser sees the titles the device keeps */
+  if (ttm && Date.now() > titleSaveUntil) fieldSet($(ttm[1] === 'APP' ? '#tApp' : '#tPage'), ttm[2]);   /* another browser sees the titles the device keeps */
   if (/^ERR busy/.test(d)) {            /* the single command worker was occupied: retry the user's own command once, say nothing for background reads */
     if (userLine && Date.now() - userAt < 3000 && Date.now() - busyRetry > 2500) { busyRetry = Date.now(); const l = userLine; userRetry = true; glassUpd(); setTimeout(() => { userRetry = false; cmd(l); }, 1500); }
     else if (Date.now() - userAt < 3000) toast(d.replace(/^ERR\s*/, ''), 'err');
@@ -2817,6 +2841,18 @@ function fmtBleDiag(t) {
   if (ne) a.push(tr('errori di invio: {n}', { n: ne }));
   return a.join(' · ');
 }
+/* interfaces and functions with the RAM each one took when it started (the "svc" of the stats frame: [id, on, internal bytes, psram bytes]) */
+const SVC_NAMES = ['Bluetooth (console e pagina)', 'WiFi', 'mDNS (nome .local)', 'Portale web (HTTP e WebSocket)', 'HTTPS', 'Philips Hue', 'Console TCP', 'Protocollo Slink-e', 'MQTT', 'Matter'];
+function svcRows(list) {
+  const rows = []; let tot = 0, totp = 0;
+  (list || []).forEach(([id, on, ri, ps]) => {
+    if (id === 9 && !on) return;                                   /* Matter exists only in its own build */
+    tot += on ? ri : 0; totp += on ? ps : 0;
+    rows.push([SVC_NAMES[id], !on ? tr('spento') : tr('attivo') + (ri || ps ? ' · ' + fmtKb(ri) + (ps ? ' + ' + fmtKb(ps) + ' PSRAM' : '') : id === 4 ? ' · ' + tr('incluso nel portale') : '')]);
+  });
+  if (rows.length) rows.push(['Totale interfacce attive', fmtKb(tot) + (totp ? ' + ' + fmtKb(totp) + ' PSRAM' : '')]);
+  return rows;
+}
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
   kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', fmtBleDiag(j.bleDiag)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
@@ -2825,6 +2861,7 @@ function renderStats(j) {
     ['PSRAM esterna', j.psram ? memTxt(j.psramFree, j.psram) : tr('assente')], ['PSRAM: minimo libero', j.psram ? fmtKb(j.psramMin) : '—'], ['Task attivi', j.tasks]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);
+  kvRows('#stSvc', svcRows(j.svc));
   kvRows('#stConn', [['Client web', j.web], ['Client TCP', j.tcp], ['BLE', j.ble ? (j.bleConn ? tr('connesso') : tr('attivo')) : tr('spento')],
     ['MQTT', j.mqtt ? (j.mqttOk ? tr('connesso') : tr('in connessione…')) : tr('non configurato')]]);
   kvRows('#stBus', [['Fronti rilevati', j.bus.edges], ['Sincronismi', j.bus.syncs], ['Bit ricevuti', j.bus.bits], ['Frame ricevuti', j.bus.frames], ['Linea', tr(j.bus.level ? 'a riposo (alta)' : 'bassa')], ['Pin GPIO del bus', j.gpio >= 0 ? j.gpio : '—'], ['Intervallo minimo tra i frame', j.gap + ' ms'], ['Loopback', tr(j.loop ? 'On' : 'Off')], ['Impulsi lunghi (>6 ms)', (j.bus.long || 0) + (j.bus.long ? ' (max ' + (j.bus.longMax / 1000).toFixed(1) + ' ms)' : '')]]);
@@ -2836,7 +2873,7 @@ function renderStats(j) {
 function demoStats() {
   const e = S.net && S.net.eco;
   return { t: 'stats', up: Math.floor(performance.now() / 1000) + 5000, reset: 'power-on', chip: 'esp32c3', rev: 4, cores: 1, fw: '1.0', built: 'Nov 9 2026 12:00:00', idf: 'v6.1.0',
-    temp: 38.5, heap: 142000, heapMin: 118000, heapBlock: 98000, heapTotal: 280000, tasks: 14, cpu: e ? 40 : 160, cpuMax: e ? 80 : 160, cpuMin: e ? 40 : 160, eco: e ? 1 : 0, twt: 0, twtMs: 0,
+    temp: 38.5, heap: 142000, heapMin: 118000, heapBlock: 98000, heapTotal: 280000, tasks: 14, svc: [[0, 1, 18400, 0], [1, 1, 52300, 0], [2, 1, 4200, 0], [3, 1, 21600, 0], [4, 0, 0, 0], [5, 0, 0, 0], [6, 0, 0, 0], [7, 0, 0, 0], [8, 0, 0, 0], [9, 0, 0, 0]], cpu: e ? 40 : 160, cpuMax: e ? 80 : 160, cpuMin: e ? 40 : 160, eco: e ? 1 : 0, twt: 0, twtMs: 0,
     ssid: 'CasaWiFi', ps: e ? 2 : 1, txq: e ? 44 : 80, bw: 20, wifi: { rssi: -52, ch: 6, ip: '192.168.1.42' }, web: 1, tcp: 0, ble: 0, bleConn: 0, mqtt: 1, mqttOk: 1,
     bus: { edges: 18234, syncs: 311, bits: 4980, frames: 311, level: 1 } };
 }
@@ -2862,14 +2899,14 @@ function renderNet() {
   const n = S.net; if (!n) return;
   const set = (id, v) => { const e = $(id); e.setAttribute('aria-checked', !!v); };
   set('#swBle', n.ble); set('#swWeb', n.web); set('#swApp', n.app); set('#swEco', n.eco); set('#swSlke', n.slke); set('#swSlkeTx', n.slkeTx); set('#swHttps', n.https); set('#swHue', n.hue);
-  { const hn = $('#hueNameIn'), hm = $('#hueMaxIn'); if (hn && document.activeElement !== hn) hn.value = n.hueName || ''; if (hm && document.activeElement !== hm) hm.value = n.hueMax || 30;
+  { const hn = $('#hueNameIn'), hm = $('#hueMaxIn'); fieldSet(hn, n.hueName || ''); fieldSet(hm, n.hueMax || 30);
     $('#hueSub').textContent = n.hue ? tr('Attiva: chiedi ad Alexa di cercare i dispositivi · luce «{n}»', { n: n.hueName || 'Amplificatore' }) : tr("L'amplificatore come luce: accensione = alimentazione, luminosità = volume (con un tetto)"); }
   { const mb = $('#mtrBox');
     if (mb) {
       mb.hidden = !n.mtrAvail;
       if (n.mtrAvail) {
         set('#swMtr', n.mtr);
-        const mn = $('#mtrNameIn'), mm = $('#mtrMaxIn'); if (document.activeElement !== mn) mn.value = n.mtrName || ''; if (document.activeElement !== mm) mm.value = n.mtrMax || 30;
+        const mn = $('#mtrNameIn'), mm = $('#mtrMaxIn'); fieldSet(mn, n.mtrName || ''); fieldSet(mm, n.mtrMax || 30);
         $('#mtrSub').textContent = n.mtrRun ? tr('Attivo · ecosistemi collegati: {f}', { f: n.mtrFab || 0 }) : n.mtr ? tr('Acceso: parte al prossimo riavvio') : tr("L'amplificatore come dispositivo Matter (Google Home, Apple Home...): accensione = alimentazione, livello = volume (con un tetto)");
         const cd = $('#mtrCodeTxt'); $('#mtrPair').hidden = !(n.mtrRun && n.mtrCode); $('#mtrBtns').hidden = !n.mtrRun;
         if (n.mtrRun && n.mtrCode) {
@@ -2883,14 +2920,14 @@ function renderNet() {
   $('#httpsCaRow').hidden = !n.https;
   $('#slkeSub').textContent = n.slke ? tr('Attivo · porta 2325 · {n} client', { n: n.slkeN || 0 }) : tr('Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)');
   $('#slkeTxSub').textContent = n.slkeTx ? tr('Acceso: il programma collegato può inviare comandi all’impianto') : tr('Spento: la connessione è un monitor di sola lettura');
-  { const bi = $('#bleNameIn'); if (bi && document.activeElement !== bi) bi.value = n.bleCustom ? (n.bleName || '') : ''; $('#bleMacTxt').textContent = n.bleMac ? tr('Indirizzo Bluetooth') + ' ' + macTxt(n.bleMac) + (n.wifiMac ? ' · WiFi ' + macTxt(n.wifiMac) : '') : ''; }
+  { const bi = $('#bleNameIn'); fieldSet(bi, n.bleCustom ? (n.bleName || '') : ''); $('#bleMacTxt').textContent = n.bleMac ? tr('Indirizzo Bluetooth') + ' ' + macTxt(n.bleMac) + (n.wifiMac ? ' · WiFi ' + macTxt(n.wifiMac) : '') : ''; }
   $('#bleSub').textContent = n.ble ? (n.bleConn ? tr('Attivo · client connesso') : tr('Attivo · visibile come {n}', { n: n.bleName || 'S-Link' })) : tr('Console seriale via Nordic UART Service');
   $('#appSub').textContent = n.app ? tr('Attiva · TCP porta 2323 ({n} client) · MQTT {m}', { n: n.tcp, m: tr(n.mqtt ? (n.mqttOk ? 'connesso' : 'in connessione…') : 'non configurato') }) : tr('Console TCP (porta 2323) e MQTT per Home Assistant');
   const wifi = n.wifi === 'connected' ? tr('Connesso · {r} dBm', { r: n.rssi }) : n.wifi === 'connecting' ? tr('In connessione…') : n.wifi === 'idle' ? tr('Inattivo') : tr('Non configurato');
-  $('#netKv').innerHTML = '<dt>WiFi</dt><dd>' + esc(n.ssid || '—') + ' · ' + wifi + '</dd><dt>' + tr('Indirizzo') + '</dt><dd>' + esc(n.ip || '—') + '</dd><dt>' + tr('Nome') + '</dt><dd>' + esc(n.dns || realHost(n)) + '</dd>';
+  htmlSet($('#netKv'), '<dt>WiFi</dt><dd>' + esc(n.ssid || '—') + ' · ' + wifi + '</dd><dt>' + tr('Indirizzo') + '</dt><dd>' + esc(n.ip || '—') + '</dd><dt>' + tr('Nome') + '</dt><dd>' + esc(n.dns || realHost(n)) + '</dd>');
   $('#accessKv').innerHTML = '<dt>Web</dt><dd>' + allUrls(n).map(esc).join('<br>') + '</dd><dt>TCP</dt><dd><code>nc ' + esc(n.dns || n.ip || realHost(n)) + ' 2323</code></dd><dt>BLE</dt><dd>' + esc(n.bleName || 'S-Link-xxxx') + ' · Nordic UART</dd>' + (n.slke ? '<dt>Slink-e</dt><dd><code>' + esc(n.dns || n.ip || realHost(n)) + ':2325</code></dd>' : '');
-  const act = document.activeElement; if (!$('#wifiForm').contains(act)) { $('#fSsid').value = n.ssid || ''; $('#fHost').value = n.host || ''; }
-  if (!$('#mqttForm').contains(act)) { $('#mUri').value = n.mqtt || ''; $('#mUser').value = n.mqttUser || ''; }
+  fieldSet($('#fSsid'), n.ssid || ''); fieldSet($('#fHost'), n.host || '');
+  fieldSet($('#mUri'), n.mqtt || ''); fieldSet($('#mUser'), n.mqttUser || '');
 }
 
 /* ---------------- wiring ---------------- */
@@ -4374,6 +4411,15 @@ if (BLEMODE) {
     try { if (ws && ws.close) ws.close(); } catch (e) {} clearTimeout(reconnectTimer); reconnectTimer = null; retry = 0; connect(); toast(tr('Riprova'), '');
   };
   $('#bleOther').onclick = () => bleSwitch();
+  /* hold the title bar (about 0.7 s): the page of the saved devices, to switch to another one at once */
+  if (BLEMODE) { const top = $('#top'); let lt = null, sx = 0, sy = 0;
+    const cancel = () => { clearTimeout(lt); lt = null; top.classList.remove('holding'); };
+    top.classList.add('holdable');
+    top.addEventListener('pointerdown', e => { if (e.target.closest('button,.mini-vol,a,input')) return; sx = e.clientX; sy = e.clientY; top.classList.add('holding');
+      lt = setTimeout(() => { lt = null; top.classList.remove('holding'); try { if (navigator.vibrate) navigator.vibrate(30); } catch (_) {} bleSwitch(); }, 700); });
+    top.addEventListener('pointermove', e => { if (lt && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) cancel(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => top.addEventListener(t, cancel));
+    top.addEventListener('contextmenu', e => { e.preventDefault(); }); }
   $('#bleReset').onclick = () => $('#bleResetAll').click();
   const forgetAll = async () => { for (const k of bleList()) { const d = await bleKnownDevice(k.id); try { if (d && d.forget) await d.forget(); } catch (e) {} } };
   $('#bleForgetAll').onclick = async () => { if (!await confirmDlg(tr('Dimenticare i dispositivi?'), tr('Il browser non si ricollegherà più da solo: dovrai sceglierli di nuovo.'), tr('Dimentica'))) return; await forgetAll(); store.set('ble-devs', '[]'); store.set('ble-last', ''); bleSwitch(); };

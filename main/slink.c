@@ -217,7 +217,7 @@ static void blink_task(void *arg)
 int slink_blink(int l1, int d1, int l2, int d2, int n)
 {
     if (d1 < 1 || d2 < 1 || n < 0) return -1;
-    if (!s_blink_task) return -2;
+    if (!s_blink_task && xTaskCreate(blink_task, "slink_blink", 4096, NULL, 4, &s_blink_task) != pdPASS) return -2;   /* the test generator exists only once BLINK is used: 4 KB of stack that most devices never need */
     s_manual = true;
     s_blink.l1 = l1; s_blink.d1 = d1; s_blink.l2 = l2; s_blink.d2 = d2; s_blink.n = n;
     s_blink_req++;
@@ -371,12 +371,11 @@ int slink_init(void)
     s_edge_q   = xQueueCreate(256, sizeof(edge_t));
     s_frame_q  = xQueueCreate(8, sizeof(slink_frame_t));
     s_tx_mutex = xSemaphoreCreateMutex();
-    if (xTaskCreate(blink_task, "slink_blink", 4096, NULL, 4, &s_blink_task) != pdPASS) return -2;
 
     gpio_install_isr_service(0);
     if (hw_start(s_gpio) != 0) return -1;
 
-    xTaskCreate(decoder_task, "slink_rx", 4096, NULL, 10, NULL);
+    xTaskCreate(decoder_task, "slink_rx", 3072, NULL, 10, NULL);
 #ifdef CONFIG_SLINK_LED_GPIO
     slink_led_set(CONFIG_SLINK_LED_GPIO, LED_INV_DEFAULT);
 #endif

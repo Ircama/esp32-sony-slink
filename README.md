@@ -389,6 +389,7 @@ outgoing frames.
 - [`docs/SOURCES.md`](docs/SOURCES.md): the sources by topic (command tables, CD, MD, other implementations, the Slink-e documentation used for the TCP protocol).
 - [`docs/MCP.md`](docs/MCP.md): the MCP server for AI assistants (Claude Desktop / Code): setup, tools, resources, prompts, safety.
 - [`docs/MATTER.md`](docs/MATTER.md): the experimental Matter build (ESP32-S3): pairing with Google Home / Apple Home, commands, how to build it, what was and was not verified.
+- [`docs/MEMORY.md`](docs/MEMORY.md): the RAM of each chip measured on real boards, the Statistics card with the RAM of every interface, the `TASKS` command, and what was done for the ESP32-C3 (no PSRAM).
 - [`docs/WIRING.md`](docs/WIRING.md): hookup (MOSFET or direct), first test.
 - [`docs/ESP32-H2.md`](docs/ESP32-H2.md): the ESP32-H2 (no WiFi: USB serial + BLE only), what was checked about its power use, how to build it.
 - [`docs/INPUTS_AND_FRAMES.md`](docs/INPUTS_AND_FRAMES.md): inputs, format of all measured frames (radio, EQ, sound field, volume, power, mute), FM station list, calibration of the knob.

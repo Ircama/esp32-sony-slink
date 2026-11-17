@@ -36,6 +36,7 @@ extern "C" {
 #include "state.h"
 }
 #include "matter.h"
+#include "svcmem.h"
 
 static const char *TAG = "slink_matter";
 
@@ -210,6 +211,7 @@ static void report_task(void *)
 static void matter_task(void *)
 {
     ensure_codes();
+    svc_mark(SVC_MATTER);
     esp_matter::set_custom_commissionable_data_provider(&s_provider);
 
     node::config_t node_config;
@@ -234,6 +236,8 @@ static void matter_task(void *)
     s_fabrics = (int)chip::Server::GetInstance().GetFabricTable().FabricCount();
     s_running = true;
     if (s_fabrics == 0) for (int i = 0; i < 60 && !open_window(); i++) vTaskDelay(pdMS_TO_TICKS(500));   /* the server finishes its start in the background: try until it takes it */
+    vTaskDelay(pdMS_TO_TICKS(500));
+    svc_done(SVC_MATTER);                                      /* the RAM the Matter stack took (Statistics) */
     xTaskCreate(report_task, "slink_mtr_rep", 3072, NULL, 3, &s_report_task);
     vTaskDelete(NULL);
 }

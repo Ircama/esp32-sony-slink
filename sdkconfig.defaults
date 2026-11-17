@@ -27,6 +27,9 @@ CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
 # No automatic light sleep: the S-Link receiver needs the GPIO interrupt latency to stay in the microseconds.
 CONFIG_PM_ENABLE=y
 
+# TASKS command: the stack that each task never used (uxTaskGetSystemState)
+CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+
 # Web portal
 CONFIG_HTTPD_WS_SUPPORT=y
 CONFIG_LWIP_MAX_SOCKETS=16

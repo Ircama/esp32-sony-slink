@@ -115,6 +115,8 @@ size_t stats_json(char *b, size_t sz)
         P("\"wifi\":{\"rssi\":%d,\"ch\":%d,\"ip\":\"" IPSTR "\"},", ap.rssi, ap.primary, IP2STR(&ip.ip));
     } else P("\"wifi\":null,");
 
+    { char sv[340]; size_t sl = net_svc_json(sv, sizeof sv); if (sl) P("%s", sv); }       /* what each interface / function took */
+
     /* links */
     P("\"web\":%d,\"tcp\":%d,\"ble\":%d,\"bleConn\":%d,\"mqtt\":%d,\"mqttOk\":%d,",
       web_clients(), tcp_srv_clients(), g_set.ble, ble_nus_connected(), g_set.mqtt_uri[0] != 0, mqtt_bridge_connected());
