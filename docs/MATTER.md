@@ -31,7 +31,7 @@ Pairing: in the app add a Matter device and scan the QR code, or type the **manu
 - **Not certified.** The device uses the test vendor id `0xFFF1` and test attestation certificates, so Google Home and others show a warning ("uncertified device") when pairing. It is meant for personal use.
 - **Matter takes over Bluetooth.** Its commissioning uses the Bluetooth host, so while Matter is on the Bluetooth UART / the portal over Bluetooth (GitHub Pages) are off. WiFi, the portal, HTTPS, Hue, MQTT and the MCP server keep working.
 - **Reset loop guard.** If the last restart was a crash, Matter switches itself off (nobody has a USB cable on the amplifier): `MATTER ON` tries again.
-- **Memory.** Measured on the S3 with Matter on: free internal RAM 16 KB (minimum seen about 8 KB; the same build without Matter keeps about 39 KB), PSRAM 2 MB almost untouched. The image is 1.81 MB in a 1.97 MB slot (8 % free); the standard image is 1.53 MB. There is little room left on a 4 MB flash.
+- **Memory.** Measured on the S3 with Matter on: free internal RAM 22.7 KB (minimum seen 12.3 KB; the same build without Matter keeps about 39 KB), PSRAM 2 MB almost untouched. Matter makes many small allocations, so this build sends everything from 512 bytes up to the PSRAM (`CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=512` in `sdkconfig.defaults.matter`; the standard S3 build keeps 4096): that raised the free internal RAM from 16.0 to 22.7 KB and the minimum from 8.4 to 12.3 KB. The image is 1.81 MB in a 1.97 MB slot (8 % free); the standard image is 1.53 MB. There is little room left on a 4 MB flash.
 - Settings added: `matter` (on/off), `matter_max`, `matter_name`, and the random passcode and discriminator (not exported by `CFG`).
 
 ## Building
@@ -66,7 +66,7 @@ Verified on the real bridge (ESP32-S3 with PSRAM, WiFi + HTTPS + Hue + web porta
 
 - pairing with a real ecosystem (Google Home, Apple Home, Home Assistant ...);
 - that on/off and level really drive the amplifier through Matter, and the state reports back;
-- long-run stability and the memory margin (about 8 KB of internal RAM at the minimum) with a controller connected;
+- long-run stability and the memory margin (about 12 KB of internal RAM at the minimum) with a controller connected;
 - Wi-Fi behaviour when the controller reconfigures the network; the Matter stack and the bridge share the same WiFi connection.
 
 If you try it with a controller, `MATTER` shows the state and the number of ecosystems paired; the console `HELP` lists the commands.

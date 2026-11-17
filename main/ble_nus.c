@@ -158,9 +158,7 @@ static void json_task(void *arg)
             json_line(b, cli_favs_json(b, sizeof b - 2), sizeof b);
         }
         if (bits & J_NET) json_line(b, net_json_get(b, sizeof b - 2), sizeof b);
-#if SOC_WIFI_SUPPORTED
         if (bits & J_STATS) json_line(b, stats_json(b, sizeof b - 2), sizeof b);
-#endif
     }
 }
 

@@ -14,6 +14,8 @@
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include "esp_system.h"
+#include "esp_chip_info.h"
+#include "esp_app_desc.h"
 #include "net.h"
 #include "settings.h"
 #include "state.h"
@@ -85,9 +87,27 @@ bool mqtt_bridge_running(void) { return false; }
 bool mqtt_bridge_connected(void) { return false; }
 void mqtt_bridge_push(const char *json, size_t n) { (void)json; (void)n; }
 
+/* statistics for the Bluetooth page ("@GET stats"): the same fields as stats.c that make sense without WiFi, OTA and temperature sensor */
 size_t stats_json(char *b, size_t sz)
 {
-    return (size_t)snprintf(b, sz, "{\"t\":\"stats\",\"up\":%lld,\"chip\":\"esp32h2\",\"cpu\":%u,\"eco\":%d,\"heap\":%u,\"heapMin\":%u}",
-                            (long long)(esp_timer_get_time() / 1000000), (unsigned)esp_rom_get_cpu_ticks_per_us(), g_set.eco,
-                            (unsigned)esp_get_free_heap_size(), (unsigned)esp_get_minimum_free_heap_size());
+    esp_chip_info_t ci; esp_chip_info(&ci);
+    const esp_app_desc_t *ad = esp_app_get_description();
+    char bm[20] = "", bn[48] = "", dg[200] = "";
+    ble_nus_mac(bm, sizeof bm); snprintf(bn, sizeof bn, "%s", ble_nus_name()); ble_nus_diag(dg, sizeof dg);
+    const char *rs = "other";
+    switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: rs = "power-on"; break;   case ESP_RST_SW: rs = "software"; break;       case ESP_RST_PANIC: rs = "panic"; break;
+    case ESP_RST_INT_WDT: case ESP_RST_TASK_WDT: case ESP_RST_WDT: rs = "watchdog"; break;          case ESP_RST_BROWNOUT: rs = "brownout"; break;
+    default: break;
+    }
+    int n = snprintf(b, sz,
+        "{\"t\":\"stats\",\"inst\":0,\"slot\":\"-\",\"ostate\":\"unknown\",\"fimg\":0,\"fslot\":0,\"fflash\":0,\"up\":%lld,\"reset\":\"%s\",\"chip\":\"esp32h2\",\"rev\":%d,\"cores\":%d,"
+        "\"fw\":\"%.31s\",\"built\":\"%.15s %.8s\",\"idf\":\"%.31s\",\"temp\":null,"
+        "\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,\"psram\":0,\"psramFree\":0,\"psramMin\":0,"
+        "\"cpu\":%u,\"cpuMax\":%d,\"cpuMin\":%d,\"eco\":%d,\"twt\":0,\"twtMs\":0,\"host\":\"\",\"mac\":\"\",\"bleMac\":\"%s\",\"bleName\":\"%s\",\"bleDiag\":\"%s\"}",
+        (long long)(esp_timer_get_time() / 1000000), rs, ci.revision, ci.cores, ad->version, ad->date, ad->time, ad->idf_ver,
+        (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+        (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_total_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+        (unsigned)uxTaskGetNumberOfTasks(), (unsigned)esp_rom_get_cpu_ticks_per_us(), g_set.eco ? 48 : 96, g_set.eco ? 32 : 96, g_set.eco, bm, bn, dg);
+    return n > 0 && (size_t)n < sz ? (size_t)n : 0;
 }

@@ -3,6 +3,8 @@
 CONFIG_ENABLE_CHIP_SHELL=n
 CONFIG_ENABLE_OTA_REQUESTOR=n
 CONFIG_CUSTOM_COMMISSIONABLE_DATA_PROVIDER=y
+# Matter makes many small allocations: from 512 bytes up they go to the PSRAM (the S3 build default, sdkconfig.defaults.esp32s3, keeps 4096) so that the internal RAM does not run out
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=512
 
 
 #disable BT connection reattempt
