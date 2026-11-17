@@ -20,6 +20,8 @@ What takes the internal RAM, how to see it, and what was done on the chips that 
 
 What each interface took on the C3 (with the profile): Bluetooth 82 KB (it shares the radio with WiFi), WiFi 41 KB, web portal with HTTPS 42 KB, mDNS 5 KB. On the H2 the Bluetooth took 44 KB.
 
+Interfaces that start at the same time overlap in the measure: on the S3 Matter build the WiFi figure (131.6 KB internal + 12 KB PSRAM) includes part of what Matter (88.7 KB) takes during the seconds before the IP address arrives. With Matter on, that build had 32.0 KB free (minimum 25.6 KB) and 2.0 MB of PSRAM free.
+
 ## What was done
 
 - **ESP32-S3:** the 2 MB PSRAM takes every allocation of 4096 bytes or more (TLS, WiFi / lwIP buffers); the Matter build lowers that threshold to 512 bytes (free RAM 16.0 → 22.7 KB, minimum 8.4 → 12.3 KB). See [`MATTER.md`](MATTER.md).
