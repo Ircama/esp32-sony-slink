@@ -35,6 +35,11 @@ typedef struct {
     bool hue;               /* Philips Hue "bridge" (hue.c): the amplifier as a dimmable light for Alexa / Hue apps: on-off = power, brightness = volume. OFF by default */
     uint8_t hue_max;        /* ... volume at 100 % brightness, percent of the knob travel (default 30): the cap */
     char hue_name[33];      /* ... name of the light (empty = "Amplificatore") */
+    bool matter;            /* Matter (matter.cpp, only in the esp32s3-matter build): the amplifier as a dimmable light for Google Home / Apple Home ... OFF by default */
+    uint8_t matter_max;     /* ... volume at 100 % level, percent of the knob travel (default 30): the cap */
+    char matter_name[33];   /* ... name shown by the ecosystem app (empty = "Amplificatore") */
+    uint32_t matter_pass;   /* ... setup passcode: random, made at the first start (never the well-known test code) */
+    uint16_t matter_disc;   /* ... 12-bit discriminator, random */
     bool slinke_tx;         /* ... and they may send to the bus (otherwise the connection is a read-only monitor). OFF by default */
 } settings_t;
 

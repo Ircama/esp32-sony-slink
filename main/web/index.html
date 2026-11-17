@@ -846,6 +846,16 @@ body.hxon .hx{display:block}
             <label>Volume al 100% di luminosità (% della corsa)<input id="hueMaxIn" type="number" min="1" max="100" value="30"></label>
             <div class="row"><button class="btn sm" type="submit">Salva</button><span class="hint">Senza autenticazione: chiunque sulla rete può accendere e alzare il volume fino a questo limite.</span></div>
           </form>
+          <div id="mtrBox" hidden>
+            <div class="set"><div class="t"><b>Matter</b><span id="mtrSub">L'amplificatore come dispositivo Matter (Google Home, Apple Home...): accensione = alimentazione, livello = volume (con un tetto)</span></div><button class="sw" role="switch" aria-checked="false" id="swMtr" aria-label="Matter"></button></div>
+            <form class="form" id="mtrForm" autocomplete="off" style="margin:4px 0 10px">
+              <label>Nome nell'app<input id="mtrNameIn" maxlength="32" placeholder="Amplificatore"></label>
+              <label>Volume al 100% del livello (% della corsa)<input id="mtrMaxIn" type="number" min="1" max="100" value="30"></label>
+              <div class="row"><button class="btn sm" type="submit">Salva</button><span class="hint">Il volume non supera mai questo limite.</span></div>
+            </form>
+            <div class="set" id="mtrPair" hidden><div class="t"><b>Associazione</b><span id="mtrCodeTxt"></span></div></div>
+            <div class="row" id="mtrBtns" hidden style="margin:4px 0 10px"><button class="btn sm" id="mtrOpen">Apri associazione</button><button class="btn sm" id="mtrNew">Nuovo codice</button><button class="btn sm" id="mtrReset">Dimentica gli ecosistemi</button></div>
+          </div>
           <div class="set"><div class="t"><b>Interfaccia applicativa WiFi</b><span id="appSub">Console TCP (porta 2323) e MQTT per Home Assistant</span></div><button class="sw" role="switch" aria-checked="false" id="swApp" aria-label="Interfaccia applicativa WiFi"></button></div>
           <div class="set"><div class="t"><b>Protocollo Slink-e su TCP</b><span id="slkeSub">Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)</span></div><button class="sw" role="switch" aria-checked="false" id="swSlke" aria-label="Protocollo Slink-e su TCP"></button></div>
           <div class="set"><div class="t"><b>Slink-e: consenti l’invio sul bus</b><span id="slkeTxSub">Spento: la connessione è un monitor di sola lettura</span></div><button class="sw" role="switch" aria-checked="false" id="swSlkeTx" aria-label="Slink-e: consenti l’invio sul bus"></button></div>
@@ -1615,6 +1625,27 @@ const TRX = [
   ['Nome della luce', 'Name of the light', 'Nom de la lumière', 'Name des Lichts', 'Nombre de la luz'],
   ['Volume al 100% di luminosità (% della corsa)', 'Volume at 100% brightness (% of the knob travel)', 'Volume à 100 % de luminosité (% de la course)', 'Lautstärke bei 100 % Helligkeit (% des Drehwegs)', 'Volumen al 100 % de brillo (% del recorrido)'],
   ['Senza autenticazione: chiunque sulla rete può accendere e alzare il volume fino a questo limite.', 'No authentication: anyone on the network can switch it on and raise the volume up to this limit.', "Sans authentification : toute personne sur le réseau peut l'allumer et monter le volume jusqu'à cette limite.", 'Ohne Authentifizierung: jeder im Netzwerk kann einschalten und die Lautstärke bis zu dieser Grenze erhöhen.', 'Sin autenticación: cualquiera en la red puede encenderlo y subir el volumen hasta este límite.'],
+  ['Attivo · ecosistemi collegati: {f}', 'On · connected ecosystems: {f}', 'Actif · écosystèmes connectés : {f}', 'Aktiv · verbundene Ökosysteme: {f}', 'Activo · ecosistemas conectados: {f}'],
+  ['Acceso: parte al prossimo riavvio', 'On: starts at the next restart', 'Activé : démarre au prochain redémarrage', 'Ein: startet beim nächsten Neustart', 'Activado: arranca en el próximo reinicio'],
+  ['L\'amplificatore come dispositivo Matter (Google Home, Apple Home...): accensione = alimentazione, livello = volume (con un tetto)', 'The amplifier as a Matter device (Google Home, Apple Home...): on = power, level = volume (capped)', 'L\'amplificateur comme appareil Matter (Google Home, Apple Home...) : allumage = alimentation, niveau = volume (plafonné)', 'Der Verstärker als Matter-Gerät (Google Home, Apple Home...): Einschalten = Strom, Pegel = Lautstärke (begrenzt)', 'El amplificador como dispositivo Matter (Google Home, Apple Home...): encendido = alimentación, nivel = volumen (con tope)'],
+  ['Nome nell\'app', 'Name in the app', 'Nom dans l\'app', 'Name in der App', 'Nombre en la app'],
+  ['Volume al 100% del livello (% della corsa)', 'Volume at 100% level (% of the knob travel)', 'Volume à 100 % du niveau (% de la course)', 'Lautstärke bei 100 % Pegel (% des Drehwegs)', 'Volumen al 100 % del nivel (% del recorrido)'],
+  ['Il volume non supera mai questo limite.', 'The volume never goes above this limit.', 'Le volume ne dépasse jamais cette limite.', 'Die Lautstärke überschreitet diese Grenze nie.', 'El volumen nunca supera este límite.'],
+  ['Associazione', 'Pairing', 'Association', 'Kopplung', 'Emparejamiento'],
+  ['Codice di associazione: {c}', 'Pairing code: {c}', 'Code d\'association : {c}', 'Kopplungscode: {c}', 'Código de emparejamiento: {c}'],
+  ['Codice QR', 'QR code', 'Code QR', 'QR-Code', 'Código QR'],
+  ['Apri associazione', 'Open pairing', 'Ouvrir l\'association', 'Kopplung öffnen', 'Abrir emparejamiento'],
+  ['Nuovo codice', 'New code', 'Nouveau code', 'Neuer Code', 'Código nuevo'],
+  ['Dimentica gli ecosistemi', 'Forget the ecosystems', 'Oublier les écosystèmes', 'Ökosysteme vergessen', 'Olvidar los ecosistemas'],
+  ['Disattivare Matter?', 'Switch Matter off?', 'Désactiver Matter ?', 'Matter ausschalten?', '¿Desactivar Matter?'],
+  ['Attivare Matter?', 'Switch Matter on?', 'Activer Matter ?', 'Matter einschalten?', '¿Activar Matter?'],
+  ['Il dispositivo si riavvia. Con Matter attivo il Bluetooth serve solo all\'associazione: la console e il portale via Bluetooth non sono disponibili.', 'The device restarts. With Matter on, Bluetooth is only used for pairing: the console and the portal over Bluetooth are not available.', 'L\'appareil redémarre. Avec Matter actif, le Bluetooth ne sert qu\'à l\'association : la console et le portail par Bluetooth ne sont pas disponibles.', 'Das Gerät startet neu. Mit Matter dient Bluetooth nur der Kopplung: Konsole und Portal über Bluetooth sind nicht verfügbar.', 'El dispositivo se reinicia. Con Matter activo, el Bluetooth solo sirve para emparejar: la consola y el portal por Bluetooth no están disponibles.'],
+  ['Attiva', 'Switch on', 'Activer', 'Einschalten', 'Activar'],
+  ['Nuovo codice di associazione?', 'New pairing code?', 'Nouveau code d\'association ?', 'Neuer Kopplungscode?', '¿Código de emparejamiento nuevo?'],
+  ['Vale dal prossimo riavvio. Gli ecosistemi già collegati continuano a funzionare.', 'It applies from the next restart. Ecosystems already paired keep working.', 'Valable au prochain redémarrage. Les écosystèmes déjà associés continuent de fonctionner.', 'Gilt ab dem nächsten Neustart. Bereits gekoppelte Ökosysteme funktionieren weiter.', 'Vale desde el próximo reinicio. Los ecosistemas ya emparejados siguen funcionando.'],
+  ['Dimenticare tutti gli ecosistemi?', 'Forget all ecosystems?', 'Oublier tous les écosystèmes ?', 'Alle Ökosysteme vergessen?', '¿Olvidar todos los ecosistemas?'],
+  ['Google Home, Apple Home e gli altri dovranno associare di nuovo il dispositivo. Il dispositivo si riavvia.', 'Google Home, Apple Home and the others will have to pair the device again. The device restarts.', 'Google Home, Apple Home et les autres devront associer à nouveau l\'appareil. L\'appareil redémarre.', 'Google Home, Apple Home und die anderen müssen das Gerät neu koppeln. Das Gerät startet neu.', 'Google Home, Apple Home y los demás tendrán que emparejar de nuevo el dispositivo. El dispositivo se reinicia.'],
+  ['Dimentica', 'Forget', 'Oublier', 'Vergessen', 'Olvidar'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -2795,6 +2826,21 @@ function renderNet() {
   set('#swBle', n.ble); set('#swWeb', n.web); set('#swApp', n.app); set('#swEco', n.eco); set('#swSlke', n.slke); set('#swSlkeTx', n.slkeTx); set('#swHttps', n.https); set('#swHue', n.hue);
   { const hn = $('#hueNameIn'), hm = $('#hueMaxIn'); if (hn && document.activeElement !== hn) hn.value = n.hueName || ''; if (hm && document.activeElement !== hm) hm.value = n.hueMax || 30;
     $('#hueSub').textContent = n.hue ? tr('Attiva: chiedi ad Alexa di cercare i dispositivi · luce «{n}»', { n: n.hueName || 'Amplificatore' }) : tr("L'amplificatore come luce: accensione = alimentazione, luminosità = volume (con un tetto)"); }
+  { const mb = $('#mtrBox');
+    if (mb) {
+      mb.hidden = !n.mtrAvail;
+      if (n.mtrAvail) {
+        set('#swMtr', n.mtr);
+        const mn = $('#mtrNameIn'), mm = $('#mtrMaxIn'); if (document.activeElement !== mn) mn.value = n.mtrName || ''; if (document.activeElement !== mm) mm.value = n.mtrMax || 30;
+        $('#mtrSub').textContent = n.mtrRun ? tr('Attivo · ecosistemi collegati: {f}', { f: n.mtrFab || 0 }) : n.mtr ? tr('Acceso: parte al prossimo riavvio') : tr("L'amplificatore come dispositivo Matter (Google Home, Apple Home...): accensione = alimentazione, livello = volume (con un tetto)");
+        const cd = $('#mtrCodeTxt'); $('#mtrPair').hidden = !(n.mtrRun && n.mtrCode); $('#mtrBtns').hidden = !n.mtrRun;
+        if (n.mtrRun && n.mtrCode) {
+          const c = String(n.mtrCode).replace(/^(\d{4})(\d{3})(\d+)$/, '$1-$2-$3');
+          cd.textContent = tr('Codice di associazione: {c}', { c }) + ' · ';
+          if (n.mtrQr) { const a = document.createElement('a'); a.href = 'https://project-chip.github.io/connectedhomeip/qrcode.html?data=' + encodeURIComponent(n.mtrQr); a.target = '_blank'; a.rel = 'noopener'; a.textContent = tr('Codice QR'); cd.appendChild(a); }
+        }
+      }
+    } }
   $('#httpsSub').textContent = n.https ? tr('Attivo · porta 443') : tr('Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)');
   $('#httpsCaRow').hidden = !n.https;
   $('#slkeSub').textContent = n.slke ? tr('Attivo · porta 2325 · {n} client', { n: n.slkeN || 0 }) : tr('Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)');
@@ -2927,6 +2973,14 @@ function wire() {
   toggle('#swSlkeTx', 'SLINKETX', "l'invio Slink-e");
   toggle('#swHue', 'HUE', 'Philips Hue');
   $('#hueForm').onsubmit = e => { e.preventDefault(); const v = $('#hueNameIn').value.trim().replace(/["\\]/g, ''); cmd('HUE NAME ' + (v ? '"' + v + '"' : '""')); setTimeout(() => cmd('HUE MAX ' + Math.max(1, Math.min(100, +$('#hueMaxIn').value || 30)), { ack: true }), 400); setTimeout(() => cmd('NET', { auto: true }), 900); };
+  $('#swMtr').onclick = async () => {
+    const on = $('#swMtr').getAttribute('aria-checked') === 'true';
+    if (await confirmDlg(on ? 'Disattivare Matter?' : 'Attivare Matter?', 'Il dispositivo si riavvia. Con Matter attivo il Bluetooth serve solo all\'associazione: la console e il portale via Bluetooth non sono disponibili.', on ? 'Disattiva' : 'Attiva')) cmd('MATTER ' + (on ? 'OFF' : 'ON'), { ack: true });
+  };
+  $('#mtrForm').onsubmit = e => { e.preventDefault(); const v = $('#mtrNameIn').value.trim().replace(/["\\]/g, ''); cmd('MATTER NAME ' + (v ? '"' + v + '"' : '""')); setTimeout(() => cmd('MATTER MAX ' + Math.max(1, Math.min(100, +$('#mtrMaxIn').value || 30)), { ack: true }), 400); setTimeout(() => cmd('NET', { auto: true }), 900); };
+  $('#mtrOpen').onclick = () => cmd('MATTER OPEN', { ack: true });
+  $('#mtrNew').onclick = async () => { if (await confirmDlg('Nuovo codice di associazione?', 'Vale dal prossimo riavvio. Gli ecosistemi già collegati continuano a funzionare.', 'Nuovo codice')) cmd('MATTER NEWCODE', { ack: true }); };
+  $('#mtrReset').onclick = async () => { if (await confirmDlg('Dimenticare tutti gli ecosistemi?', 'Google Home, Apple Home e gli altri dovranno associare di nuovo il dispositivo. Il dispositivo si riavvia.', 'Dimentica')) cmd('MATTER RESET', { ack: true }); };
   toggle('#swHttps', 'HTTPS', 'il portale HTTPS', 'Se stai usando questa pagina via https si spegnerà. Potrai riattivare HTTPS con il comando HTTPS ON da USB, BLE o TCP.');
   toggle('#swWeb', 'WEB', 'il portale web', 'Questa pagina si spegnerà. Potrai riattivarla con il comando WEB ON da USB, BLE o TCP.');
   const q = s => '"' + s.replace(/"/g, '') + '"';
@@ -3547,7 +3601,7 @@ function demoCmd(line) {
   else if (a === 'PRESETS') { setTimeout(() => say('OK 10 presets read'), 800); return; }
   else if (a === 'STATUS' || a === 'EQ' || a === 'NET') { say('OK ' + a.toLowerCase() + ' requested'); }
   else if (a === 'ECO') { S.net.eco = b === 'OFF' ? 0 : 1; }
-  else if (['DEV', 'REPEAT', 'GAP', 'DECODE', 'LOOPBACK', 'SLINK', 'LED', 'HTTPS', 'HUE'].includes(a)) { say('OK ' + a.toLowerCase()); }
+  else if (['DEV', 'REPEAT', 'GAP', 'DECODE', 'LOOPBACK', 'SLINK', 'LED', 'HTTPS', 'HUE', 'MATTER'].includes(a)) { say('OK ' + a.toLowerCase()); }
   else if (a === 'LINE') { say('LINE 1'); return; }
   else if (a === 'FAV') {
     if (b === 'ADD') { const t = S.tuner, am = t.band === 'AM'; if (S.favs.some(v => !!v.am === am && v.f === t.f)) return say('OK fav already 1');

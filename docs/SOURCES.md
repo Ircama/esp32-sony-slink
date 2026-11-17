@@ -67,6 +67,8 @@ Read and set aside: nothing to add to the decoder.
 |---|---|---|
 | [Model Context Protocol](https://modelcontextprotocol.io) (specification 2025-06-18) | the protocol AI assistants use to call tools and read resources | `tools/mcp_slink.py` (see [`MCP.md`](MCP.md)): lifecycle, tools, resources and subscriptions, prompts, stdio and Streamable HTTP |
 | Philips Hue API v1 and the SSDP discovery of Hue bridges | what Alexa and the Hue apps speak locally | the Hue emulation (`main/hue.c`) |
+| [esp-matter](https://github.com/espressif/esp-matter) (release/v1.6.1) and its [component registry page](https://components.espressif.com/components/espressif/esp_matter) | Espressif's Matter SDK on top of the Matter reference implementation (connectedhomeip); recommends ESP-IDF 6.0.2, builds on Linux / WSL only | the experimental Matter build (`main/matter.cpp`, [`MATTER.md`](MATTER.md)); it built unchanged on ESP-IDF 6.1 |
+| [rs-matter](https://github.com/project-chip/rs-matter) and [esp-idf-matter](https://github.com/ivmarkov/esp-idf-matter) | a Matter stack in Rust (`no_std`), with its ESP-IDF glue (BLE commissioning, `light_wifi` example) | the alternative to esp-matter; the toolchain was installed, not tried |
 
 ## Not readable
 

@@ -17,6 +17,7 @@
 #include "esp_mac.h"
 #include "lwip/sockets.h"
 #include "net.h"
+#include "matter.h"
 #include "settings.h"
 #include "state.h"
 #include "cli.h"
@@ -100,7 +101,7 @@ static void notify(uint32_t bits)
     if (s_task) xTaskNotify(s_task, bits, eSetBits);
 }
 
-void net_notify_state(void) { notify(NB_STATE); ble_nus_state_changed(); }
+void net_notify_state(void) { notify(NB_STATE); ble_nus_state_changed(); matter_report(); }
 void net_notify_ws_client(void) { notify(NB_WS); }
 
 static void rc_timer_cb(void *arg)
@@ -238,7 +239,7 @@ void net_apply(void)
     xSemaphoreTake(s_mtx, portMAX_DELAY);
 
     power_apply();
-    if (g_set.ble) ble_nus_start(); else ble_nus_stop();
+    if (g_set.ble && !(g_set.matter && matter_available())) ble_nus_start(); else ble_nus_stop();   /* Matter has the Bluetooth host (commissioning) */
 
     bool want_wifi = NET_WANTED && g_set.ssid[0];
     wifi_apply(want_wifi);
@@ -272,7 +273,7 @@ void net_status(char *b, size_t n)
         int rssi = esp_wifi_sta_get_ap_info(&ap) == ESP_OK ? ap.rssi : 0;
         P("WIFI  \"%s\" connected, IP " IPSTR ", RSSI %d dBm, host %s.local%s%s\r\n", g_set.ssid, IP2STR(&s_ip), rssi, g_set.host, s_dns_name[0] ? ", DNS name " : "", s_dns_name);
     } else P("WIFI  \"%s\" connecting...\r\n", g_set.ssid);
-    P("BLE   %s%s\r\n", g_set.ble ? "ON" : "OFF", g_set.ble ? (ble_nus_connected() ? ", client connected" : ", advertising as S-Link-xxxx") : "");
+    P("BLE   %s%s\r\n", g_set.ble ? "ON" : "OFF", !g_set.ble ? "" : (g_set.matter && matter_available()) ? ", taken by Matter (pairing only)" : ble_nus_connected() ? ", client connected" : ", advertising as S-Link-xxxx");
     if (g_set.web) {
         if (s_have_ip) P("WEB   ON  http://" IPSTR "/  http://%s.local/\r\n", IP2STR(&s_ip), g_set.host);
         else P("WEB   ON  (waiting for WiFi)\r\n");
@@ -326,6 +327,7 @@ static size_t net_json(char *b, size_t sz)
     P(",\"mqttUser\":"); J(g_set.mqtt_user);
     P(",\"mqttOk\":%d,\"tcp\":%d,\"slke\":%d,\"slkeTx\":%d,\"slkeN\":%d,\"https\":%d,\"hue\":%d,\"hueMax\":%d,\"hueName\":", mqtt_bridge_connected(), tcp_srv_clients(), g_set.slinke, g_set.slinke_tx, slinke_clients(), g_set.https && web_https_running(), g_set.hue, g_set.hue_max ? g_set.hue_max : 30);
     J(g_set.hue_name);
+    if (matter_available()) { char mj[420]; size_t ml = matter_json(mj, sizeof mj); if (ml) P("%s", mj); }
     P("}");
     #undef P
     #undef J

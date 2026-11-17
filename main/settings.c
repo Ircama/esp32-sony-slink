@@ -58,6 +58,10 @@ void settings_load(void)
     if (nvs_get_u8(h, "hue", &v) == ESP_OK) g_set.hue = v;
     g_set.hue_max = 30; if (nvs_get_u8(h, "huemax", &v) == ESP_OK && v >= 1 && v <= 100) g_set.hue_max = v;
     get_str(h, "huen", g_set.hue_name, sizeof g_set.hue_name, "");
+    if (nvs_get_u8(h, "mtr", &v) == ESP_OK) g_set.matter = v;
+    g_set.matter_max = 30; if (nvs_get_u8(h, "mtrmax", &v) == ESP_OK && v >= 1 && v <= 100) g_set.matter_max = v;
+    get_str(h, "mtrn", g_set.matter_name, sizeof g_set.matter_name, "");
+    { uint32_t u = 0; uint16_t d = 0; if (nvs_get_u32(h, "mtrpin", &u) == ESP_OK) g_set.matter_pass = u; if (nvs_get_u16(h, "mtrdsc", &d) == ESP_OK) g_set.matter_disc = d; }
     nvs_close(h);
 }
 
@@ -99,6 +103,11 @@ void settings_save(void)
     nvs_set_u8(h, "hue", g_set.hue);
     nvs_set_u8(h, "huemax", g_set.hue_max);
     nvs_set_str(h, "huen", g_set.hue_name);
+    nvs_set_u8(h, "mtr", g_set.matter);
+    nvs_set_u8(h, "mtrmax", g_set.matter_max);
+    nvs_set_str(h, "mtrn", g_set.matter_name);
+    nvs_set_u32(h, "mtrpin", g_set.matter_pass);
+    nvs_set_u16(h, "mtrdsc", g_set.matter_disc);
     nvs_commit(h);
     nvs_close(h);
 }

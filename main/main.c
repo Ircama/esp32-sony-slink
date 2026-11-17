@@ -3,6 +3,7 @@
 #include "slink.h"
 #include "cli.h"
 #include "net.h"
+#include "matter.h"
 #include "settings.h"
 #include "soc/soc_caps.h"
 #if SOC_WIFI_SUPPORTED
@@ -19,6 +20,7 @@ void app_main(void)
     }
     cli_start_rx();
     net_init();             /* BLE / WiFi / web / app interface, as saved in the settings */
+    matter_start();         /* Matter, in the build that has it and when MATTER is on */
 #if SOC_WIFI_SUPPORTED
     ota_confirm_start();    /* a firmware installed over the air must prove itself, or the bootloader goes back to the previous one */
 #endif
