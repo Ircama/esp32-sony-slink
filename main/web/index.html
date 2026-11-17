@@ -424,7 +424,8 @@ body.ble .bleonly{display:block}
 .sk.cust{background:conic-gradient(#e0524d,#e8b13c,#5fc088,#4aa3e0,#a478e0,#e0524d);overflow:hidden}
 .sk.cust input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
 .set{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:13px 0;border-top:1px solid var(--line)}
-.ro-card{opacity:.62}
+.ro-card{opacity:.62;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#tab-set.unlocking .ro-card{opacity:.85;transition:opacity .7s}
 .ro-card .set,.ro-card .row{pointer-events:none}
 .set:first-of-type{border-top:0;padding-top:2px}
 .set .t{flex:1 1 210px;min-width:0}
@@ -439,7 +440,8 @@ body.ble .bleonly{display:block}
 .form input,.form select{height:42px;border-radius:var(--r-sm);border:1px solid var(--line2);background:var(--surface2);padding:0 13px;font-weight:400;color:var(--text)}
 .form input:focus{border-color:var(--accent);outline:none}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13.5px}
-.kv dt{color:var(--text3)} .kv dd{margin:0;word-break:break-all}
+.kv dt{color:var(--text3);overflow-wrap:anywhere} .kv dd{margin:0;word-break:break-all}
+@media (max-width:520px){.kv{grid-template-columns:1fr;gap:1px 0}.kv dt{margin-top:7px}.kv dt:first-child{margin-top:0}}
 code{font:12.5px var(--mono);background:var(--surface2);border:1px solid var(--line);padding:1px 6px;border-radius:6px}
 
 /* toast + dialog */
@@ -833,7 +835,7 @@ body.hxon .hx{display:block}
     <section class="tab" id="tab-set" role="tabpanel">
       <div class="grid two">
         <div class="card span2" id="editBar">
-          <div class="set"><div class="t"><b>Modifica</b><span>Le impostazioni sono in sola lettura: attiva la modifica per cambiarle</span></div><button class="sw" role="switch" aria-checked="false" id="editSw" aria-label="Modifica"></button></div>
+          <div class="set"><div class="t"><b>Modifica</b><span>Le impostazioni sono in sola lettura: attiva la modifica, o tieni premuto un controllo, per cambiarle</span></div><button class="sw" role="switch" aria-checked="false" id="editSw" aria-label="Modifica"></button></div>
         </div>
         <div class="card">
           <h2>Interfacce</h2>
@@ -1323,6 +1325,8 @@ const TRX = [
   ['Ogni quanti beacon (~100 ms) la radio si sveglia; più alto = meno consumo, comandi più lenti', 'How many beacons (~100 ms) the radio sleeps through; higher = less consumption, slower commands', 'Nombre de balises (~100 ms) pendant lesquelles la radio dort ; plus haut = moins de consommation, commandes plus lentes', 'Wie viele Beacons (~100 ms) das Funkmodul schläft; höher = weniger Verbrauch, langsamere Befehle', 'Cuántos beacons (~100 ms) duerme la radio; más alto = menos consumo, comandos más lentos'],
   ['Valori in dBm. Sono applicati subito e salvati; il WiFi potrebbe riconnettersi per qualche secondo.', 'Values in dBm. They are applied at once and saved; the WiFi may reconnect for a few seconds.', 'Valeurs en dBm. Elles sont appliquées immédiatement et enregistrées ; le WiFi peut se reconnecter quelques secondes.', 'Werte in dBm. Sie werden sofort angewendet und gespeichert; das WLAN verbindet sich ggf. kurz neu.', 'Valores en dBm. Se aplican de inmediato y se guardan; el WiFi puede reconectarse unos segundos.'],
   ['Modifica', 'Edit', 'Modifier', 'Bearbeiten', 'Editar'],
+  ['Modifica sbloccata', 'Editing unlocked', 'Modification déverrouillée', 'Bearbeiten freigeschaltet', 'Edición desbloqueada'],
+  ['Le impostazioni sono in sola lettura: attiva la modifica, o tieni premuto un controllo, per cambiarle', 'Settings are read-only: turn on editing, or press and hold a control, to change them', 'Les réglages sont en lecture seule : activez la modification, ou maintenez appuyé un contrôle, pour les changer', 'Die Einstellungen sind schreibgeschützt: Bearbeiten einschalten oder ein Bedienelement gedrückt halten, um sie zu ändern', 'Los ajustes son de solo lectura: activa la edición, o mantén pulsado un control, para cambiarlos'],
   ['Le impostazioni sono in sola lettura: attiva la modifica per cambiarle', 'Settings are read-only: turn on editing to change them', 'Les réglages sont en lecture seule : activez la modification pour les changer', 'Die Einstellungen sind schreibgeschützt: Bearbeiten aktivieren, um sie zu ändern', 'Los ajustes son de solo lectura: activa la edición para cambiarlos'],
   ["A = audio, V = Video. Audio: {a} · Video: {v}. Toccando una sorgente video una volta si mantiene il precedente audio. Toccandola nuovamente si ottiene A+V.", "A = audio, V = Video. Audio: {a} · Video: {v}. Tapping a video source once keeps the previous audio. Tapping it again gives A+V.", "A = audio, V = vidéo. Audio : {a} · Vidéo : {v}. Toucher une source vidéo une fois conserve l'audio précédent. La toucher à nouveau donne A+V.", "A = Audio, V = Video. Audio: {a} · Video: {v}. Einmaliges Antippen einer Videoquelle behält den bisherigen Ton. Erneutes Antippen ergibt A+V.", "A = audio, V = vídeo. Audio: {a} · Vídeo: {v}. Al tocar una fuente de vídeo una vez se mantiene el audio anterior. Al tocarla de nuevo se obtiene A+V."],
   ["A = audio, V = Video. Per separarli scegli prima una sorgente solo audio (Tuner, Phono, CD, MD, Tape): le sorgenti video portano con sé anche l'audio.", "A = audio, V = Video. To split them first choose an audio-only source (Tuner, Phono, CD, MD, Tape): video sources bring their audio with them.", "A = audio, V = vidéo. Pour les séparer, choisissez d'abord une source audio seule (Tuner, Phono, CD, MD, Tape) : les sources vidéo emportent aussi l'audio.", "A = Audio, V = Video. Zum Trennen zuerst eine reine Audioquelle wählen (Tuner, Phono, CD, MD, Tape): Videoquellen bringen ihren Ton mit.", "A = audio, V = vídeo. Para separarlos elige primero una fuente solo de audio (Tuner, Phono, CD, MD, Tape): las fuentes de vídeo traen también su audio."],
@@ -4247,6 +4251,16 @@ function applyHide() {
 function scheduleHide() { if (hxTimer) return; hxTimer = setTimeout(() => { hxTimer = 0; applyHide(); }, 120); }
 function initUiOptions() {
   $('#editSw').onclick = () => { const e = $('#editSw'); e.setAttribute('aria-checked', e.getAttribute('aria-checked') !== 'true'); applyEdit(); };
+  /* While the settings are read-only (their cards are inert), holding the finger or the mouse on any control for 0.7 s switches the editing on. The inert cards do not get the
+   * events, so they are caught on the tab itself; a movement of more than 12 px (a scroll) cancels it. */
+  { const tab = $('#tab-set'); let lt = null, sx = 0, sy = 0;
+    const locked = () => $('#editSw').getAttribute('aria-checked') !== 'true';
+    const cancel = () => { clearTimeout(lt); lt = null; tab.classList.remove('unlocking'); };
+    tab.addEventListener('pointerdown', e => { if (!locked() || e.target.closest('#editBar')) return; sx = e.clientX; sy = e.clientY; tab.classList.add('unlocking');
+      lt = setTimeout(() => { lt = null; tab.classList.remove('unlocking'); if (!locked()) return; $('#editSw').setAttribute('aria-checked', 'true'); applyEdit(); try { if (navigator.vibrate) navigator.vibrate(30); } catch (_) {} toast(tr('Modifica sbloccata')); }, 700); });
+    tab.addEventListener('pointermove', e => { if (lt && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) cancel(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => tab.addEventListener(t, cancel));
+    tab.addEventListener('contextmenu', e => { if (locked()) e.preventDefault(); }); }
   applyEdit();
   const sw = (id, key) => { $(id).onclick = () => { UI[key] = UI[key] ? 0 : 1; saveUI(); applyUI(); if (key === 'codes') render(); }; };
   sw('#uoAllOff', 'allOff'); sw('#uoCodes', 'codes'); sw('#uoQuick', 'quick'); sw('#uoKmode', 'kmode'); sw('#uoVchips', 'vchips'); sw('#uoHx', 'hx');
