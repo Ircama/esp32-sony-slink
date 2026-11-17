@@ -4,12 +4,16 @@ A modern web application for comfortable, intuitive control of a **Sony STR-DA50
 
 The portal is a **Progressive Web App (PWA)**: open it in a browser, or **install it as an app** on an Android phone (or on a PC) with its own icon and name, full screen, no browser bars, that opens at once and still starts, showing the last known state, when the device does not answer. Installing needs a secure connection: enable the optional HTTPS, whose certificate comes from a private authority the device makes by itself, and register that certificate once on the phone ([HTTPS and installing the app](#https-and-installing-the-app)). The name of the installed app is a setting.
 
+A second PWA, the **Bluetooth page** (<https://ircama.github.io/esp32-sony-slink/ble.html>, hosted on GitHub Pages), is the same interface over Web Bluetooth for boards without WiFi (the **ESP32-H2**) or with the portal off: it installs as an app of its own (with a name you choose, so it can be told apart from the WiFi one), remembers the devices it has used, lets you switch between them with a long press on the title bar and can be protected by a Bluetooth password.
+
 Beyond the amplifier, the firmware (written in C with ESP-IDF) implements the S-Link / Control-A1 protocol broadly: it decodes bus traffic in real time and handles the other device types on the bus, such as the tuner, CD players and changers and MiniDisc recorders (the Jukebox tab; those are implemented from published documentation and have not been tried on real units). Everything is exposed through several interfaces:
 
 - **Web Portal:** A modern, embedded web app for full device control, inspired by the Sony RM-TP501 remote (reference remotes: RM-TP501, RM-TP501E, RM-TP502, RM-TP503, RM-TP504 and RM-TP1).
 - **REST & WebSocket API:** For custom integrations and real-time state updates.
 - **MQTT:** Native integration with automatic Home Assistant discovery.
-- **Bluetooth LE:** Wireless control via the Nordic UART Service.
+- **Bluetooth LE:** Wireless control via the Nordic UART Service, with an optional password.
+- **Bluetooth page (PWA):** the web interface over Web Bluetooth, from GitHub Pages, installable as an app.
+- **Voice assistants and AI:** a **Philips Hue** emulation (Alexa), an experimental **Matter** build for the ESP32-S3 (Google Home, Apple Home, Home Assistant ...), and an **MCP server** for AI assistants.
 - **Raw TCP Console:** Direct text-based command interface over the network.
 - **USB Serial:** Direct local connection for logging and commands.
 
@@ -34,14 +38,18 @@ Beyond the amplifier, the firmware (written in C with ESP-IDF) implements the S-
 - **MQTT** client with automatic **Home Assistant** discovery (power, mute, input, sound field, volume, FM frequency, station name, signal level).
 - **Raw TCP console** (port 2323), same text protocol as USB.
 - **Slink-e protocol on TCP** (port 2325) so programs written for the Nirvis Slink-e interface can use the bridge; read-only by default.
-- **Bluetooth LE** UART (Nordic UART Service), **USB serial** (USB Serial/JTAG) always available for logging and commands.
+- **Bluetooth LE** UART (Nordic UART Service) with an optional **password** (`BLEPASS`: a challenge, the password never travels), **USB serial** (USB Serial/JTAG) always available for logging and commands.
+- **Bluetooth page, a PWA of its own** (`ble.html` on GitHub Pages): the same interface over Web Bluetooth for boards without WiFi or with the portal off; installable as an app with its own name, it remembers the devices (one tap to reconnect), a long press on the title bar lists them to switch, reset and add devices, and it asks for the Bluetooth password once. See [The portal over Bluetooth](#the-portal-over-bluetooth-github-pages).
+- **Matter** (experimental, ESP32-S3 build): the amplifier as a Matter dimmable light (on-off = power, level = volume, capped) for Google Home, Apple Home, SmartThings, Home Assistant; random pairing code, QR / manual code in the portal. Built with esp-matter on ESP-IDF 6.1; not yet paired with a real controller. See [`docs/MATTER.md`](docs/MATTER.md).
+- **Philips Hue emulation** for Alexa (an Echo with Hue support) and Hue apps: on-off = power, brightness = volume up to a cap. See [Philips Hue](#philips-hue-alexa).
+- **MCP server** (`tools/mcp_slink.py`, on a computer) for AI assistants such as Claude Desktop / Code: tools, resources and prompts, with a volume cap and blocked commands. See [`docs/MCP.md`](docs/MCP.md).
 - WiFi client (WPA2/WPA3) configured over USB or BLE; **power saving** profile (modem sleep, 20 MHz channel, reduced TX power, Target Wake Time on WiFi 6 chips) on by default.
 
 **Maintenance**
 - **Over-the-air update** with two firmware slots, automatic rollback, optional upload password, pull from GitHub releases or push from a computer; both off or user-triggered by default (see [Firmware update over WiFi](#firmware-update-over-wifi-ota)).
 - Settings kept in flash (NVS); **backup and restore** of the amplifier configuration, the bridge's data and the browser preferences in one JSON file.
-- Statistics page: uptime, reset reason, chip temperature, memory, WiFi quality, clients, S-Link counters.
-- Every interface is **opt-in**: web, TCP console, MQTT, Slink-e, BLE, push update and sending from Slink-e are off until enabled; the network interfaces have no authentication, so use them only on a trusted network (see *Security* below).
+- Statistics page: uptime, reset reason, chip temperature, internal RAM and PSRAM, the RAM each interface took (measured when it started), the protocol this page is reached with (HTTP, HTTPS or Bluetooth LE), WiFi quality, clients, S-Link counters; the `TASKS` command lists the tasks with what they do and their stack margin. See [`docs/MEMORY.md`](docs/MEMORY.md).
+- Every interface is **opt-in**: web, HTTPS, TCP console, MQTT, Slink-e, Hue, Matter, BLE, push update and sending from Slink-e are off until enabled; the network interfaces have no authentication, so use them only on a trusted network (see *Security* below).
 - Builds for ESP32-C3, S3, C6, C5 and H2 (the H2 has no WiFi: USB and BLE only); GitHub Actions builds every chip and publishes releases.
 
 ## Build and flash

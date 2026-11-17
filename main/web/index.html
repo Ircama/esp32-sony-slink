@@ -1701,6 +1701,12 @@ const TRX = [
   ['Rimuovi', 'Remove', 'Retirer', 'Entfernen', 'Quitar'],
   ['Il dispositivo {n} chiede la password.', 'The device {n} asks for the password.', 'L\'appareil {n} demande le mot de passe.', 'Das Gerät {n} verlangt das Passwort.', 'El dispositivo {n} pide la contraseña.'],
   ['Password errata', 'Wrong password', 'Mot de passe erroné', 'Falsches Passwort', 'Contraseña incorrecta'],
+  ['Accesso a questa pagina', 'How this page is reached', 'Accès à cette page', 'Zugriff auf diese Seite', 'Acceso a esta página'],
+  ['Demo (nessun dispositivo)', 'Demo (no device)', 'Démo (aucun appareil)', 'Demo (kein Gerät)', 'Demo (sin dispositivo)'],
+  ['Bluetooth LE (Web Bluetooth, Nordic UART)', 'Bluetooth LE (Web Bluetooth, Nordic UART)', 'Bluetooth LE (Web Bluetooth, Nordic UART)', 'Bluetooth LE (Web Bluetooth, Nordic UART)', 'Bluetooth LE (Web Bluetooth, Nordic UART)'],
+  ['HTTPS (TLS) · WebSocket sicuro (wss)', 'HTTPS (TLS) · secure WebSocket (wss)', 'HTTPS (TLS) · WebSocket sécurisé (wss)', 'HTTPS (TLS) · sicheres WebSocket (wss)', 'HTTPS (TLS) · WebSocket seguro (wss)'],
+  ['HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)'],
+  ['intervallo {x} ms', 'interval {x} ms', 'intervalle {x} ms', 'Intervall {x} ms', 'intervalo {x} ms'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -2889,6 +2895,12 @@ function svcRows(list) {
   if (rows.length) rows.push(['Totale interfacce attive', fmtKb(tot) + (totp ? ' + ' + fmtKb(totp) + ' PSRAM' : '')]);
   return rows;
 }
+/* the way this page reaches the device: Bluetooth LE (the page of GitHub Pages), HTTPS or HTTP (+ WebSocket), or the demo */
+function accessProto(j) {
+  if (DEMO) return tr('Demo (nessun dispositivo)');
+  if (BLEMODE) { const m = /interval ([\d.]+) ms/.exec((j && j.bleDiag) || ''); return tr('Bluetooth LE (Web Bluetooth, Nordic UART)') + (m && +m[1] > 0 ? ' · ' + tr('intervallo {x} ms', { x: m[1] }) : ''); }
+  return tr(location.protocol === 'https:' ? 'HTTPS (TLS) · WebSocket sicuro (wss)' : 'HTTP · WebSocket (ws)') + ' · ' + location.host;
+}
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
   kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', fmtBleDiag(j.bleDiag)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
@@ -2898,7 +2910,7 @@ function renderStats(j) {
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);
   kvRows('#stSvc', svcRows(j.svc));
-  kvRows('#stConn', [['Client web', j.web], ['Client TCP', j.tcp], ['BLE', j.ble ? (j.bleConn ? tr('connesso') : tr('attivo')) : tr('spento')],
+  kvRows('#stConn', [['Accesso a questa pagina', accessProto(j)], ['Client web', j.web], ['Client TCP', j.tcp], ['BLE', j.ble ? (j.bleConn ? tr('connesso') : tr('attivo')) : tr('spento')],
     ['MQTT', j.mqtt ? (j.mqttOk ? tr('connesso') : tr('in connessione…')) : tr('non configurato')]]);
   kvRows('#stBus', [['Fronti rilevati', j.bus.edges], ['Sincronismi', j.bus.syncs], ['Bit ricevuti', j.bus.bits], ['Frame ricevuti', j.bus.frames], ['Linea', tr(j.bus.level ? 'a riposo (alta)' : 'bassa')], ['Pin GPIO del bus', j.gpio >= 0 ? j.gpio : '—'], ['Intervallo minimo tra i frame', j.gap + ' ms'], ['Loopback', tr(j.loop ? 'On' : 'Off')], ['Impulsi lunghi (>6 ms)', (j.bus.long || 0) + (j.bus.long ? ' (max ' + (j.bus.longMax / 1000).toFixed(1) + ' ms)' : '')]]);
   kvRows('#stPow', [['Modalità risparmio', tr(j.eco ? 'On' : 'Off')], ['Frequenza CPU', j.cpu + ' MHz' + (j.cpuMax ? ' (' + j.cpuMin + '–' + j.cpuMax + ')' : '')],
