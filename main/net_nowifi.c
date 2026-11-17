@@ -62,9 +62,9 @@ size_t net_json_get(char *b, size_t sz)
 {
     char bm[20];
     ble_nus_mac(bm, sizeof bm);
-    int n = snprintf(b, sz, "{\"t\":\"net\",\"ble\":%d,\"web\":0,\"app\":0,\"eco\":%d,\"bleConn\":%d,\"bleCustom\":%d,\"bleName\":\"%s\",\"bleMac\":\"%s\",\"wifiMac\":\"\",\"wifi\":\"none\",\"rssi\":0,\"ip\":\"\",\"dns\":\"\","
+    int n = snprintf(b, sz, "{\"t\":\"net\",\"ble\":%d,\"web\":0,\"app\":0,\"eco\":%d,\"bleConn\":%d,\"bleCustom\":%d,\"blePw\":%d,\"bleName\":\"%s\",\"bleMac\":\"%s\",\"wifiMac\":\"\",\"wifi\":\"none\",\"rssi\":0,\"ip\":\"\",\"dns\":\"\","
                             "\"ssid\":\"\",\"host\":\"%s\",\"mqtt\":\"\",\"mqttUser\":\"\",\"mqttOk\":0,\"tcp\":0,\"slke\":0,\"slkeTx\":0,\"slkeN\":0,\"https\":0}",
-                     g_set.ble, g_set.eco, ble_nus_connected(), g_set.ble_name[0] != 0, ble_nus_name(), bm, g_set.host);
+                     g_set.ble, g_set.eco, ble_nus_connected(), g_set.ble_name[0] != 0, g_set.ble_pass[0] != 0, ble_nus_name(), bm, g_set.host);
     return n > 0 && (size_t)n < sz ? (size_t)n : 0;
 }
 

@@ -548,7 +548,7 @@ body.hxon .hx{display:block}
     </ul>
     <div id="bleLandList"></div>
     <p class="hint" id="bleHint"></p>
-    <button class="go" id="bleGo">Collega il dispositivo</button> <button class="go alt" id="bleInstall" hidden>Installa come app</button>
+    <button class="go" id="bleGo">Cerca e collega il dispositivo</button> <button class="go alt" id="bleInstall" hidden>Installa come app</button>
     <div class="err" id="bleErr" role="alert"></div>
     <div class="links"><a href="install.html">Installa il firmware</a><a href="./">Demo del portale</a><a href="https://github.com/Ircama/esp32-sony-slink">GitHub</a></div>
   </div>
@@ -841,6 +841,10 @@ body.hxon .hx{display:block}
           <form class="form" id="bleNameForm" autocomplete="off" style="margin:4px 0 10px">
             <label>Nome Bluetooth<input id="bleNameIn" maxlength="20" placeholder="vuoto = S-Link-<MAC>"></label>
             <div class="row"><button class="btn sm" type="submit">Salva</button><span class="hint" id="bleMacTxt"></span></div>
+          </form>
+          <form class="form" id="blePwForm" autocomplete="off" style="margin:4px 0 10px">
+            <label>Password Bluetooth<input id="blePwIn" type="password" maxlength="32" autocomplete="new-password" placeholder="vuoto = nessuna password"></label>
+            <div class="row"><button class="btn sm" type="submit">Salva</button><button class="btn sm" type="button" id="blePwOff">Rimuovi</button><span class="hint" id="blePwTxt"></span></div>
           </form>
           <div class="set"><div class="t"><b>Portale web</b><span>Questa pagina</span></div><button class="sw" role="switch" aria-checked="true" id="swWeb" aria-label="Portale web"></button></div>
           <div class="set"><div class="t"><b>Portale web HTTPS</b><span id="httpsSub">Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)</span><span id="httpsCaRow" hidden><a id="httpsCa" href="/ca.crt">Scarica il certificato CA</a></span></div><button class="sw" role="switch" aria-checked="false" id="swHttps" aria-label="Portale web HTTPS"></button></div>
@@ -1622,7 +1626,7 @@ const TRX = [
   ['Servono Chrome, Edge o Opera (PC o Android): Firefox e Safari non supportano Web Bluetooth.', 'You need Chrome, Edge or Opera (PC or Android): Firefox and Safari do not support Web Bluetooth.', 'Il faut Chrome, Edge ou Opera (PC ou Android) : Firefox et Safari ne gèrent pas Web Bluetooth.', 'Erforderlich: Chrome, Edge oder Opera (PC oder Android); Firefox und Safari unterstützen Web Bluetooth nicht.', 'Se necesita Chrome, Edge u Opera (PC o Android): Firefox y Safari no admiten Web Bluetooth.'],
   ['Il dispositivo deve essere acceso, con il BLE attivo, e non collegato ad altre app.', 'The device must be on, with BLE active, and not connected to other apps.', 'L’appareil doit être allumé, avec le BLE actif, et non connecté à d’autres applications.', 'Das Gerät muss eingeschaltet sein, BLE aktiv und nicht mit anderen Apps verbunden.', 'El dispositivo debe estar encendido, con el BLE activo, y no conectado a otras aplicaciones.'],
   ['Non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.', 'There is no authentication: anyone within range can connect with any app. Keep BLE on only when needed.', 'Il n’y a pas d’authentification : toute personne à portée peut se connecter avec une application quelconque. N’activez le BLE que si nécessaire.', 'Es gibt keine Authentifizierung: jeder in Reichweite kann sich mit einer beliebigen App verbinden. BLE nur bei Bedarf eingeschaltet lassen.', 'No hay autenticación: cualquiera al alcance puede conectarse con cualquier aplicación. Mantenga el BLE encendido solo cuando haga falta.'],
-  ['Collega il dispositivo', 'Connect the device', 'Connecter l’appareil', 'Gerät verbinden', 'Conectar el dispositivo'],
+  ['Cerca e collega il dispositivo', 'Search for and connect the device', 'Rechercher et connecter l’appareil', 'Gerät suchen und verbinden', 'Buscar y conectar el dispositivo'],
   ['Questo browser non supporta Web Bluetooth.', 'This browser does not support Web Bluetooth.', 'Ce navigateur ne gère pas Web Bluetooth.', 'Dieser Browser unterstützt Web Bluetooth nicht.', 'Este navegador no admite Web Bluetooth.'],
   ['Connessione persa. Ricollega il dispositivo.', 'Connection lost. Connect the device again.', 'Connexion perdue. Reconnectez l’appareil.', 'Verbindung verloren. Gerät erneut verbinden.', 'Conexión perdida. Vuelva a conectar el dispositivo.'],
   ['Installa il firmware', 'Install the firmware', 'Installer le firmware', 'Firmware installieren', 'Instalar el firmware'],
@@ -1687,6 +1691,16 @@ const TRX = [
   ['incluso nel portale', 'included in the portal', 'inclus dans le portail', 'im Portal enthalten', 'incluido en el portal'],
   ['Totale interfacce attive', 'Total of the active interfaces', 'Total des interfaces actives', 'Summe der aktiven Schnittstellen', 'Total de las interfaces activas'],
   ['Per cambiare dispositivo in qualsiasi momento tieni premuta la barra del titolo (circa un secondo): compare l\'elenco dei dispositivi salvati.', 'To switch device at any time, press and hold the title bar (about a second): the list of the saved devices appears.', 'Pour changer d\'appareil à tout moment, maintenez appuyée la barre de titre (environ une seconde) : la liste des appareils enregistrés apparaît.', 'Um jederzeit das Gerät zu wechseln, halte die Titelleiste (etwa eine Sekunde) gedrückt: die Liste der gespeicherten Geräte erscheint.', 'Para cambiar de dispositivo en cualquier momento, mantén pulsada la barra de título (aproximadamente un segundo): aparece la lista de los dispositivos guardados.'],
+  ['Password Bluetooth', 'Bluetooth password', 'Mot de passe Bluetooth', 'Bluetooth-Passwort', 'Contraseña Bluetooth'],
+  ['vuoto = nessuna password', 'empty = no password', 'vide = aucun mot de passe', 'leer = kein Passwort', 'vacío = sin contraseña'],
+  ['Impostata: la connessione Bluetooth la chiede prima di tutto', 'Set: the Bluetooth connection asks for it before anything else', 'Définie : la connexion Bluetooth la demande avant tout', 'Gesetzt: die Bluetooth-Verbindung fragt sie vor allem anderen ab', 'Definida: la conexión Bluetooth la pide antes que nada'],
+  ['Nessuna: chiunque nel raggio può collegarsi', 'None: anyone in range can connect', 'Aucun : toute personne à portée peut se connecter', 'Keines: jeder in Reichweite kann sich verbinden', 'Ninguna: cualquiera al alcance puede conectarse'],
+  ['Almeno 4 caratteri, senza spazi', 'At least 4 characters, no spaces', 'Au moins 4 caractères, sans espaces', 'Mindestens 4 Zeichen, keine Leerzeichen', 'Al menos 4 caracteres, sin espacios'],
+  ['Togliere la password Bluetooth?', 'Remove the Bluetooth password?', 'Retirer le mot de passe Bluetooth ?', 'Bluetooth-Passwort entfernen?', '¿Quitar la contraseña Bluetooth?'],
+  ['Chiunque nel raggio potrà collegarsi alla console Bluetooth.', 'Anyone in range will be able to connect to the Bluetooth console.', 'Toute personne à portée pourra se connecter à la console Bluetooth.', 'Jeder in Reichweite kann sich mit der Bluetooth-Konsole verbinden.', 'Cualquiera al alcance podrá conectarse a la consola Bluetooth.'],
+  ['Rimuovi', 'Remove', 'Retirer', 'Entfernen', 'Quitar'],
+  ['Il dispositivo {n} chiede la password.', 'The device {n} asks for the password.', 'L\'appareil {n} demande le mot de passe.', 'Das Gerät {n} verlangt das Passwort.', 'El dispositivo {n} pide la contraseña.'],
+  ['Password errata', 'Wrong password', 'Mot de passe erroné', 'Falsches Passwort', 'Contraseña incorrecta'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -2295,7 +2309,29 @@ function onMsg(d) {
   handleLine(d);
 }
 function logClass(d) { return d.startsWith('RX') ? 'rx' : d.startsWith('TX') ? 'tx' : d.startsWith('OK') ? 'ok' : d.startsWith('ERR') ? 'err' : 'info'; }
+/* The device asks for the Bluetooth password (BLEPASS): "AUTH <nonce>"; the answer is "@AUTH <sha256 of nonce:password>": the password itself never travels. It is asked once and kept for this device (localStorage). */
+let bleAuthBad = false, bleAuthBusy = false;
+async function bleAuth(nonce, again) {
+  if (!BLEMODE || !bleDev || bleAuthBusy) return;
+  bleAuthBusy = true;
+  try {
+    const key = 'ble-pw-' + bleDev.id; let pw = again ? '' : store.get(key, '');
+    if (!pw) {
+      pw = await inputDlg('Password Bluetooth', tr('Il dispositivo {n} chiede la password.', { n: bleDev.name || 'S-Link' }), '', 32, true);
+      if (!pw) { bleSwitch(); return; }
+      pw = pw.trim(); store.set(key, pw);
+    }
+    const dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nonce + ':' + pw));
+    bleWrite('@AUTH ' + [...new Uint8Array(dig)].map(b => b.toString(16).padStart(2, '0')).join('') + '\n');
+  } finally { bleAuthBusy = false; }
+}
 function handleLine(d) {
+  if (BLEMODE) {
+    const am = /^AUTH ([0-9a-f]{32})$/.exec(d);
+    if (am) { bleAuth(am[1], bleAuthBad); bleAuthBad = false; return; }
+    if (/^ERR auth failed/.test(d)) { bleAuthBad = true; if (bleDev) store.set('ble-pw-' + bleDev.id, ''); toast(tr('Password errata'), 'err'); return; }
+    if (/^OK auth/.test(d)) { bleAuthBad = false; const w = ws; if (w && w.onopen) w.onopen(); bleWrite('@UI\n'); return; }        /* let in: ask for everything again, what was sent before was ignored */
+  }
   if (Date.now() - busActAt > BUS_QUIET) busBurst = false;       /* silence: the compound command is over */
   busActAt = Date.now();                                 /* the device is writing: a command is still running */
   if (/^(OK|ERR)\b/.test(d)) busDone();                /* the device finished a command */
@@ -2921,6 +2957,7 @@ function renderNet() {
   $('#slkeSub').textContent = n.slke ? tr('Attivo · porta 2325 · {n} client', { n: n.slkeN || 0 }) : tr('Porta 2325, per i programmi scritti per lo Slink-e (Nirvis)');
   $('#slkeTxSub').textContent = n.slkeTx ? tr('Acceso: il programma collegato può inviare comandi all’impianto') : tr('Spento: la connessione è un monitor di sola lettura');
   { const bi = $('#bleNameIn'); fieldSet(bi, n.bleCustom ? (n.bleName || '') : ''); $('#bleMacTxt').textContent = n.bleMac ? tr('Indirizzo Bluetooth') + ' ' + macTxt(n.bleMac) + (n.wifiMac ? ' · WiFi ' + macTxt(n.wifiMac) : '') : ''; }
+  $('#blePwTxt').textContent = n.blePw ? tr('Impostata: la connessione Bluetooth la chiede prima di tutto') : tr('Nessuna: chiunque nel raggio può collegarsi');
   $('#bleSub').textContent = n.ble ? (n.bleConn ? tr('Attivo · client connesso') : tr('Attivo · visibile come {n}', { n: n.bleName || 'S-Link' })) : tr('Console seriale via Nordic UART Service');
   $('#appSub').textContent = n.app ? tr('Attiva · TCP porta 2323 ({n} client) · MQTT {m}', { n: n.tcp, m: tr(n.mqtt ? (n.mqttOk ? 'connesso' : 'in connessione…') : 'non configurato') }) : tr('Console TCP (porta 2323) e MQTT per Home Assistant');
   const wifi = n.wifi === 'connected' ? tr('Connesso · {r} dBm', { r: n.rssi }) : n.wifi === 'connecting' ? tr('In connessione…') : n.wifi === 'idle' ? tr('Inattivo') : tr('Non configurato');
@@ -3819,9 +3856,9 @@ function jbReadGroups(u) {
 }
 
 /* ---- writes: always behind a confirmation ---- */
-function inputDlg(title, text, value, max) {
+function inputDlg(title, text, value, max, secret) {
   return new Promise(res => {
-    const d = $('#inDlg'); $('#inT').textContent = tr(title); $('#inP').textContent = tr(text); const i = $('#inV'); i.value = value || ''; i.maxLength = max || 60;
+    const d = $('#inDlg'); $('#inT').textContent = tr(title); $('#inP').textContent = tr(text); const i = $('#inV'); i.value = value || ''; i.maxLength = max || 60; i.type = secret ? 'password' : 'text';
     const done = v => { d.close(); res(v); };
     $('#inYes').onclick = () => done(i.value); $('#inNo').onclick = () => done(null); d.oncancel = () => res(null); i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); done(i.value); } };
     d.showModal(); i.focus();
@@ -4227,6 +4264,14 @@ function initUiOptions() {
   /* titles */
   $('#tApp').value = TITLE.app; $('#tPage').value = TITLE.page; $('#tPwa').value = TITLE.pwa; $('#tName').value = TITLE.name;
   $('#tName').oninput = () => { if ($('#tName').value.trim()) $('#tPwa').value = 'NAME'; };   /* typing a name selects it */
+  $('#blePwForm').onsubmit = e => { e.preventDefault(); const v = $('#blePwIn').value.trim();
+    if (v.length < 4 || /["\s]/.test(v)) { toast(tr('Almeno 4 caratteri, senza spazi'), 'err'); return; }
+    if (BLEMODE && bleDev) store.set('ble-pw-' + bleDev.id, v);                       /* this page keeps it for this device: it answers the challenge when the connection is made again */
+    cmd('BLEPASS ' + v, { ack: true }); $('#blePwIn').value = ''; setTimeout(() => cmd('NET', { auto: true }), 900); };
+  $('#blePwOff').onclick = async () => {
+    if (!await confirmDlg('Togliere la password Bluetooth?', 'Chiunque nel raggio potrà collegarsi alla console Bluetooth.', 'Rimuovi')) return;
+    if (BLEMODE && bleDev) store.set('ble-pw-' + bleDev.id, '');
+    cmd('BLEPASS OFF', { ack: true }); setTimeout(() => cmd('NET', { auto: true }), 900); };
   $('#bleNameForm').onsubmit = e => { e.preventDefault(); const v = $('#bleNameIn').value.trim(); cmd('BLENAME ' + (v ? '"' + v.replace(/"/g, '') + '"' : 'DEFAULT'), { ack: true }); setTimeout(() => cmd('NET', { auto: true }), 600); };
   $('#titleForm').onsubmit = e => {
     e.preventDefault();

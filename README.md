@@ -135,6 +135,7 @@ Host → ESP (one line per command, case-insensitive):
 | `LOOPBACK ON` / `LOOPBACK OFF` | also show the transmitted frames as `RX`: checks that the line is healthy |
 | `LINE` | line level: 1 = free/high, 0 = low |
 | `BLE ON\|OFF` | enable/disable **UART over BLE** (Nordic UART Service). **Saved in flash**: it persists after a reboot. Without an argument it shows the state |
+| `BLEPASS <text>\|OFF` | **password of the Bluetooth UART** (4-32 characters, off by default, saved). With it set, a connection listens to nothing and sends nothing until it answers a challenge: the device sends `AUTH <nonce>`, the client answers `@AUTH <sha256 hex of "nonce:password">` (the password never travels, except in the `BLEPASS` command that sets it); five wrong answers end the connection. The Bluetooth page asks for it once and remembers it for that device. Setting it ends the connection in progress |
 | `WEB ON\|OFF` | enable/disable the **web portal** (saved) |
 | `APP ON\|OFF` | enable/disable the **WiFi application interface**: TCP console (port 2323) and MQTT bridge with Home Assistant discovery (saved) |
 | `SLINKE ON\|OFF` | enable/disable the **Slink-e serial protocol on TCP** (port 2325, see [Slink-e protocol over TCP](#slink-e-protocol-over-tcp)); **off** by default (saved) |

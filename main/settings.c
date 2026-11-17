@@ -59,6 +59,7 @@ void settings_load(void)
     if (nvs_get_u8(h, "hue", &v) == ESP_OK) g_set.hue = v;
     g_set.hue_max = 30; if (nvs_get_u8(h, "huemax", &v) == ESP_OK && v >= 1 && v <= 100) g_set.hue_max = v;
     get_str(h, "huen", g_set.hue_name, sizeof g_set.hue_name, "");
+    get_str(h, "blepw", g_set.ble_pass, sizeof g_set.ble_pass, "");
     if (nvs_get_u8(h, "mtr", &v) == ESP_OK) g_set.matter = v;
     g_set.matter_max = 30; if (nvs_get_u8(h, "mtrmax", &v) == ESP_OK && v >= 1 && v <= 100) g_set.matter_max = v;
     get_str(h, "mtrn", g_set.matter_name, sizeof g_set.matter_name, "");
@@ -104,6 +105,7 @@ void settings_save(void)
     nvs_set_u8(h, "hue", g_set.hue);
     nvs_set_u8(h, "huemax", g_set.hue_max);
     nvs_set_str(h, "huen", g_set.hue_name);
+    nvs_set_str(h, "blepw", g_set.ble_pass);
     nvs_set_u8(h, "mtr", g_set.matter);
     nvs_set_u8(h, "mtrmax", g_set.matter_max);
     nvs_set_str(h, "mtrn", g_set.matter_name);

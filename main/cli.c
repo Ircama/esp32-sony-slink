@@ -419,9 +419,10 @@ static void help(void)
         "  ECHO ON|OFF (now %s)   DECODE ON|OFF (now %s)   LOOPBACK ON|OFF (own frames as RX)" CRLF
         "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF, slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
     out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
-        "  TASKS              every task with what it does and the part of its stack never used (to size the stacks)" CRLF
+        "  TASKS              every task with what it does and its stack margin: the bytes of its stack never touched (to size the stacks)" CRLF
         "  MATTER ON|OFF | OPEN | MAX <1-100> | NAME <text> | NEWCODE | RESET   amplifier as a Matter light (Google Home, Apple Home ...): only in the esp32s3-matter build, see docs/MATTER.md" CRLF
         "  HUE ON|OFF | MAX <1-100> | NAME <text>   amplifier as a Philips Hue light for Alexa / Hue apps: on-off = power, brightness = volume up to MAX %% of the knob (default 30); off by default (saved)" CRLF
+        "  BLEPASS <text>|OFF  password of the Bluetooth UART (the client proves it with a challenge; the password never travels); off by default" CRLF
         "  BLENAME [text|DEFAULT]   Bluetooth LE name shown in the list of devices (max 20 characters; default S-Link-<MAC>; saved)" CRLF
         "  HTTPS ON|OFF|RESET   web portal also on https (port 443, certificate from the device's own CA, download it at /ca.crt); RESET makes a new CA (saved)" CRLF
         "  SLINKE ON|OFF   SLINKETX ON|OFF   Slink-e serial protocol on TCP port 2325 (off by default); SLINKETX allows sending to the bus (saved)" CRLF
@@ -755,10 +756,10 @@ static void handle_cmd(char *line)
         n = uxTaskGetSystemState(t, n, NULL);
         unsigned tot = 0;
         for (UBaseType_t i = 0; i < n; i++) {
-            out("%-14s prio %2u  stack never used %5u B  %s" CRLF, t[i].pcTaskName, (unsigned)t[i].uxCurrentPriority, (unsigned)(t[i].usStackHighWaterMark * sizeof(StackType_t)), task_role(t[i].pcTaskName));
+            out("%-14s prio %2u  stack margin %5u B  %s" CRLF, t[i].pcTaskName, (unsigned)t[i].uxCurrentPriority, (unsigned)(t[i].usStackHighWaterMark * sizeof(StackType_t)), task_role(t[i].pcTaskName));
             tot += (unsigned)(t[i].usStackHighWaterMark * sizeof(StackType_t));
         }
-        out("%u tasks, %u bytes of stack never used" CRLF, (unsigned)n, tot);
+        out("%u tasks; stack margin = bytes of its stack a task never touched since the start (%u in all)" CRLF, (unsigned)n, tot);
         free(t);
     }
     else if (!strcmp(c0, "STATS")) {
@@ -1079,7 +1080,7 @@ static void handle_cmd(char *line)
         do_send(b, 4);
     }
     else if (!strcmp(c0, "BLE") || !strcmp(c0, "WEB") || !strcmp(c0, "APP") || !strcmp(c0, "SLINKE") || !strcmp(c0, "SLINKETX") || !strcmp(c0, "HTTPS") || !strcmp(c0, "HUE") || !strcmp(c0, "MATTER") || !strcmp(c0, "WIFI") ||
-             !strcmp(c0, "MQTT") || !strcmp(c0, "HOSTNAME") || !strcmp(c0, "BLENAME") || !strcmp(c0, "NET") || !strcmp(c0, "ECO") ||
+             !strcmp(c0, "MQTT") || !strcmp(c0, "HOSTNAME") || !strcmp(c0, "BLENAME") || !strcmp(c0, "BLEPASS") || !strcmp(c0, "NET") || !strcmp(c0, "ECO") ||
              !strcmp(c0, "VOLCFG") || !strcmp(c0, "UITITLE") || !strcmp(c0, "CFG") || !strcmp(c0, "WIFIPWR")) handle_net(raw, tok, nt);
     else if (!parse_hex_line(line)) out("ERR unknown command (try HELP)\r\n");
 }
@@ -1358,6 +1359,22 @@ static void handle_net(char *raw, char **tok, int nt)
             settings_save();
         }
         out("UITITLE APP \"%s\"" CRLF "UITITLE PAGE \"%s\"" CRLF "UITITLE NAME \"%s\"" CRLF "UITITLE PWA %s" CRLF, g_set.title_app, g_set.title_page, g_set.title_pwa, g_set.pwa_src == 2 ? "NAME" : g_set.pwa_src == 1 ? "PAGE" : "APP");
+    }
+    else if (!strcmp(c0, "BLEPASS")) {                              /* Bluetooth password: BLEPASS [<text>|OFF] */
+        if (na >= 2) {
+            const char *t = av[1];
+            size_t l = strlen(t);
+            if (!strcasecmp(t, "OFF")) g_set.ble_pass[0] = 0;
+            else {
+                bool ok = l >= 4 && l <= 32;
+                for (size_t i = 0; ok && i < l; i++) ok = (unsigned char)t[i] > 32 && (unsigned char)t[i] < 127 && t[i] != '"';
+                if (!ok) { out("ERR blepass: 4-32 printable characters, no spaces or quotes (BLEPASS OFF removes it)" CRLF); return; }
+                memcpy(g_set.ble_pass, t, l + 1);
+            }
+            settings_save();
+            out("OK blepass %s (saved)%s" CRLF, g_set.ble_pass[0] ? "set" : "removed", ble_nus_connected() ? ": the Bluetooth connection ends in a moment, connect again" : "");
+            ble_nus_auth_changed();
+        } else out("BLEPASS %s - the Bluetooth connection asks for it before anything else. Usage: BLEPASS <4-32 characters> | OFF" CRLF, g_set.ble_pass[0] ? "set" : "OFF");
     }
     else if (!strcmp(c0, "BLENAME")) {                              /* Bluetooth name: BLENAME [text|DEFAULT] */
         if (na >= 2) {

@@ -17,6 +17,9 @@
 #include "services/gatt/ble_svc_gatt.h"
 #include "esp_mac.h"
 #include "esp_bt.h"
+#include "esp_random.h"
+#include "esp_timer.h"
+#include "sha256.h"
 #if SOC_WIFI_SUPPORTED
 #include "esp_coexist.h"
 #endif
@@ -43,6 +46,9 @@ static MessageBufferHandle_t s_mb;         /* JSON lines for the web page on Git
 static TaskHandle_t s_tx_task, s_json_task;
 static volatile uint32_t s_dg_conn, s_dg_disc, s_dg_fail, s_dg_enomem, s_dg_notify_err, s_dg_upd;   /* counters for "BLE" and the Statistics page */
 static volatile int s_dg_reason = -1, s_dg_upd_status = -1, s_dg_itvl;                                /* last disconnect reason (HCI code, 8 = supervision timeout, 19 = the phone hung up, 22 = we hung up), result of the parameter update, interval (1.25 ms units) */
+static volatile bool s_auth;               /* the client proved the Bluetooth password (BLEPASS); without a password everybody is let in */
+static char s_nonce[33];                   /* the challenge of this connection */
+static uint8_t s_auth_fails;
 static volatile bool s_ui;                 /* the client asked for the JSON frames of the portal ("@UI"): the Bluetooth page of the project */
 static SemaphoreHandle_t s_stop_done;
 
@@ -67,9 +73,47 @@ bool ble_nus_connected(void) { return s_conn != BLE_HS_CONN_HANDLE_NONE; }
 
 /* ---- output: CLI sink -> stream buffer -> notifications ---- */
 
+/* ---- password: the device sends "AUTH <nonce>", the client answers "@AUTH <sha256 hex of nonce:password>"; until then nothing is listened to or sent (no bus frames, no JSON) ---- */
+static bool need_auth(void) { return g_set.ble_pass[0] && !s_auth; }
+
+static void make_nonce(void)
+{
+    uint8_t r[16]; esp_fill_random(r, sizeof r);
+    slink_hex(r, sizeof r, s_nonce);
+}
+
+static void auth_say(const char *line)                   /* straight into the stream buffer: the sink below is closed until the proof is right */
+{
+    if (s_sb) { xStreamBufferSend(s_sb, line, strlen(line), 0); if (s_tx_task) xTaskNotifyGive(s_tx_task); }
+}
+
+static void auth_challenge(void) { char l[48]; snprintf(l, sizeof l, "AUTH %s\r\n", s_nonce); auth_say(l); }
+
+static bool proof_ok(const char *got)
+{
+    char m[96], hx[65]; uint8_t d[32];
+    int n = snprintf(m, sizeof m, "%s:%s", s_nonce, g_set.ble_pass);
+    slink_sha256((const uint8_t *)m, (size_t)n, d);
+    slink_hex(d, 32, hx);
+    if (strlen(got) != 64) return false;
+    uint8_t diff = 0;
+    for (int i = 0; i < 64; i++) diff |= (uint8_t)(hx[i] ^ got[i]);               /* constant time */
+    return diff == 0;
+}
+
+static void kick_cb(void *arg) { uint16_t c = s_conn; if (c != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(c, BLE_ERR_REM_USER_CONN_TERM); }
+
+void ble_nus_auth_changed(void)                          /* BLEPASS: the connection in progress ends (after the answer went out): connect again with the new password */
+{
+    if (s_conn == BLE_HS_CONN_HANDLE_NONE) return;
+    static esp_timer_handle_t t;
+    if (!t) { esp_timer_create_args_t a = { .callback = kick_cb, .name = "ble_kick" }; if (esp_timer_create(&a, &t) != ESP_OK) return; }
+    esp_timer_stop(t); esp_timer_start_once(t, 800000);
+}
+
 static void ble_sink(const char *d, size_t n)
 {
-    if (s_sb && s_sub) {                                       /* a long output (HELP, SETUP) is bigger than the buffer: wait for room instead of cutting the text; give up if the phone is gone or too slow */
+    if (s_sb && s_sub && !need_auth()) {                                       /* a long output (HELP, SETUP) is bigger than the buffer: wait for room instead of cutting the text; give up if the phone is gone or too slow */
         size_t left = n;
         for (int i = 0; i < 20 && left && s_sub; i++) {
             size_t k = xStreamBufferSend(s_sb, d + (n - left), left, pdMS_TO_TICKS(50));
@@ -181,6 +225,15 @@ static int rx_access(uint16_t conn, uint16_t attr, struct ble_gatt_access_ctxt *
     for (uint16_t i = 0; i < n; i++) {
         char ch = (char)tmp[i];
         if (ch == '\r' || ch == '\n') {
+            if (len && need_auth()) {                                        /* not let in yet: only the proof is listened to */
+                line[len] = 0; len = 0;
+                if (!strncmp(line, "@AUTH ", 6)) {
+                    if (proof_ok(line + 6)) { s_auth = true; s_auth_fails = 0; auth_say("OK auth\r\n"); }
+                    else if (++s_auth_fails >= 5) ble_gap_terminate(conn, BLE_ERR_REM_USER_CONN_TERM);
+                    else { make_nonce(); auth_say("ERR auth failed\r\n"); auth_challenge(); }
+                } else auth_challenge();
+                continue;
+            }
             if (len && line[0] == '@') {                                   /* "@UI": send me the portal's JSON frames; "@GET <state|tables|net|stats>": send one now */
                 line[len] = 0; len = 0;
                 if (s_json_task) {
@@ -219,6 +272,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
     case BLE_GAP_EVENT_CONNECT:
         if (ev->connect.status == 0) {
             s_conn = ev->connect.conn_handle; s_sub = false; s_ui = false; s_dg_conn++;
+            s_auth = false; s_auth_fails = 0; make_nonce();
 #if SOC_WIFI_SUPPORTED
             esp_coex_preference_set(ESP_COEX_PREFER_BT);        /* the link broke with "supervision timeout" a second or two after it was made: the WiFi had the air */
 #endif
@@ -234,11 +288,11 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
     case BLE_GAP_EVENT_DISCONNECT:
         s_dg_disc++; s_dg_reason = ev->disconnect.reason & 0xFF;
         s_conn = BLE_HS_CONN_HANDLE_NONE;
-        s_sub = false; s_ui = false;
+        s_sub = false; s_ui = false; s_auth = false;
         if (s_running) advertise();
         break;
     case BLE_GAP_EVENT_SUBSCRIBE:
-        if (ev->subscribe.attr_handle == s_tx_handle) s_sub = ev->subscribe.cur_notify;
+        if (ev->subscribe.attr_handle == s_tx_handle) { s_sub = ev->subscribe.cur_notify; if (s_sub && need_auth()) auth_challenge(); }
         break;
     case BLE_GAP_EVENT_ADV_COMPLETE:
         if (s_running) advertise();
