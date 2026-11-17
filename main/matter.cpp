@@ -12,6 +12,9 @@
 #include <esp_random.h>
 #include <esp_err.h>
 #include <esp_system.h>
+#include <esp_mac.h>
+#include <esp_timer.h>
+#include <stdlib.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -50,6 +53,9 @@ static uint16_t s_ep;
 static TaskHandle_t s_report_task;
 static char s_qr[64], s_manual[24];
 static int s_last_on = -1, s_last_level = -1;
+static volatile int s_vol_pending = -1;                         /* level asked by a controller, waiting to be sent to the amplifier (debounce) */
+static volatile int64_t s_hold_until_us;                        /* until then the controllers are not told the position of the knob: it is still moving to what they asked */
+static TaskHandle_t s_vol_task;
 
 /* ------------------------------------------------------------------ setup code (random, kept in the settings) */
 static bool pin_ok(uint32_t p)
@@ -99,6 +105,35 @@ public:
 SlinkCommissionable s_provider;
 }
 
+/* what Apple Home and the others show as manufacturer, model, serial number (Basic Information cluster) */
+namespace {
+class SlinkInfo : public chip::DeviceLayer::DeviceInstanceInfoProvider {
+    static CHIP_ERROR cp(char *b, size_t n, const char *s) { if (strlen(s) >= n) return CHIP_ERROR_BUFFER_TOO_SMALL; strcpy(b, s); return CHIP_NO_ERROR; }
+    static void mac(uint8_t m[6]) { esp_read_mac(m, ESP_MAC_WIFI_STA); }
+public:
+    CHIP_ERROR GetVendorName(char *b, size_t n) override { return cp(b, n, "Ircama"); }
+    CHIP_ERROR GetVendorId(uint16_t &v) override { v = 0xFFF1; return CHIP_NO_ERROR; }                    /* the test vendor id: the device is not certified */
+    CHIP_ERROR GetProductName(char *b, size_t n) override { return cp(b, n, "S-Link bridge"); }
+    CHIP_ERROR GetProductId(uint16_t &p) override { p = 0x8000; return CHIP_NO_ERROR; }
+    CHIP_ERROR GetPartNumber(char *b, size_t n) override { return cp(b, n, CONFIG_IDF_TARGET); }
+    CHIP_ERROR GetProductURL(char *b, size_t n) override { return cp(b, n, "https://github.com/Ircama/esp32-sony-slink"); }
+    CHIP_ERROR GetProductLabel(char *b, size_t n) override { return cp(b, n, "Sony S-Link / Control-A1 bridge"); }
+    CHIP_ERROR GetSerialNumber(char *b, size_t n) override { uint8_t m[6]; mac(m); char t[16]; snprintf(t, sizeof t, "%02X%02X%02X%02X%02X%02X", m[0], m[1], m[2], m[3], m[4], m[5]); return cp(b, n, t); }
+    CHIP_ERROR GetManufacturingDate(uint16_t &y, uint8_t &mo, uint8_t &d) override { y = 2026; mo = 11; d = 17; return CHIP_NO_ERROR; }
+    CHIP_ERROR GetHardwareVersion(uint16_t &h) override { h = 1; return CHIP_NO_ERROR; }
+    CHIP_ERROR GetHardwareVersionString(char *b, size_t n) override { return cp(b, n, CONFIG_IDF_TARGET); }
+    CHIP_ERROR GetRotatingDeviceIdUniqueId(chip::MutableByteSpan &u) override
+    {
+        uint8_t m[6]; mac(m);
+        if (u.size() < 16) return CHIP_ERROR_BUFFER_TOO_SMALL;
+        for (int i = 0; i < 16; i++) u.data()[i] = (uint8_t)(m[i % 6] ^ (0xA5 + 7 * i));
+        u.reduce_size(16);
+        return CHIP_NO_ERROR;
+    }
+};
+SlinkInfo s_info;
+}
+
 static void make_payload_strings(void)
 {
     uint16_t vid = 0xFFF1, pid = 0x8000;
@@ -137,12 +172,12 @@ static esp_err_t attr_cb(attribute::callback_type_t type, uint16_t endpoint_id, 
         if (val->val.b) { if (state_power() != 1) cli_submit("PWRON"); }
         else cli_submit("PWROFF");
     } else if (cluster_id == LevelControl::Id && attribute_id == LevelControl::Attributes::CurrentLevel::Id) {
-        int l = val->val.u8;
+        int l = val->val.u8;                                          /* a slider (and the cluster's own transitions) gives a series of values: only the last one is sent, see vol_task */
         if (l < 1) l = 1;
         if (l > 254) l = 254;
-        char cmd[32];
-        snprintf(cmd, sizeof cmd, "VOL SET %.1f", l * (double)max_pct() / 254.0);   /* never above the maximum volume setting */
-        cli_submit(cmd);
+        s_vol_pending = l; s_last_level = l;
+        s_hold_until_us = esp_timer_get_time() + 20 * 1000000LL;         /* the knob takes seconds to get there */
+        if (s_vol_task) xTaskNotifyGive(s_vol_task);
     }
     return ESP_OK;
 }
@@ -185,11 +220,26 @@ static bool open_window(void)
     return e == CHIP_NO_ERROR;
 }
 
+/* the volume asked by a controller: wait until the values stop coming (400 ms), then one VOL SET (never above MATTER MAX) */
+static void vol_task(void *)
+{
+    for (;;) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        while (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(400)) > 0) {}
+        int l = s_vol_pending; s_vol_pending = -1;
+        if (l < 1) continue;
+        if (state_power() == 0) { s_hold_until_us = 0; matter_report(); continue; }   /* standby: the knob does not move, the controller gets the real level back */
+        char cmd[32];
+        snprintf(cmd, sizeof cmd, "VOL SET %.1f", l * (double)max_pct() / 254.0);
+        cli_submit(cmd);
+    }
+}
+
 /* the amplifier changed (power, volume): update the two attributes so that the controllers see it */
 static void report_task(void *)
 {
     for (;;) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(5000));       /* woken by a change; every 5 s anyway (the hold of the volume ends by itself) */
         vTaskDelay(pdMS_TO_TICKS(300));                      /* a burst of frames makes one update */
         ulTaskNotifyTake(pdTRUE, 0);
         if (!s_running) continue;
@@ -200,7 +250,8 @@ static void report_task(void *)
             s_last_on = p;
         }
         int l = level_now();
-        if (cli_vol_x10() >= 0 && l != s_last_level) {
+        bool holding = esp_timer_get_time() < s_hold_until_us;
+        if (!holding && cli_vol_x10() >= 0 && (s_last_level < 0 || abs(l - s_last_level) > 2)) {          /* not while the knob is on its way, and no flapping for a rounding */
             esp_matter_attr_val_t v = esp_matter_nullable_uint8((uint8_t)l);
             attribute::update(s_ep, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id, &v);
             s_last_level = l;
@@ -213,6 +264,7 @@ static void matter_task(void *)
     ensure_codes();
     svc_mark(SVC_MATTER);
     esp_matter::set_custom_commissionable_data_provider(&s_provider);
+    esp_matter::set_custom_device_instance_info_provider(&s_info);
 
     node::config_t node_config;
     const char *nm = g_set.matter_name[0] ? g_set.matter_name : "Amplificatore";
@@ -238,7 +290,8 @@ static void matter_task(void *)
     if (s_fabrics == 0) for (int i = 0; i < 60 && !open_window(); i++) vTaskDelay(pdMS_TO_TICKS(500));   /* the server finishes its start in the background: try until it takes it */
     vTaskDelay(pdMS_TO_TICKS(500));
     svc_done(SVC_MATTER);                                      /* the RAM the Matter stack took (Statistics) */
-    xTaskCreate(report_task, "slink_mtr_rep", 3072, NULL, 3, &s_report_task);
+    xTaskCreate(vol_task, "slink_mtr_vol", 3072, NULL, 3, &s_vol_task);
+    xTaskCreate(report_task, "slink_mtr_rep", 6144, NULL, 3, &s_report_task);        /* attribute::update goes through the CHIP stack: 3 KB were not enough (panic) */
     vTaskDelete(NULL);
 }
 

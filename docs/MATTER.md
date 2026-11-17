@@ -56,17 +56,30 @@ About 8 GB for the sources; the first build compiles the Matter SDK (30-40 minut
 
 ## Status and limits
 
+**Paired with Apple Home** (iPhone 14 Plus, QR code, no hub needed for this): the device is added, switching on and off works.
+**Google Home does not work without a Google hub** (a Nest Hub, a Nest speaker or display ...): it refuses to add a Matter device from the phone alone, whatever the device.
+
+Found with the first real controller, and what was done about each (not yet checked again on the phone):
+
+- **The volume slider oscillated up and down.** A slider (and the cluster's own transitions) sends a series of levels, and each one became a `VOL SET` while the bridge also kept telling the controller the estimated position of the motorised knob, which was still on its way. Now the level a controller asks for is sent **once**, 400 ms after the last value; for 20 s the knob position is not reported back; in standby the level is not sent and the controller gets the real one.
+- **Switching on and off was slow.** The WiFi power saving (modem sleep, the default eco profile) left the radio asleep when the controller's UDP requests arrived, and they were retried after 300 ms. With Matter on the WiFi power saving is off (`WIFIPWR` still overrides it).
+- **A panic (crash).** The Statistics page showed *last reset: panic* and the crash guard switched Matter off by itself. The probable cause is the task that tells the controllers about changes, which had a 3 KB stack: `attribute::update` goes through the CHIP stack and needs more; it is 6 KB now. **That is a probable cause, not a proven one**: the S3 sits on the amplifier without a USB cable and the console is off, so there is no backtrace. If it happens again, connect it to a computer.
+- **Manufacturer and model were empty in Apple Home.** The device did not provide its identity (Basic Information cluster): now vendor *Ircama*, product *S-Link bridge*, label *Sony S-Link / Control-A1 bridge*, part number the chip, serial number the WiFi MAC, product URL the project page (a custom `DeviceInstanceInfoProvider`; the vendor id is still the test one, `0xFFF1`).
+- The text "Please scan with your CHIPTool app" is not written by the firmware: it belongs to the page of the Matter project that the *QR code* link opens (an online QR generator). CHIPTool is the project's reference controller app; the same QR is read by Apple Home.
+
+Memory: with the device already paired the Matter stack takes about 19 KB of internal RAM (free 93 KB, minimum 39 KB with the portal, HTTPS and Matter on); while the pairing window is open it takes about 89 KB more, because Matter then starts its own Bluetooth stack for the commissioning.
+
 Verified on the real bridge (ESP32-S3 with PSRAM, WiFi + HTTPS + Hue + web portal on):
 
 - the Matter image builds with ESP-IDF 6.1 and esp-matter 1.6.1 without changes, installs over the air and confirms itself (rollback not triggered);
-- `MATTER ON` starts the stack, the node comes up with a random passcode, the pairing window opens by itself, the device advertises over Bluetooth and answers DNS-SD (`_matterc._udp`, vendor `0xFFF1`, discriminator as in the code);
-- the web portal, HTTPS and the standard commands keep working with Matter running.
+- `MATTER ON` starts the stack, the node comes up with a random passcode, the pairing window opens by itself, the device advertises over Bluetooth and answers DNS-SD (`_matterc._udp`, vendor `0xFFF1`, discriminator as in the code); Apple Home adds it; on/off from the phone;
+- the web portal, HTTPS and the standard commands keep working with Matter running; after a restart the pairing is kept (`paired with 2 ecosystems`).
 
-**Not verified** (no Matter controller was at hand: no Google/Apple hub, and the PC cannot reach the device's multicast from WSL):
+**Not verified**:
 
-- pairing with a real ecosystem (Google Home, Apple Home, Home Assistant ...);
-- that on/off and level really drive the amplifier through Matter, and the state reports back;
-- long-run stability and the memory margin (about 12 KB of internal RAM at the minimum) with a controller connected;
+- that the level (volume) from the phone behaves after the change above, and that the state reports back correctly;
+- the real cause of the panic, and long-run stability with a controller connected;
+- Google Home (needs a hub), Home Assistant, SmartThings;
 - Wi-Fi behaviour when the controller reconfigures the network; the Matter stack and the bridge share the same WiFi connection.
 
 If you try it with a controller, `MATTER` shows the state and the number of ecosystems paired; the console `HELP` lists the commands.

@@ -176,7 +176,9 @@ static wifi_ps_type_t eff_ps(void)
     case 1: return WIFI_PS_NONE;
     case 2: return WIFI_PS_MIN_MODEM;
     case 3: return WIFI_PS_MAX_MODEM;
-    default: return g_set.eco ? WIFI_PS_MAX_MODEM : WIFI_PS_MIN_MODEM;
+    default:
+        if (g_set.matter && matter_available()) return WIFI_PS_NONE;      /* Matter: the controller's requests (UDP, retried after 300 ms) found the radio asleep: every command was slow */
+        return g_set.eco ? WIFI_PS_MAX_MODEM : WIFI_PS_MIN_MODEM;
     }
 }
 static int eff_listen(void) { return g_set.lis ? g_set.lis : (g_set.eco ? 3 : 0); }

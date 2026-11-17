@@ -1455,6 +1455,7 @@ static const char *task_role(const char *n)
         { "slink_ble", "Bluetooth UART: sends the notifications" },
         { "slink_matter", "Matter: starts the stack (ends by itself)" },
         { "slink_mtr_rep", "Matter: tells the controllers about changes" },
+        { "slink_mtr_vol", "Matter: sends the volume a controller asked for (after the slider stops)" },
         { "slink_rst", "restart after the Matter commands (short lived)" },
         { "ota_pull", "firmware update: downloads and installs" },
         { "ota_ok", "firmware update: confirms the new image after the start" },
