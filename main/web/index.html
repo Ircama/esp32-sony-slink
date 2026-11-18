@@ -586,7 +586,7 @@ body.hxon .hx{display:block}
     <p class="hint" id="bleHint"></p>
     <button class="go" id="bleGo">Cerca e collega il dispositivo</button> <button class="go alt" id="bleInstall" hidden>Installa come app</button>
     <div class="err" id="bleErr" role="alert"></div>
-    <div class="links"><a href="install.html">Installa il firmware</a><a href="./">Demo del portale</a><a href="https://github.com/Ircama/esp32-sony-slink">GitHub</a></div>
+    <div class="links"><a href="#" id="bleManual">Leggi il manuale</a><a href="install.html">Installa il firmware</a><a href="./">Demo del portale</a><a href="https://github.com/Ircama/esp32-sony-slink">GitHub</a></div>
   </div>
 </div>
 <div class="app">
@@ -1668,6 +1668,7 @@ const TRX = [
   ['Nessun risultato', 'No result', 'Aucun résultat', 'Kein Ergebnis', 'Sin resultados'],
   ['Risultato precedente', 'Previous result', 'Résultat précédent', 'Voriges Ergebnis', 'Resultado anterior'],
   ['Risultato successivo', 'Next result', 'Résultat suivant', 'Nächstes Ergebnis', 'Resultado siguiente'],
+  ['Leggi il manuale', 'Read the manual', 'Lire le manuel', 'Handbuch lesen', 'Leer el manual'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
@@ -2240,7 +2241,9 @@ function setConn(ok, txt) {
   const live = ok && linkReady;
   $('#dot').className = 'dot ' + (live ? (BLEMODE ? 'ble' : 'live') : 'wait'); connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel();   /* WiFi: green / yellow; Bluetooth: blue / yellow */
   /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
-  ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the page, the header's volume buttons and the power button */
+  ['#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the header's volume buttons and the power button */
+  const mn = $('main'); mn.inert = false; mn.classList.remove('offline');
+  $$('main > *').forEach(e => { const off = !live && e.id !== 'tab-help'; e.inert = off; e.classList.toggle('offline', off); });   /* the tabs: dimmed and unusable without a link; the manual (Help) always can be read */
   if (live && !wasLive && $('#tab-set') && $('#tab-set').classList.contains('active')) pollStats();      /* Settings open while the link comes up: the device time needs the statistics */
   wasLive = live;
   if (live) S.stale = 0;
@@ -3155,6 +3158,7 @@ function initSearch() {
   $('#srchIn').addEventListener('input', () => { clearTimeout(SRCH.tm); SRCH.tm = setTimeout(() => srchRun(false), 120); });
   $('#srchIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); srchStep(e.shiftKey ? -1 : 1); } else if (e.key === 'Escape') srchClose(); });
   addEventListener('message', e => { const f = $('#helpFrame'); if (!f || e.source !== f.contentWindow || !e.data || e.data.slink !== 'found') return; $('#srchCnt').textContent = e.data.n ? (e.data.i + 1) + '/' + e.data.n : tr('Nessun risultato'); });
+  const bm = $('#bleManual'); if (bm) bm.onclick = e => { e.preventDefault(); bleLanding(false); showTab('help'); };      /* the manual can be read before connecting */
   $('#srchNext').onclick = () => srchStep(1); $('#srchPrev').onclick = () => srchStep(-1); $('#srchClose').onclick = srchClose;
   addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !e.shiftKey) { e.preventDefault(); srchOpen(); } });   /* where the browser has its own find bar too, the one of the page replaces it (it also looks in the other tabs) */
 }
