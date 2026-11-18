@@ -247,6 +247,17 @@ static esp_err_t h_tasks(httpd_req_t *r)                        /* the tasks: bi
     free(buf);
     return e;
 }
+static esp_err_t h_clients(httpd_req_t *r)                      /* the TCP/IP clients (net.c): the reverse DNS queries can take a moment, the buffer is the caller's */
+{
+    char *buf = malloc(2200);
+    if (!buf) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no memory");
+    size_t n = clients_json(buf, 2200);
+    httpd_resp_set_type(r, "application/json");
+    httpd_resp_set_hdr(r, "Cache-Control", "no-store");
+    esp_err_t e = httpd_resp_send(r, buf, (ssize_t)n);
+    free(buf);
+    return e;
+}
 static esp_err_t h_favs(httpd_req_t *r) { return send_json(r, cli_favs_json); }
 
 /* The interface preferences (knob curvature, safety limit, visible tabs, colours, hidden items ...) live in the device, not in each browser:
@@ -352,6 +363,7 @@ static void reg_all(httpd_handle_t srv)
         { .uri = "/api/dbg",      .method = HTTP_GET,  .handler = h_dbg },
         { .uri = "/api/stats",    .method = HTTP_GET,  .handler = h_stats },
         { .uri = "/api/tasks",    .method = HTTP_GET,  .handler = h_tasks },
+        { .uri = "/api/clients",  .method = HTTP_GET,  .handler = h_clients },
         { .uri = "/api/favs",     .method = HTTP_GET,  .handler = h_favs },
         { .uri = "/api/prefs",    .method = HTTP_GET,  .handler = h_prefs_get },
         { .uri = "/api/prefs",    .method = HTTP_POST, .handler = h_prefs_post },

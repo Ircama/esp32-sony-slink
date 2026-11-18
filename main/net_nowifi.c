@@ -106,6 +106,8 @@ bool mqtt_bridge_connected(void) { return false; }
 void mqtt_bridge_push(const char *json, size_t n) { (void)json; (void)n; }
 
 /* statistics for the Bluetooth page ("@GET stats"): the same fields as stats.c that make sense without WiFi, OTA and temperature sensor */
+size_t clients_json(char *b, size_t sz) { return (size_t)snprintf(b, sz, "{\"t\":\"clients\",\"c\":[]}"); }     /* no WiFi: no TCP/IP clients */
+
 size_t stats_json(char *b, size_t sz)
 {
     esp_chip_info_t ci; esp_chip_info(&ci);

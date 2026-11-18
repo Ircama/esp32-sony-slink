@@ -378,13 +378,13 @@ static bool dns_name(const uint8_t *m, int len, int off, char *out, size_t sz)
 }
 
 /* reverse DNS (PTR) of our own address, asked to the DNS server given by DHCP: lwIP has no getnameinfo(), so the query is built here */
-static void ptr_lookup(void)
+static bool ptr_query(uint32_t a, char *name, size_t nsz, int ms)
 {
     esp_netif_dns_info_t di;
-    if (!s_netif || esp_netif_get_dns_info(s_netif, ESP_NETIF_DNS_MAIN, &di) != ESP_OK || di.ip.type != ESP_IPADDR_TYPE_V4 || !di.ip.u_addr.ip4.addr) return;
+    if (!s_netif || esp_netif_get_dns_info(s_netif, ESP_NETIF_DNS_MAIN, &di) != ESP_OK || di.ip.type != ESP_IPADDR_TYPE_V4 || !di.ip.u_addr.ip4.addr) return false;
     uint8_t q[96], r[512];
     int n = 0;
-    uint32_t a = s_ip.addr;                         /* network order: first octet in the low byte */
+    /* a: network order, first octet in the low byte */
     q[n++] = 0x5A; q[n++] = 0x17; q[n++] = 0x01; q[n++] = 0x00; q[n++] = 0; q[n++] = 1; memset(q + n, 0, 6); n += 6;
     for (int i = 3; i >= 0; i--) {
         char d[4]; int l = snprintf(d, sizeof d, "%u", (unsigned)((a >> (8 * i)) & 0xFF));
@@ -394,26 +394,87 @@ static void ptr_lookup(void)
     memcpy(q + n, tail, sizeof tail - 1); n += (int)sizeof tail - 1;
     q[n++] = 0; q[n++] = 0; q[n++] = 12; q[n++] = 0; q[n++] = 1;          /* QTYPE PTR, QCLASS IN */
     int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (fd < 0) return;
-    struct timeval tv = { .tv_sec = 1 };
+    if (fd < 0) return false;
+    struct timeval tv = { .tv_sec = ms / 1000, .tv_usec = (ms % 1000) * 1000 };
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
     struct sockaddr_in sa = { .sin_family = AF_INET, .sin_port = htons(53), .sin_addr.s_addr = di.ip.u_addr.ip4.addr };
     int len = -1;
     if (sendto(fd, q, (size_t)n, 0, (struct sockaddr *)&sa, sizeof sa) == n) len = recv(fd, r, sizeof r, 0);
     close(fd);
-    if (len < 12 || r[0] != 0x5A || r[1] != 0x17 || (r[3] & 0x0F) != 0) return;
+    if (len < 12 || r[0] != 0x5A || r[1] != 0x17 || (r[3] & 0x0F) != 0) return false;
     int an = (r[6] << 8) | r[7], off = 12;
     while (off < len && r[off]) off += (r[off] & 0xC0) == 0xC0 ? 2 : 1 + r[off];     /* question name */
     off += 5;                                                                           /* root label + QTYPE + QCLASS */
     for (int i = 0; i < an && off + 12 <= len; i++) {
         while (off < len && r[off] && (r[off] & 0xC0) != 0xC0) off += 1 + r[off];
         off += (off < len && (r[off] & 0xC0) == 0xC0) ? 2 : 1;
-        if (off + 10 > len) return;
+        if (off + 10 > len) return false;
         int type = (r[off] << 8) | r[off + 1], rl = (r[off + 8] << 8) | r[off + 9];
         off += 10;
-        if (type == 12 && dns_name(r, len, off, s_dns_name, sizeof s_dns_name)) return;
+        if (type == 12 && dns_name(r, len, off, name, nsz)) return true;
         off += rl;
     }
+    return false;
+}
+
+static void ptr_lookup(void) { ptr_query(s_ip.addr, s_dns_name, sizeof s_dns_name, 1000); }
+
+/* The TCP/IP clients: every connected socket with its peer (getpeername), grouped by peer and local port. The name is the router's reverse DNS (a cache of the last
+ * answers, failures too, so that a client the router does not know does not cost a query at every call). Sockets we opened ourselves (MQTT, OTA...) have a local port
+ * that is not one of ours: the page shows them as outgoing. {"t":"clients","c":[["ip","name",local port,remote port,count],...]} */
+typedef struct { uint32_t ip; char name[40]; int64_t at; } ptrc_t;
+static ptrc_t s_ptrc[8];
+static const char *ptr_cached(uint32_t ip)
+{
+    int64_t now = esp_timer_get_time() / 1000000;
+    int oldest = 0;
+    for (int i = 0; i < 8; i++) {
+        if (s_ptrc[i].at && s_ptrc[i].ip == ip && now - s_ptrc[i].at < 600) return s_ptrc[i].name;
+        if (s_ptrc[i].at < s_ptrc[oldest].at) oldest = i;
+    }
+    ptrc_t *c = &s_ptrc[oldest];
+    c->ip = ip; c->name[0] = 0; c->at = now ? now : 1;
+    if (!ptr_query(ip, c->name, sizeof c->name, 400)) c->name[0] = 0;
+    return c->name;
+}
+size_t clients_json(char *b, size_t sz)
+{
+    typedef struct { uint32_t ip4; char ip[46]; int lp, rp, n; } cl_t;
+    cl_t c[14]; int nc = 0;
+    for (int fd = LWIP_SOCKET_OFFSET; fd < LWIP_SOCKET_OFFSET + CONFIG_LWIP_MAX_SOCKETS && nc < 14; fd++) {
+        struct sockaddr_storage pa, la; socklen_t pl = sizeof pa, ll = sizeof la;
+        if (getpeername(fd, (struct sockaddr *)&pa, &pl) != 0 || getsockname(fd, (struct sockaddr *)&la, &ll) != 0) continue;
+        cl_t x = {0};
+        if (pa.ss_family == AF_INET) {
+            struct sockaddr_in *p = (struct sockaddr_in *)&pa; x.ip4 = p->sin_addr.s_addr; x.rp = ntohs(p->sin_port);
+            x.lp = ntohs(((struct sockaddr_in *)&la)->sin_port);
+            inet_ntop(AF_INET, &p->sin_addr, x.ip, sizeof x.ip);
+        }
+#if LWIP_IPV6
+        else if (pa.ss_family == AF_INET6) {
+            struct sockaddr_in6 *p = (struct sockaddr_in6 *)&pa; x.rp = ntohs(p->sin6_port); x.lp = ntohs(((struct sockaddr_in6 *)&la)->sin6_port);
+            const uint8_t *a = p->sin6_addr.s6_addr;
+            static const uint8_t m4[12] = {0,0,0,0,0,0,0,0,0,0,0xFF,0xFF};
+            if (!memcmp(a, m4, 12)) { memcpy(&x.ip4, a + 12, 4); inet_ntop(AF_INET, a + 12, x.ip, sizeof x.ip); }
+            else inet_ntop(AF_INET6, &p->sin6_addr, x.ip, sizeof x.ip);
+        }
+#endif
+        else continue;
+        int k = 0;
+        while (k < nc && !(!strcmp(c[k].ip, x.ip) && c[k].lp == x.lp && (c[k].lp == 80 || c[k].lp == 443 || c[k].lp == 2323 || c[k].lp == 2325 || c[k].rp == x.rp))) k++;
+        if (k < nc) c[k].n++; else { x.n = 1; c[nc++] = x; }
+    }
+    size_t o = 0;
+    #define PC(...) do { if (o < sz) { int w_ = snprintf(b + o, sz - o, __VA_ARGS__); if (w_ > 0) o += (size_t)w_; } } while (0)
+    PC("{\"t\":\"clients\",\"c\":[");
+    for (int i = 0; i < nc; i++) {
+        PC("%s[\"%s\",\"", i ? "," : "", c[i].ip);
+        if (c[i].ip4) for (const char *q = ptr_cached(c[i].ip4); *q; q++) if (*q != '"' && *q != '\\' && (unsigned char)*q >= 32) PC("%c", *q);
+        PC("\",%d,%d,%d]", c[i].lp, c[i].rp, c[i].n);
+    }
+    PC("]}");
+    #undef PC
+    return o < sz ? o : sz - 1;
 }
 
 static void net_task(void *arg)

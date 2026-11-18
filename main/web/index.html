@@ -444,6 +444,23 @@ body.ble .bleonly{display:block}
 .form input:focus{border-color:var(--accent);outline:none}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13.5px}
 .taskdlg{width:min(96vw,920px);max-height:92vh;overflow:auto;padding:14px 16px}
+@media (min-width:900px){.taskdlg{width:min(94vw,1280px)}#taskTbl td.tn span{max-width:70em}}
+#cliTbl{border-collapse:collapse;width:100%;font-size:13px}
+#cliTbl th{text-align:left;color:var(--text3);font-weight:600;padding:4px 8px 4px 0;border-bottom:1px solid var(--line2);white-space:nowrap}
+#cliTbl td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+#cliTbl td.num{text-align:right;white-space:nowrap}
+#cliTbl tr.out td{color:var(--text3)}
+/* search in the page (the installed PWA has no find bar of the browser) */
+.srch-fab{position:fixed;right:14px;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom,0px));z-index:31;width:42px;height:42px;border-radius:50%;border:1px solid var(--line2);background:var(--surface);color:var(--text2);display:grid;place-items:center;box-shadow:var(--shadow);opacity:.88;cursor:pointer;padding:0}
+@media (min-width:860px){.srch-fab{bottom:20px;right:20px}}
+.srch-bar{position:fixed;left:0;right:0;top:0;z-index:40;display:flex;gap:8px;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:var(--surface);border-bottom:1px solid var(--line2);box-shadow:var(--shadow)}
+.srch-bar[hidden]{display:none}
+.srch-bar input{flex:1;min-width:0;height:40px;border-radius:var(--r-sm);border:1px solid var(--line2);background:var(--surface2);padding:0 12px;color:var(--text);font-size:16px}
+.srch-bar input:focus{border-color:var(--accent);outline:none}
+.srch-cnt{font-size:12.5px;color:var(--text3);white-space:nowrap}
+::highlight(srch){background:color-mix(in srgb,var(--warn) 35%,transparent)}
+::highlight(srchcur){background:var(--warn);color:#000}
+.srch-hit{outline:2px solid var(--warn);outline-offset:3px;border-radius:4px}
 .taskwrap{overflow-x:auto}
 #taskTbl{border-collapse:collapse;width:100%;font-size:13px}
 #taskTbl th{text-align:left;color:var(--text3);font-weight:600;padding:4px 8px 4px 0;border-bottom:1px solid var(--line2);white-space:nowrap}
@@ -549,6 +566,7 @@ body.hxon .hx{display:block}
 <symbol id="i-ff" viewBox="0 0 24 24"><path d="m13 6 8 6-8 6zM3 6l8 6-8 6z"/></symbol>
 <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></symbol>
 <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
 <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></symbol>
 <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
@@ -1094,6 +1112,15 @@ body.hxon .hx{display:block}
 <dialog id="taskDlg" class="taskdlg"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">Task</h3><button class="btn sm" id="taskClose" type="button">Chiudi</button></div>
   <div id="taskSum" class="hint"></div>
   <div class="taskwrap"><table id="taskTbl"><thead><tr><th>Task</th><th class="tp">Priorità</th><th>CPU</th><th>Margine stack</th><th class="ts">Stato</th></tr></thead><tbody></tbody></table></div></dialog>
+<dialog id="cliDlg" class="taskdlg"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">Client TCP/IP</h3><span><button class="btn sm" id="cliRefresh" type="button">Aggiorna</button> <button class="btn sm" id="cliClose" type="button">Chiudi</button></span></div>
+  <div id="cliSum" class="hint"></div>
+  <div class="taskwrap"><table id="cliTbl"><thead><tr><th>Servizio</th><th>Indirizzo IP</th><th>Nome</th><th class="num">Connessioni</th></tr></thead><tbody></tbody></table></div></dialog>
+<button class="srch-fab" id="srchFab" type="button"><svg class="i"><use href="#i-search"/></svg></button>
+<div class="srch-bar" id="srchBar" role="search" hidden>
+  <input id="srchIn" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <span class="srch-cnt" id="srchCnt" aria-live="polite"></span>
+  <button class="btn sm" id="srchPrev" type="button">↑</button><button class="btn sm" id="srchNext" type="button">↓</button><button class="btn sm" id="srchClose" type="button"><svg class="i"><use href="#i-x"/></svg></button>
+</div>
 <dialog id="dlg"><h3 id="dlgT"></h3><p id="dlgP"></p><div class="row"><button class="btn" id="dlgNo">Annulla</button><button class="btn primary" id="dlgYes">Conferma</button></div></dialog>
 
 <script>
@@ -1617,6 +1644,30 @@ const TRX = [
   ['Si riavvia in un secondo. Con una manopola del volume motorizzata la stima della posizione va persa: il volume andrà riletto o riportato a zero.', 'It restarts in a second. With a motorised volume knob the position estimate is lost: the volume must be read again or brought back to zero.', 'Il redémarre en une seconde. Avec un bouton de volume motorisé, l’estimation de la position est perdue : le volume devra être relu ou ramené à zéro.', 'Es startet in einer Sekunde neu. Bei einem motorisierten Lautstärkeregler geht die Positionsschätzung verloren: die Lautstärke muss neu gelesen oder auf null gebracht werden.', 'Se reinicia en un segundo. Con un mando de volumen motorizado se pierde la estimación de la posición: habrá que releer el volumen o ponerlo a cero.'],
   ['non impostata', 'not set', 'non réglée', 'nicht gesetzt', 'sin establecer'],
   ['non impostata (si imposta con NTP o dallo smartphone)', 'not set (set by NTP or from the smartphone)', 'non réglée (réglée par NTP ou depuis le smartphone)', 'nicht gesetzt (per NTP oder vom Smartphone)', 'sin establecer (se fija por NTP o desde el móvil)'],
+  ['Client TCP/IP', 'TCP/IP clients', 'Clients TCP/IP', 'TCP/IP-Clients', 'Clientes TCP/IP'],
+  ['Client TCP/IP collegati', 'Connected TCP/IP clients', 'Clients TCP/IP connectés', 'Verbundene TCP/IP-Clients', 'Clientes TCP/IP conectados'],
+  ['elenco', 'list', 'liste', 'Liste', 'lista'],
+  ['Aggiorna', 'Refresh', 'Actualiser', 'Aktualisieren', 'Actualizar'],
+  ['Servizio', 'Service', 'Service', 'Dienst', 'Servicio'],
+  ['Indirizzo IP', 'IP address', 'Adresse IP', 'IP-Adresse', 'Dirección IP'],
+  ['Nome', 'Name', 'Nom', 'Name', 'Nombre'],
+  ['Connessioni', 'Connections', 'Connexions', 'Verbindungen', 'Conexiones'],
+  ['Portale web (HTTP, WebSocket)', 'Web portal (HTTP, WebSocket)', 'Portail web (HTTP, WebSocket)', 'Webportal (HTTP, WebSocket)', 'Portal web (HTTP, WebSocket)'],
+  ['Portale web (HTTPS, WebSocket)', 'Web portal (HTTPS, WebSocket)', 'Portail web (HTTPS, WebSocket)', 'Webportal (HTTPS, WebSocket)', 'Portal web (HTTPS, WebSocket)'],
+  ['Console TCP', 'TCP console', 'Console TCP', 'TCP-Konsole', 'Consola TCP'],
+  ['Protocollo Slink-e', 'Slink-e protocol', 'Protocole Slink-e', 'Slink-e-Protokoll', 'Protocolo Slink-e'],
+  ['MQTT (verso il broker)', 'MQTT (to the broker)', 'MQTT (vers le broker)', 'MQTT (zum Broker)', 'MQTT (hacia el broker)'],
+  ['HTTPS in uscita (aggiornamento firmware)', 'Outgoing HTTPS (firmware update)', 'HTTPS sortant (mise à jour du firmware)', 'Ausgehendes HTTPS (Firmware-Update)', 'HTTPS saliente (actualización del firmware)'],
+  ['HTTP in uscita', 'Outgoing HTTP', 'HTTP sortant', 'Ausgehendes HTTP', 'HTTP saliente'],
+  ['Connessione in uscita', 'Outgoing connection', 'Connexion sortante', 'Ausgehende Verbindung', 'Conexión saliente'],
+  ['porta', 'port', 'port', 'Port', 'puerto'],
+  ['{n} collegamenti in ingresso', '{n} incoming connections', '{n} connexions entrantes', '{n} eingehende Verbindungen', '{n} conexiones entrantes'],
+  ['{n} in uscita', '{n} outgoing', '{n} sortantes', '{n} ausgehend', '{n} salientes'],
+  ['Nessun client TCP/IP collegato', 'No TCP/IP client connected', 'Aucun client TCP/IP connecté', 'Kein TCP/IP-Client verbunden', 'Ningún cliente TCP/IP conectado'],
+  ['Cerca nella pagina', 'Search in the page', 'Rechercher dans la page', 'Auf der Seite suchen', 'Buscar en la página'],
+  ['Nessun risultato', 'No result', 'Aucun résultat', 'Kein Ergebnis', 'Sin resultados'],
+  ['Risultato precedente', 'Previous result', 'Résultat précédent', 'Voriges Ergebnis', 'Resultado anterior'],
+  ['Risultato successivo', 'Next result', 'Résultat suivant', 'Nächstes Ergebnis', 'Resultado siguiente'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
@@ -2400,6 +2451,7 @@ function onMsg(d) {
     else if (j.t === 'net') { S.net = j; renderNet(); }
     else if (j.t === 'stats') renderStats(j);
     else if (j.t === 'tasks') renderTasks(j);
+    else if (j.t === 'clients') renderClients(j);
     return;
   }
   log(logClass(d), maskLine(d));
@@ -2471,7 +2523,7 @@ function handleLine(d) {
   const m = /^(\d)\/(\d+)\s/.exec(d); if (m) { $('#preProg').classList.add('show'); $('#preProgT').textContent = tr('Lettura preset {a}/{b}…', { a: m[1], b: m[2] }); }
 }
 async function fetchJson(u) {
-  if (DEMO) { if (u === '/api/tasks') renderTasks(demoTasks()); return; }
+  if (DEMO) { if (u === '/api/tasks') renderTasks(demoTasks()); else if (u === '/api/clients') renderClients({ t: 'clients', c: [['192.168.178.20', 'iphone.fritz.box', 80, 51234, 2], ['192.168.178.31', 'pc.fritz.box', 443, 50100, 3], ['192.168.178.31', 'pc.fritz.box', 2323, 50222, 1], ['192.168.178.1', 'fritz.box', 51000, 1883, 1]] }); return; }
   if (BLEMODE) { const m = /\/api\/(\w+)/.exec(u); if (m && ws && ws.readyState === 1) ws.send('@GET ' + m[1]); return; }      /* the device answers with the same JSON frame */
   try { const r = await fetch(u, { cache: 'no-store' }); onMsg(await r.text()); } catch (e) {}
 }
@@ -3032,6 +3084,75 @@ function demoTasks() {
   return { t: 'tasks', win: 3, cores: 2, tasks: [r('IDLE0', 0, 97.8, 650, 1), r('IDLE1', 0, 98.9, 756, 1), r('wifi', 23, 0.9 + Math.random(), 4480), r('slink_rx', 10, 0.4, 2296), r('tcpip', 18, 0.3, 1704), r('esp_timer', 22, 0.2, 3068), r('httpd', 5, 0.1, 5168, 0),
     r('slink_ws', 4, 0.1, 2012), r('slink_cmd', 5, 0.1, 2836), r('mdns', 1, 0, 3308), r('slink_net', 4, 0, 1904), r('nimble_host', 21, 0, 2268), r('Tmr Svc', 1, 0, 1420), r('sys_evt', 20, 0, 2084), r('slink_cli', 5, 0, 900)] };
 }
+/* the TCP/IP clients: every connected socket of the device (web portal, TCP console, Slink-e and the connections it opened itself), with the name from the router's DNS */
+function cliOpen() {
+  const d = $('#cliDlg'); if (!d.open) d.showModal();
+  $('#cliSum').textContent = tr('Attendi…'); $('#cliTbl tbody').textContent = '';
+  fetchJson('/api/clients');
+}
+function renderClients(j) {
+  if (!$('#cliDlg').open) return;
+  const SV = { 80: 'Portale web (HTTP, WebSocket)', 443: 'Portale web (HTTPS, WebSocket)', 2323: 'Console TCP', 2325: 'Protocollo Slink-e' };
+  const OUT = { 1883: 'MQTT (verso il broker)', 8883: 'MQTT (verso il broker)', 443: 'HTTPS in uscita (aggiornamento firmware)', 80: 'HTTP in uscita' };
+  const L = (j.c || []).map(x => { const inn = !!SV[x[2]]; return { ip: x[0], name: x[1], n: x[4], inn, sv: inn ? tr(SV[x[2]]) : (OUT[x[3]] ? tr(OUT[x[3]]) : tr('Connessione in uscita') + ' · ' + tr('porta') + ' ' + x[3]) }; });
+  L.sort((a, b) => (b.inn - a.inn) || a.ip.localeCompare(b.ip, undefined, { numeric: true }));
+  const nin = L.filter(x => x.inn).length;
+  $('#cliSum').textContent = L.length ? tr('{n} collegamenti in ingresso', { n: nin }) + (L.length > nin ? ' · ' + tr('{n} in uscita', { n: L.length - nin }) : '') : tr('Nessun client TCP/IP collegato');
+  $('#cliTbl tbody').innerHTML = L.map(x => '<tr class="' + (x.inn ? '' : 'out') + '"><td>' + esc(x.sv) + '</td><td>' + esc(x.ip) + '</td><td>' + esc(x.name || '—') + '</td><td class="num">' + x.n + '</td></tr>').join('');
+}
+/* search in the page: the text of every tab (also the hidden ones), highlighted and scrolled into view; for the installed app, which has no find bar */
+const SRCH = { q: '', m: [], i: -1, tm: 0 };
+function srchCollect(q) {
+  const out = [], ql = q.toLowerCase();
+  $$('main section.tab').forEach(sec => {
+    const w = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT, { acceptNode: n => (n.parentElement && !n.parentElement.closest('script,style,[hidden],dialog,#log,svg,template')) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+    for (let n; (n = w.nextNode());) { const t = n.nodeValue.toLowerCase(); for (let p = t.indexOf(ql); p >= 0; p = t.indexOf(ql, p + ql.length)) out.push({ n, p, tab: sec.id.slice(4) }); }
+  });
+  return out;
+}
+function srchMark() {
+  if (!window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
+  const rg = SRCH.m.map(m => { const r = document.createRange(); r.setStart(m.n, m.p); r.setEnd(m.n, m.p + SRCH.q.length); return r; });
+  CSS.highlights.set('srch', new Highlight(...rg));
+  CSS.highlights.set('srchcur', new Highlight(...(rg[SRCH.i] ? [rg[SRCH.i]] : [])));
+}
+function srchClear() { if (window.CSS && CSS.highlights) { CSS.highlights.delete('srch'); CSS.highlights.delete('srchcur'); } $$('.srch-hit').forEach(e => e.classList.remove('srch-hit')); }
+function srchShow() {
+  const c = $('#srchCnt');
+  if (!SRCH.q) { c.textContent = ''; return; }
+  c.textContent = SRCH.m.length ? (SRCH.i + 1) + '/' + SRCH.m.length : tr('Nessun risultato');
+}
+function srchRun(keep) {
+  srchClear();
+  SRCH.q = $('#srchIn').value.trim();
+  if (!SRCH.q) { SRCH.m = []; SRCH.i = -1; srchShow(); return; }
+  SRCH.m = srchCollect(SRCH.q);
+  if (!keep || SRCH.i < 0 || SRCH.i >= SRCH.m.length) { const cur = ($('section.tab.active') || {}).id; const k = SRCH.m.findIndex(m => 'tab-' + m.tab === cur); SRCH.i = SRCH.m.length ? Math.max(0, k) : -1; }
+  srchGo(SRCH.i, true);
+}
+function srchGo(k, noWrapCheck) {
+  if (!SRCH.m.length) { srchMark(); srchShow(); return; }
+  SRCH.i = (k + SRCH.m.length) % SRCH.m.length;
+  const m = SRCH.m[SRCH.i];
+  if (!($('#tab-' + m.tab).classList.contains('active'))) { showTab(m.tab); }
+  srchMark(); srchShow();
+  $$('.srch-hit').forEach(e => e.classList.remove('srch-hit'));
+  const el = m.n.parentElement; if (el) { el.classList.add('srch-hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+}
+function srchStep(d) { srchRun(true); if (SRCH.m.length) srchGo(SRCH.i + d); }        /* the page may have been redrawn since: collect again, then move */
+function srchOpen() {
+  $('#srchIn').placeholder = tr('Cerca nella pagina'); $('#srchBar').hidden = false; $('#srchIn').focus(); $('#srchIn').select();
+}
+function srchClose() { $('#srchBar').hidden = true; srchClear(); SRCH.q = ''; SRCH.m = []; SRCH.i = -1; }
+function initSearch() {
+  const fab = $('#srchFab'); fab.setAttribute('aria-label', tr('Cerca nella pagina')); fab.title = tr('Cerca nella pagina');
+  $('#srchPrev').setAttribute('aria-label', tr('Risultato precedente')); $('#srchNext').setAttribute('aria-label', tr('Risultato successivo')); $('#srchClose').setAttribute('aria-label', tr('Chiudi'));
+  fab.onclick = () => { if ($('#srchBar').hidden) srchOpen(); else srchClose(); };
+  $('#srchIn').addEventListener('input', () => { clearTimeout(SRCH.tm); SRCH.tm = setTimeout(() => srchRun(false), 120); });
+  $('#srchIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); srchStep(e.shiftKey ? -1 : 1); } else if (e.key === 'Escape') srchClose(); });
+  $('#srchNext').onclick = () => srchStep(1); $('#srchPrev').onclick = () => srchStep(-1); $('#srchClose').onclick = srchClose;
+  addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !e.shiftKey) { e.preventDefault(); srchOpen(); } });   /* where the browser has its own find bar too, the one of the page replaces it (it also looks in the other tabs) */
+}
 /* the way this page reaches the device: Bluetooth LE (the page of GitHub Pages), HTTPS or HTTP (+ WebSocket), or the demo */
 function accessProto(j) {
   if (DEMO) return tr('Demo (nessun dispositivo)');
@@ -3049,7 +3170,7 @@ function renderStats(j) {
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);
   kvRows('#stSvc', svcRows(j.svc));
-  kvRows('#stConn', [['Accesso a questa pagina', accessProto(j)], ['Client web', j.web], ['Client TCP', j.tcp], ['BLE', j.ble ? (j.bleConn ? tr('connesso') : tr('attivo')) : tr('spento')],
+  kvRows('#stConn', [['Accesso a questa pagina', accessProto(j)], ['Client web', j.web], ['Client TCP', j.tcp], ['Client TCP/IP collegati', '<button type="button" class="btn sm" id="cliOpen">' + tr('elenco') + '</button>', true], ['BLE', j.ble ? (j.bleConn ? tr('connesso') : tr('attivo')) : tr('spento')],
     ['MQTT', j.mqtt ? (j.mqttOk ? tr('connesso') : tr('in connessione…')) : tr('non configurato')]]);
   kvRows('#stBus', [['Fronti rilevati', j.bus.edges], ['Sincronismi', j.bus.syncs], ['Bit ricevuti', j.bus.bits], ['Frame ricevuti', j.bus.frames], ['Linea', tr(j.bus.level ? 'a riposo (alta)' : 'bassa')], ['Pin GPIO del bus', j.gpio >= 0 ? j.gpio : '—'], ['Intervallo minimo tra i frame', j.gap + ' ms'], ['Loopback', tr(j.loop ? 'On' : 'Off')], ['Impulsi lunghi (>6 ms)', (j.bus.long || 0) + (j.bus.long ? ' (max ' + (j.bus.longMax / 1000).toFixed(1) + ' ms)' : '')]]);
   kvRows('#stPow', [['Modalità risparmio', tr(j.eco ? 'On' : 'Off')], ['Frequenza CPU', j.cpu + ' MHz' + (j.cpuMax ? ' (' + j.cpuMin + '–' + j.cpuMax + ')' : '')],
@@ -4390,6 +4511,9 @@ function applyHide() {
 function scheduleHide() { if (hxTimer) return; hxTimer = setTimeout(() => { hxTimer = 0; applyHide(); }, 120); }
 function initUiOptions() {
   $('#stSys').addEventListener('click', e => { if (e.target.closest('#taskOpen')) taskOpen(); });
+  $('#stConn').addEventListener('click', e => { if (e.target.closest('#cliOpen')) cliOpen(); });
+  $('#cliClose').onclick = () => $('#cliDlg').close(); $('#cliRefresh').onclick = () => cliOpen();
+  initSearch();
   $('#taskClose').onclick = () => $('#taskDlg').close();
   $('#taskDlg').addEventListener('close', taskStop);
   $('#editSw').onclick = () => { const e = $('#editSw'); e.setAttribute('aria-checked', e.getAttribute('aria-checked') !== 'true'); applyEdit(); };
