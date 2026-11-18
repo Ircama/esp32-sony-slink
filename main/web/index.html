@@ -2477,13 +2477,13 @@ async function fetchJson(u) {
 }
 
 /* ---------------- console ---------------- */
-let paused = false; const hist = []; let hi = -1, lastLog = 0, lastDay = '';
+let paused = false; const hist = []; let hi = -1, lastLog = 0;
 function log(cls, txt) {
   if (paused) return;
   const L = $('#log'), stick = L.scrollTop + L.clientHeight >= L.scrollHeight - 30, d = document.createElement('div');
   const now = Date.now();
   if (now - lastLog > 3000) {                                               /* new block: its local time (of this phone / computer) */
-    const h = document.createElement('div'); h.className = 'ts'; const dt = new Date(now), day = dt.toLocaleDateString(); h.textContent = '── ' + (day !== lastDay ? day + ' ' : '') + dt.toLocaleTimeString([], { hour12: false }) + ' ──'; lastDay = day;     /* the date at the first block and when the day changes */ L.appendChild(h);
+    const h = document.createElement('div'); h.className = 'ts'; const dt = new Date(now); h.textContent = '── ' + dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString([], { hour12: false }) + ' ──'; L.appendChild(h);
   }
   lastLog = now;
   d.className = cls;
