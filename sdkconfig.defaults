@@ -27,8 +27,10 @@ CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
 # No automatic light sleep: the S-Link receiver needs the GPIO interrupt latency to stay in the microseconds.
 CONFIG_PM_ENABLE=y
 
-# TASKS command: the stack that each task never used (uxTaskGetSystemState)
+# TASKS command: the stack that each task never used and the CPU it uses (uxTaskGetSystemState, run time statistics)
 CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+# (the 32-bit counter: the Matter SDK passes a uint32_t to uxTaskGetSystemState; it wraps after 71 minutes, so use "TASKS <seconds>" on a device that has been up longer)
 
 # Web portal
 CONFIG_HTTPD_WS_SUPPORT=y

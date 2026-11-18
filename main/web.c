@@ -1,6 +1,7 @@
 /* Web portal: static page + WebSocket (/ws) carrying the CLI text protocol and JSON state frames.
  *   browser -> device : one CLI command per text frame
  *   device  -> browser: JSON frames ({"t":"state"|"presets"|"stations",...}) and plain CLI output lines */
+#include "sdkconfig.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -406,7 +407,13 @@ void web_start(void)
             s_mb = xMessageBufferCreate(8192);
         }
         for (int i = 0; i < MAX_WS; i++) { s_fds[i] = -1; s_hds[i] = NULL; }
-        if (!s_tx_task) xTaskCreate(tx_task, "slink_ws", 3072, NULL, 4, &s_tx_task);
+        if (!s_tx_task) 
+#ifdef CONFIG_SPIRAM
+#define WS_STACK 4096                       /* margin 0.6 KB with 3 KB */
+#else
+#define WS_STACK 3072
+#endif
+        xTaskCreate(tx_task, "slink_ws", WS_STACK, NULL, 4, &s_tx_task);
 
         httpd_config_t c = HTTPD_DEFAULT_CONFIG();
         c.max_open_sockets = 6;

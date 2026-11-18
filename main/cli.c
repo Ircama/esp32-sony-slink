@@ -419,7 +419,7 @@ static void help(void)
         "  ECHO ON|OFF (now %s)   DECODE ON|OFF (now %s)   LOOPBACK ON|OFF (own frames as RX)" CRLF
         "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF, slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
     out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
-        "  TASKS              every task with what it does and its stack margin: the bytes of its stack never touched (to size the stacks)" CRLF
+        "  TASKS [seconds]    every task with what it does, the CPU it uses (since the start, or in the next <seconds>) and its stack margin (to find a task that loops and to size the stacks)" CRLF
         "  MATTER ON|OFF | OPEN | MAX <1-100> | NAME <text> | NEWCODE | RESET   amplifier as a Matter light (Google Home, Apple Home ...): only in the esp32s3-matter build, see docs/MATTER.md" CRLF
         "  HUE ON|OFF | MAX <1-100> | NAME <text>   amplifier as a Philips Hue light for Alexa / Hue apps: on-off = power, brightness = volume up to MAX %% of the knob (default 30); off by default (saved)" CRLF
         "  BLEPASS <text>|OFF  password of the Bluetooth UART (the client proves it with a challenge; the password never travels); off by default" CRLF
@@ -749,18 +749,34 @@ static void handle_cmd(char *line)
         for (int i = 0; i < n; i++) out("%s%lu%s", l[i] ? "H<" : "L<", (unsigned long)d[i], i % 8 == 7 ? CRLF : " ");
         out(CRLF);
     }
-    else if (!strcmp(c0, "TASKS")) {                                    /* every task with the part of its stack that was never used: to size the stacks */
-        UBaseType_t n = uxTaskGetNumberOfTasks();
-        TaskStatus_t *t = malloc(n * sizeof *t);
-        if (!t) { out("ERR no memory" CRLF); return; }
-        n = uxTaskGetSystemState(t, n, NULL);
+    else if (!strcmp(c0, "TASKS")) {                                    /* TASKS [seconds]: every task with what it does, the CPU it used and its stack margin; the CPU since the start, or in the next <seconds> */
+        int secs = nt >= 2 ? atoi(tok[1]) : 0;
+        if (secs < 0) secs = 0;
+        if (secs > 30) secs = 30;
+        UBaseType_t cap = uxTaskGetNumberOfTasks() + 4;
+        TaskStatus_t *a = malloc(cap * sizeof *a), *b = secs ? malloc(cap * sizeof *b) : NULL;
+        if (!a || (secs && !b)) { free(a); free(b); out("ERR no memory" CRLF); return; }
+        configRUN_TIME_COUNTER_TYPE t1 = 0, t2 = 0;
+        UBaseType_t n1 = uxTaskGetSystemState(a, cap, &t1), n2 = 0;
+        if (secs) { vTaskDelay(pdMS_TO_TICKS(secs * 1000)); n2 = uxTaskGetSystemState(b, cap, &t2); }
+        const TaskStatus_t *r = secs ? b : a;
+        UBaseType_t n = secs ? n2 : n1;
         unsigned tot = 0;
         for (UBaseType_t i = 0; i < n; i++) {
-            out("%-14s prio %2u  stack margin %5u B  %s" CRLF, t[i].pcTaskName, (unsigned)t[i].uxCurrentPriority, (unsigned)(t[i].usStackHighWaterMark * sizeof(StackType_t)), task_role(t[i].pcTaskName));
-            tot += (unsigned)(t[i].usStackHighWaterMark * sizeof(StackType_t));
+            double cpu = 0;
+            if (secs) {
+                for (UBaseType_t k = 0; k < n1; k++) if (a[k].xHandle == r[i].xHandle) {
+                    configRUN_TIME_COUNTER_TYPE dc = r[i].ulRunTimeCounter - a[k].ulRunTimeCounter, dt = t2 - t1;
+                    cpu = dt ? (double)dc * 100.0 / (double)dt : 0;
+                }
+            } else cpu = t1 ? (double)r[i].ulRunTimeCounter * 100.0 / (double)t1 : 0;
+            out("%-14s prio %2u  cpu %5.1f %%  stack margin %5u B  %s" CRLF, r[i].pcTaskName, (unsigned)r[i].uxCurrentPriority, cpu,
+                (unsigned)(r[i].usStackHighWaterMark * sizeof(StackType_t)), task_role(r[i].pcTaskName));
+            tot += (unsigned)(r[i].usStackHighWaterMark * sizeof(StackType_t));
         }
-        out("%u tasks; stack margin = bytes of its stack a task never touched since the start (%u in all)" CRLF, (unsigned)n, tot);
-        free(t);
+        out("%u tasks; cpu = percent of one core %s (the IDLE tasks are the time left over); stack margin = bytes of its stack a task never touched (%u in all)" CRLF,
+            (unsigned)n, secs ? "in the last seconds" : "since the start", tot);
+        free(a); free(b);
     }
     else if (!strcmp(c0, "STATS")) {
         uint32_t e, sy, b, f, br[6];
@@ -1560,7 +1576,13 @@ void cli_start(void)
     usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
     cfg.tx_buffer_size = 1024;
     usb_serial_jtag_driver_install(&cfg);
-    xTaskCreate(worker_task, "slink_cmd", 5120, NULL, 5, NULL);
+    
+#ifdef CONFIG_SPIRAM
+#define CMD_STACK 7168                      /* the S3 has the PSRAM: the memory is not short; the margin measured with 5 KB was 0.9 KB (the Matter commands print more) */
+#else
+#define CMD_STACK 5120
+#endif
+    xTaskCreate(worker_task, "slink_cmd", CMD_STACK, NULL, 5, NULL);
     xTaskCreate(cli_task, "slink_cli", 3072, NULL, 5, NULL);
 }
 
