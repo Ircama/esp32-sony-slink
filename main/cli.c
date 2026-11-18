@@ -1583,12 +1583,23 @@ void cli_start(void)
 #define CMD_STACK 5120
 #endif
     xTaskCreate(worker_task, "slink_cmd", CMD_STACK, NULL, 5, NULL);
-    xTaskCreate(cli_task, "slink_cli", 3072, NULL, 5, NULL);
+#ifdef CONFIG_SPIRAM
+#define CLI_STACK 4096                      /* margin 0.7 KB with 3 KB (S3) */
+#else
+#define CLI_STACK 3072
+#endif
+    xTaskCreate(cli_task, "slink_cli", CLI_STACK, NULL, 5, NULL);
 }
 
 void cli_start_rx(void)
 {
-    xTaskCreate(rx_task, "slink_out", 3584, NULL, 5, NULL);
+    
+#ifdef CONFIG_SPIRAM
+#define OUT_STACK 5120                      /* margin 0.75 KB with 3.5 KB (S3) */
+#else
+#define OUT_STACK 3584
+#endif
+    xTaskCreate(rx_task, "slink_out", OUT_STACK, NULL, 5, NULL);
 }
 
 void cli_report_error(const char *msg) { out("%s\r\n", msg); }

@@ -5,7 +5,7 @@ What takes the internal RAM, how to see it, and what was done on the chips that 
 ## Seeing it
 
 - **Statistics** page: *RAM interna* (free of total, used, lowest free, largest block), *PSRAM esterna*, and the card **Interfacce e funzioni** with the RAM each interface took *when it started*: Bluetooth, WiFi, mDNS, web portal (HTTP + HTTPS), Hue, TCP console, Slink-e, MQTT, Matter. The value is the difference of the free heap before and after the start (`main/svcmem.c`), so it includes the task stacks and the buffers it allocates at start, not what open connections need later.
-- Console: **`TASKS`** lists every task with what it does and the part of its stack that was never used (to size the stacks); `STATS` is the S-Link bus counters, not memory.
+- Console: **`TASKS [seconds]`** lists every task with what it does, its **CPU** (since the start, or in the next `<seconds>`: `TASKS 10`) and its **stack margin** (the part of its stack that was never used); `STATS` is the S-Link bus counters, not memory. The Statistics page has the same as a panel: the *Task attivi* row opens it (bars for CPU and stack margin, refreshed every 3 s; `GET /api/tasks`, or `@GET tasks` over Bluetooth, also on the H2). The CPU counter is 32 bits (the Matter SDK needs it): "since the start" is exact only in the first 71 minutes, the windowed value always.
 - Over Bluetooth (`@GET stats`) the same fields arrive, also on the ESP32-H2 (which has no portal).
 
 ## Measured
@@ -27,6 +27,12 @@ Interfaces that start at the same time overlap in the measure: on the S3 Matter 
 - **ESP32-S3:** the 2 MB PSRAM takes every allocation of 4096 bytes or more (TLS, WiFi / lwIP buffers); the Matter build lowers that threshold to 512 bytes (free RAM 16.0 → 22.7 KB, minimum 8.4 → 12.3 KB). See [`MATTER.md`](MATTER.md).
 - **ESP32-C3** (no PSRAM, [`sdkconfig.defaults.esp32c3`](../sdkconfig.defaults.esp32c3)): the code that ESP-IDF copies into the internal RAM for speed (WiFi, lwIP, FreeRTOS, heap) stays in the flash; WiFi is station only, with fewer and smaller buffers; lwIP is IPv4 only with smaller TCP windows (the number of sockets stays 16: with 10 the portal stopped after `HUE ON`); TLS record buffers are dynamic and the received records are at most 4 KB (**a firmware upload over HTTPS does not work on this chip: use `http://`**); at most 2 HTTPS connections at a time. Result: 7 → 57 KB free with WiFi + portal + Bluetooth.
 - **Everywhere:** task stacks sized from `TASKS` (`slink_cmd` 5 KB, `slink_out` 3.5 KB, `slink_net` 4.5 KB, `slink_blej`, `slink_rx` and `slink_ws` 3 KB), and the BLINK test generator task is created at the first `BLINK` instead of at start-up.
+
+## What the tasks showed
+
+- **S3 with Matter, at rest:** both `IDLE` tasks at 98-99 % (the CPU is idle: no task loops; the `CHIP` task of Matter is at 0 %). The heat of 90 °C was the WiFi radio always on, not the CPU ([`MATTER.md`](MATTER.md)).
+- **Stacks almost used up on the S3**: `ipc0` (the inter-processor calls, where the NVS and Matter flash writes go) had **276 bytes** left of its 1.25 KB, the timer service 444, `IDLE0` 652, and two of ours (`slink_cli`, `slink_out`) under 800: a stack overflow there is a *panic*, and the first Matter test ended with one. On the chips with PSRAM the stacks are now `ipc` 2.3 KB, timers 3 KB, `IDLE` 2.3 KB, `slink_out` 5 KB, `slink_cli` 4 KB, `slink_cmd` 7 KB, `slink_ws` 4 KB: the lowest margin is 1.3 KB. This is the most probable cause of the panic, not a proven one.
+- **C3:** the lowest margin is 1.0 KB (`slink_cli`); the stacks there stay small to save RAM.
 
 ## Limits that remain
 

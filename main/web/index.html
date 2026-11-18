@@ -440,8 +440,21 @@ body.ble .bleonly{display:block}
 .form input,.form select{height:42px;border-radius:var(--r-sm);border:1px solid var(--line2);background:var(--surface2);padding:0 13px;font-weight:400;color:var(--text)}
 .form input:focus{border-color:var(--accent);outline:none}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13.5px}
+.taskdlg{width:min(96vw,920px);max-height:92vh;overflow:auto;padding:14px 16px}
+.taskwrap{overflow-x:auto}
+#taskTbl{border-collapse:collapse;width:100%;font-size:13px}
+#taskTbl th{text-align:left;color:var(--text3);font-weight:600;padding:4px 8px 4px 0;border-bottom:1px solid var(--line2);white-space:nowrap}
+#taskTbl td{padding:5px 8px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+#taskTbl td.tn b{display:block}#taskTbl td.tn span{display:block;color:var(--text3);font-size:12px;max-width:34em}
+#taskTbl td.num{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.tbar{height:7px;background:var(--line);border-radius:4px;margin-top:4px;min-width:90px}.tbar i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+.tbar.warn i{background:#d9822b}.tbar.bad i{background:#d6453d}
+#taskTbl tr.idle{opacity:.55}
+#taskTbl .tmeta{display:none}
+@media (max-width:600px){#taskTbl .tp,#taskTbl .ts{display:none}#taskTbl .tmeta{display:block;color:var(--text3);font-size:12px}#taskTbl td.tn{min-width:9.5em}.tbar{min-width:60px}}
 .kv dt{color:var(--text3);overflow-wrap:anywhere} .kv dd{margin:0;word-break:break-all}
-@media (max-width:520px){.kv{grid-template-columns:1fr;gap:1px 0}.kv dt{margin-top:7px}.kv dt:first-child{margin-top:0}}
+/* portrait phone: the label above its value, and a thin line between one entry and the next */
+@media (max-width:520px){.kv{grid-template-columns:1fr;gap:0}.kv dt{padding-top:9px;font-size:12px}.kv dt:first-child{padding-top:0}.kv dd{padding:2px 0 9px;border-bottom:1px solid var(--line2)}.kv dd:last-child{border-bottom:0;padding-bottom:0}}
 code{font:12.5px var(--mono);background:var(--surface2);border:1px solid var(--line);padding:1px 6px;border-radius:6px}
 
 /* toast + dialog */
@@ -1070,6 +1083,9 @@ body.hxon .hx{display:block}
 <div id="toasts" aria-live="polite"></div>
 <dialog id="calDlg"><h3>Calibrare il volume?</h3><p id="calP"></p><div class="calopts"><button class="btn primary big" id="calQuick">Calibrazione rapida</button><small id="calQs"></small><button class="btn sm" id="calFull">Calibrazione completa</button><small>La manopola motorizzata va al minimo da qualsiasi posizione (circa mezzo minuto).</small><button class="btn sm" id="calNo">Annulla</button></div></dialog>
 <dialog id="inDlg"><h3 id="inT"></h3><p id="inP"></p><input class="cp" id="inV" style="width:100%;margin-bottom:16px" autocomplete="off"><div class="row"><button class="btn" id="inNo">Annulla</button><button class="btn primary" id="inYes">Conferma</button></div></dialog>
+<dialog id="taskDlg" class="taskdlg"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">Task</h3><button class="btn sm" id="taskClose" type="button">Chiudi</button></div>
+  <div id="taskSum" class="hint"></div>
+  <div class="taskwrap"><table id="taskTbl"><thead><tr><th>Task</th><th class="tp">Priorità</th><th>CPU</th><th>Margine stack</th><th class="ts">Stato</th></tr></thead><tbody></tbody></table></div></dialog>
 <dialog id="dlg"><h3 id="dlgT"></h3><p id="dlgP"></p><div class="row"><button class="btn" id="dlgNo">Annulla</button><button class="btn primary" id="dlgYes">Conferma</button></div></dialog>
 
 <script>
@@ -1711,6 +1727,58 @@ const TRX = [
   ['HTTPS (TLS) · WebSocket sicuro (wss)', 'HTTPS (TLS) · secure WebSocket (wss)', 'HTTPS (TLS) · WebSocket sécurisé (wss)', 'HTTPS (TLS) · sicheres WebSocket (wss)', 'HTTPS (TLS) · WebSocket seguro (wss)'],
   ['HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)', 'HTTP · WebSocket (ws)'],
   ['intervallo {x} ms', 'interval {x} ms', 'intervalle {x} ms', 'Intervall {x} ms', 'intervalo {x} ms'],
+  ['dettagli', 'details', 'détails', 'Details', 'detalles'],
+  ['Attendi…', 'Wait…', 'Patientez…', 'Bitte warten…', 'Espera…'],
+  ['{n} task', '{n} tasks', '{n} tâches', '{n} Tasks', '{n} tareas'],
+  ['carico CPU {p} %', 'CPU load {p} %', 'charge CPU {p} %', 'CPU-Last {p} %', 'carga de CPU {p} %'],
+  ['CPU negli ultimi {s} s', 'CPU in the last {s} s', 'CPU sur les {s} dernières s', 'CPU in den letzten {s} s', 'CPU en los últimos {s} s'],
+  ['CPU dall’avvio', 'CPU since the start', 'CPU depuis le démarrage', 'CPU seit dem Start', 'CPU desde el arranque'],
+  ['% di un core', '% of one core', '% d’un cœur', '% eines Kerns', '% de un núcleo'],
+  ['Priorità', 'Priority', 'Priorité', 'Priorität', 'Prioridad'],
+  ['Margine stack', 'Stack margin', 'Marge de pile', 'Stack-Reserve', 'Margen de pila'],
+  ['Stato', 'State', 'État', 'Zustand', 'Estado'],
+  ['Chiudi', 'Close', 'Fermer', 'Schließen', 'Cerrar'],
+  ['In esecuzione', 'Running', 'En cours', 'Läuft', 'En ejecución'],
+  ['Pronto', 'Ready', 'Prêt', 'Bereit', 'Listo'],
+  ['In attesa', 'Waiting', 'En attente', 'Wartet', 'En espera'],
+  ['Sospeso', 'Suspended', 'Suspendu', 'Angehalten', 'Suspendida'],
+  ['Terminato', 'Ended', 'Terminé', 'Beendet', 'Terminada'],
+  ['Bus S-Link: trasforma gli impulsi ricevuti in frame', 'S-Link bus: turns the received pulses into frames', 'Bus S-Link : transforme les impulsions reçues en trames', 'S-Link-Bus: macht aus den empfangenen Impulsen Frames', 'Bus S-Link: convierte los pulsos recibidos en tramas'],
+  ['Segnale di prova BLINK sulla linea (creato al primo BLINK)', 'BLINK test signal on the line (made at the first BLINK)', 'Signal de test BLINK sur la ligne (créé au premier BLINK)', 'BLINK-Testsignal auf der Leitung (beim ersten BLINK erzeugt)', 'Señal de prueba BLINK en la línea (creada en el primer BLINK)'],
+  ['Stampa i frame ricevuti dal bus (righe RX) e aggiorna lo stato', 'Prints the frames received from the bus (RX lines) and updates the state', 'Affiche les trames reçues du bus (lignes RX) et met à jour l’état', 'Gibt die vom Bus empfangenen Frames aus (RX-Zeilen) und aktualisiert den Zustand', 'Imprime las tramas recibidas del bus (líneas RX) y actualiza el estado'],
+  ['Esegue le righe di comando di ogni interfaccia (USB, BLE, web, TCP, MQTT)', 'Runs the command lines of every interface (USB, BLE, web, TCP, MQTT)', 'Exécute les lignes de commande de chaque interface (USB, BLE, web, TCP, MQTT)', 'Führt die Befehlszeilen jeder Schnittstelle aus (USB, BLE, Web, TCP, MQTT)', 'Ejecuta las líneas de comando de cada interfaz (USB, BLE, web, TCP, MQTT)'],
+  ['Legge i caratteri digitati sulla porta seriale USB', 'Reads the characters typed on the USB serial port', 'Lit les caractères saisis sur le port série USB', 'Liest die auf der seriellen USB-Schnittstelle getippten Zeichen', 'Lee los caracteres escritos en el puerto serie USB'],
+  ['Supervisore di rete: WiFi, servizi, pubblicazione dello stato', 'Network supervisor: WiFi, services, state publishing', 'Superviseur réseau : WiFi, services, publication de l’état', 'Netzwerk-Überwachung: WLAN, Dienste, Zustandsveröffentlichung', 'Supervisor de red: WiFi, servicios, publicación del estado'],
+  ['Portale web: invia i frame ai client WebSocket', 'Web portal: sends the frames to the WebSocket clients', 'Portail web : envoie les trames aux clients WebSocket', 'Webportal: sendet die Frames an die WebSocket-Clients', 'Portal web: envía las tramas a los clientes WebSocket'],
+  ['Philips Hue: risponde alla ricerca SSDP', 'Philips Hue: answers the SSDP search', 'Philips Hue : répond à la recherche SSDP', 'Philips Hue: beantwortet die SSDP-Suche', 'Philips Hue: responde a la búsqueda SSDP'],
+  ['Console TCP (porta 2323)', 'TCP console (port 2323)', 'Console TCP (port 2323)', 'TCP-Konsole (Port 2323)', 'Consola TCP (puerto 2323)'],
+  ['Server del protocollo Slink-e (porta 2325)', 'Slink-e protocol server (port 2325)', 'Serveur du protocole Slink-e (port 2325)', 'Server des Slink-e-Protokolls (Port 2325)', 'Servidor del protocolo Slink-e (puerto 2325)'],
+  ['Pagina Bluetooth: costruisce i frame JSON', 'Bluetooth page: builds the JSON frames', 'Page Bluetooth : construit les trames JSON', 'Bluetooth-Seite: baut die JSON-Frames', 'Página Bluetooth: construye las tramas JSON'],
+  ['UART Bluetooth: invia le notifiche', 'Bluetooth UART: sends the notifications', 'UART Bluetooth : envoie les notifications', 'Bluetooth-UART: sendet die Benachrichtigungen', 'UART Bluetooth: envía las notificaciones'],
+  ['Matter: avvia lo stack (termina da solo)', 'Matter: starts the stack (ends by itself)', 'Matter : démarre la pile (se termine seule)', 'Matter: startet den Stack (endet von selbst)', 'Matter: inicia la pila (termina sola)'],
+  ['Matter: informa i controller dei cambiamenti', 'Matter: tells the controllers about changes', 'Matter : informe les contrôleurs des changements', 'Matter: meldet den Controllern Änderungen', 'Matter: informa a los controladores de los cambios'],
+  ['Matter: invia il volume chiesto da un controller (quando lo slider si ferma)', 'Matter: sends the volume a controller asked for (when the slider stops)', 'Matter : envoie le volume demandé par un contrôleur (quand le curseur s’arrête)', 'Matter: sendet die von einem Controller gewünschte Lautstärke (wenn der Regler stoppt)', 'Matter: envía el volumen pedido por un controlador (cuando el deslizador se detiene)'],
+  ['Riavvio dopo i comandi Matter (breve)', 'Restart after the Matter commands (short-lived)', 'Redémarrage après les commandes Matter (court)', 'Neustart nach den Matter-Befehlen (kurzlebig)', 'Reinicio tras los comandos Matter (breve)'],
+  ['Aggiornamento firmware: scarica e installa', 'Firmware update: downloads and installs', 'Mise à jour du firmware : télécharge et installe', 'Firmware-Update: lädt herunter und installiert', 'Actualización del firmware: descarga e instala'],
+  ['Aggiornamento firmware: conferma la nuova immagine dopo l’avvio', 'Firmware update: confirms the new image after the start', 'Mise à jour du firmware : confirme la nouvelle image après le démarrage', 'Firmware-Update: bestätigt das neue Image nach dem Start', 'Actualización del firmware: confirma la nueva imagen tras el arranque'],
+  ['Aggiornamento firmware: riavvia dopo l’installazione (breve)', 'Firmware update: restarts after the install (short-lived)', 'Mise à jour du firmware : redémarre après l’installation (court)', 'Firmware-Update: startet nach der Installation neu (kurzlebig)', 'Actualización del firmware: reinicia tras la instalación (breve)'],
+  ['HTTPS: crea la CA e il certificato del dispositivo (breve)', 'HTTPS: makes the device’s CA and certificate (short-lived)', 'HTTPS : crée l’AC et le certificat de l’appareil (court)', 'HTTPS: erzeugt die CA und das Zertifikat des Geräts (kurzlebig)', 'HTTPS: crea la CA y el certificado del dispositivo (breve)'],
+  ['Inattività: gira quando nient’altro è pronto', 'Idle: runs when nothing else is ready', 'Inactivité : s’exécute quand rien d’autre n’est prêt', 'Leerlauf: läuft, wenn nichts anderes bereit ist', 'Inactividad: se ejecuta cuando nada más está listo'],
+  ['Timer software di FreeRTOS', 'FreeRTOS software timers', 'Minuteries logicielles de FreeRTOS', 'Software-Timer von FreeRTOS', 'Temporizadores de software de FreeRTOS'],
+  ['Callback periodiche e ritardate (ESP-IDF)', 'Periodic and delayed callbacks (ESP-IDF)', 'Rappels périodiques et différés (ESP-IDF)', 'Periodische und verzögerte Callbacks (ESP-IDF)', 'Callbacks periódicos y retardados (ESP-IDF)'],
+  ['Ciclo di eventi: eventi WiFi e IP', 'Event loop: WiFi and IP events', 'Boucle d’événements : événements WiFi et IP', 'Ereignisschleife: WLAN- und IP-Ereignisse', 'Bucle de eventos: eventos WiFi e IP'],
+  ['lwIP: lo stack TCP/IP', 'lwIP: the TCP/IP stack', 'lwIP : la pile TCP/IP', 'lwIP: der TCP/IP-Stack', 'lwIP: la pila TCP/IP'],
+  ['Driver WiFi', 'WiFi driver', 'Pilote WiFi', 'WLAN-Treiber', 'Controlador WiFi'],
+  ['Host Bluetooth LE (NimBLE)', 'Bluetooth LE host (NimBLE)', 'Hôte Bluetooth LE (NimBLE)', 'Bluetooth-LE-Host (NimBLE)', 'Host Bluetooth LE (NimBLE)'],
+  ['Controller Bluetooth LE (radio)', 'Bluetooth LE controller (radio)', 'Contrôleur Bluetooth LE (radio)', 'Bluetooth-LE-Controller (Funk)', 'Controlador Bluetooth LE (radio)'],
+  ['Livello di collegamento Bluetooth LE (radio)', 'Bluetooth LE link layer (radio)', 'Couche liaison Bluetooth LE (radio)', 'Bluetooth-LE-Link-Layer (Funk)', 'Capa de enlace Bluetooth LE (radio)'],
+  ['Server web (HTTP o HTTPS)', 'Web server (HTTP or HTTPS)', 'Serveur web (HTTP ou HTTPS)', 'Webserver (HTTP oder HTTPS)', 'Servidor web (HTTP o HTTPS)'],
+  ['Risponditore mDNS (slink.local)', 'mDNS responder (slink.local)', 'Répondeur mDNS (slink.local)', 'mDNS-Responder (slink.local)', 'Respondedor mDNS (slink.local)'],
+  ['Client MQTT', 'MQTT client', 'Client MQTT', 'MQTT-Client', 'Cliente MQTT'],
+  ['Chiamate tra i due core (ESP-IDF)', 'Calls between the two cores (ESP-IDF)', 'Appels entre les deux cœurs (ESP-IDF)', 'Aufrufe zwischen den beiden Kernen (ESP-IDF)', 'Llamadas entre los dos núcleos (ESP-IDF)'],
+  ['app_main (termina quando tutto è avviato)', 'app_main (ends once everything is started)', 'app_main (se termine une fois tout démarré)', 'app_main (endet, wenn alles gestartet ist)', 'app_main (termina cuando todo está iniciado)'],
+  ['Stack Matter', 'Matter stack', 'Pile Matter', 'Matter-Stack', 'Pila Matter'],
+  ['USB Serial/JTAG', 'USB Serial/JTAG', 'USB Serial/JTAG', 'USB Serial/JTAG', 'USB Serial/JTAG'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -2313,6 +2381,7 @@ function onMsg(d) {
     else if (j.t === 'favs') { S.favs = j.favs || []; favSig = ''; renderFavs(); }
     else if (j.t === 'net') { S.net = j; renderNet(); }
     else if (j.t === 'stats') renderStats(j);
+    else if (j.t === 'tasks') renderTasks(j);
     return;
   }
   log(logClass(d), maskLine(d));
@@ -2384,7 +2453,7 @@ function handleLine(d) {
   const m = /^(\d)\/(\d+)\s/.exec(d); if (m) { $('#preProg').classList.add('show'); $('#preProgT').textContent = tr('Lettura preset {a}/{b}…', { a: m[1], b: m[2] }); }
 }
 async function fetchJson(u) {
-  if (DEMO) return;
+  if (DEMO) { if (u === '/api/tasks') renderTasks(demoTasks()); return; }
   if (BLEMODE) { const m = /\/api\/(\w+)/.exec(u); if (m && ws && ws.readyState === 1) ws.send('@GET ' + m[1]); return; }      /* the device answers with the same JSON frame */
   try { const r = await fetch(u, { cache: 'no-store' }); onMsg(await r.text()); } catch (e) {}
 }
@@ -2859,7 +2928,7 @@ const fmtBuilt = b => { const d = new Date(String(b || '').replace(/\s+/g, ' '))
 const fmtInst = t => t ? new Date(t * 1000).toLocaleString() : tr('non disponibile (installato via USB o orologio non sincronizzato)');
 const otaStateName = st => ({ valid: tr('valido'), pending: tr('in prova: non ancora confermato') })[st] || st || '—';
 const memTxt = (free, tot) => tr('liberi {f} su {t} · occupati {u} ({p} %)', { f: fmtKb(free), t: fmtKb(tot), u: fmtKb(tot - free), p: Math.round((tot - free) * 100 / tot) });
-function kvRows(sel, rows) { $(sel).innerHTML = rows.map(r => '<dt>' + tr(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join(''); }
+function kvRows(sel, rows) { $(sel).innerHTML = rows.map(r => '<dt>' + tr(r[0]) + '</dt><dd>' + (r[2] ? r[1] : esc(r[1])) + '</dd>').join(''); }       /* r[2] true: r[1] is HTML made here */
 /* vendor of a MAC address from its first three bytes: the Espressif blocks of the IEEE registry (tools/gen_oui.py); a random (locally administered) address is recognised as such */
 /* OUI-BEGIN */
 const OUI_ESP = new Set('004B12 007007 00FB4A 048308 04B247 083A8D 083AF2 089272 08A6F7 08AD0A 08B61F 08D1F9 08F9E0 0C4EA0 0C8B95 0CB815 0CDC7E 10003B 10061C 1020BA 1051DB 10521C 1091A8 1097BD 10B41D 10BDA3 140808 142B2F 14335C 146393 14C19F 188B0E 18FE34 1C2904 1C6465 1C6920 1C8F57 1C9DC2 1CC3AB 1CDBD4 202565 2043A8 20500D 206EF1 209BA9 20E7C8 240AC4 244CAB 24587C 2462AB 246F28 24A160 24B2DE 24D7EB 24DCC3 24EC4A 2805A5 28372F 28562F 288485 2C3AE8 2CBCBB 2CF432 3030F9 3076F5 308398 30AEA4 30C6F7 30C922 30EDA0 345F45 348518 34865D 349454 34987A 34AB95 34B472 34B7DA 34C934 34CDB0 38182B 383E51 3844BE 3C0F02 3C6105 3C71BF 3C8427 3C8A1F 3CDC75 3CE255 3CE90E 4022D8 402BD6 404CCA 409151 40F520 441793 441BF6 441D64 447B30 44B176 44BD8D 4827E2 4831B7 483FDA 485519 489D31 48AFF3 48CA43 48E729 48F6EE 4C11AE 4C7525 4C8421 4CC382 4CEBD6 500291 50787D 543204 5443B2 545AA6 549DEA 582ABD 582BD3 588C81 58BF25 58CF79 58E6C5 5C013B 5CCF7F 600194 6055F9 648914 64B708 64E833 680947 6825DD 686725 689DD2 68B6B3 68C63A 68EE8F 68FE71 6C2FA0 6CB456 6CC840 70039F 70041D 704BCA 70AF09 70B8F6 744DBD 748927 781C3C 782184 78421C 78E36D 78EE4C 7C0C5F 7C2C67 7C4FAD 7C7398 7C87CE 7C9EBD 7CD544 7CDFA1 7CE8B1 80456B 8053E0 80646F 806599 807D3A 80B54E 80F1B2 80F3DA 840D8E 841FE8 84C7BB 84CCA8 84F3EB 84F703 84FCE6 8813BF 8856A6 885721 88F155 8C4598 8C4B14 8C4F00 8C8C29 8C94DF 8CAAB5 8CBFEA 8CCE4E 8CFD49 901506 90380C 90649B 907069 9097D5 90B339 90DA72 90E5B1 943CC6 9451DC 9454C5 94A990 94B555 94B97E 94E686 983DAE 9888E0 98A316 98C377 98CDAC 98F4AB 9C139E 9C9C1F 9C9E6E 9CCC01 A020A6 A0764E A085E3 A0A3B3 A0B765 A0DD6C A0F262 A47B9D A4CB8F A4CF12 A4E57C A4E972 A4F00F A8032A A842E3 A84674 A848FA A8FD07 AC0BFB AC1518 AC276E AC67B2 ACA704 ACD074 ACEBE6 B03FD3 B08184 B0A604 B0A732 B0B21C B0CBD8 B43A45 B48A0A B4A64A B4BFE9 B4E62D B81F3F B87B4D B8D61A B8F009 B8F862 BC1926 BCDDC2 BCFF4D C049EF C04E30 C05D89 C0CDD6 C44F33 C45BBE C49E7E C4D8D5 C4DD57 C4DEE2 C82B96 C82E18 C88541 C88A7B C8C9A3 C8EA71 C8ED8B C8F09E CC50E3 CC68C7 CC7B5C CC7E1F CC8DA2 CCBA97 CCDBA7 CCE732 D0CF13 D0EF76 D40592 D48AFC D48C49 D4D4DA D4E9F4 D4F98D D8132A D83BDA D885AC D8A01D D8BC38 D8BFC0 D8F15B DC0675 DC0A69 DC1ED5 DC4F22 DC5475 DC55B1 DCB4D9 DCDA0C E05A1B E072A1 E08CFE E09806 E0E2E6 E465B8 E4B063 E4B323 E80690 E831CD E83DC1 E868E7 E86BEA E89F6D E8DB84 E8EDBD E8F60A EC6260 EC64C9 EC94CB ECC9FF ECD61B ECDA3B ECE334 ECFABC F008D1 F0161D F024F9 F09E9E F0F5BD F412FA F42DC9 F4650B F4CFA2 F80C4E F843EE F85B1B F8B3B7 FC012C FCB467 FCE8C0 FCF5C4'.split(' '));   /* 355 MA-L blocks of Espressif Inc. (IEEE registry), made by tools/gen_oui.py */
@@ -2899,6 +2968,47 @@ function svcRows(list) {
   if (rows.length) rows.push(['Totale interfacce attive', fmtKb(tot) + (totp ? ' + ' + fmtKb(totp) + ' PSRAM' : '')]);
   return rows;
 }
+/* the tasks: a panel opened from the Statistics ("Task attivi"), refreshed every 3 s while it is open; the device answers /api/tasks (or @GET tasks over Bluetooth) with the CPU of the last seconds */
+const TASK_ROLES = [
+  ['slink_rx', 'Bus S-Link: trasforma gli impulsi ricevuti in frame'], ['slink_blink', 'Segnale di prova BLINK sulla linea (creato al primo BLINK)'], ['slink_out', 'Stampa i frame ricevuti dal bus (righe RX) e aggiorna lo stato'],
+  ['slink_cmd', 'Esegue le righe di comando di ogni interfaccia (USB, BLE, web, TCP, MQTT)'], ['slink_cli', 'Legge i caratteri digitati sulla porta seriale USB'], ['slink_net', 'Supervisore di rete: WiFi, servizi, pubblicazione dello stato'],
+  ['slink_ws', 'Portale web: invia i frame ai client WebSocket'], ['slink_ssdp', 'Philips Hue: risponde alla ricerca SSDP'], ['slink_tcp', 'Console TCP (porta 2323)'], ['slink_slke', 'Server del protocollo Slink-e (porta 2325)'],
+  ['slink_blej', 'Pagina Bluetooth: costruisce i frame JSON'], ['slink_ble', 'UART Bluetooth: invia le notifiche'], ['slink_matter', 'Matter: avvia lo stack (termina da solo)'], ['slink_mtr_rep', 'Matter: informa i controller dei cambiamenti'],
+  ['slink_mtr_vol', 'Matter: invia il volume chiesto da un controller (quando lo slider si ferma)'], ['slink_rst', 'Riavvio dopo i comandi Matter (breve)'], ['ota_pull', 'Aggiornamento firmware: scarica e installa'],
+  ['ota_ok', 'Aggiornamento firmware: conferma la nuova immagine dopo l’avvio'], ['ota_rst', 'Aggiornamento firmware: riavvia dopo l’installazione (breve)'], ['tls_gen', 'HTTPS: crea la CA e il certificato del dispositivo (breve)'],
+  ['IDLE', 'Inattività: gira quando nient’altro è pronto'], ['Tmr Svc', 'Timer software di FreeRTOS'], ['esp_timer', 'Callback periodiche e ritardate (ESP-IDF)'], ['sys_evt', 'Ciclo di eventi: eventi WiFi e IP'],
+  ['tiT', 'lwIP: lo stack TCP/IP'], ['tcpip', 'lwIP: lo stack TCP/IP'], ['wifi', 'Driver WiFi'], ['nimble', 'Host Bluetooth LE (NimBLE)'], ['btController', 'Controller Bluetooth LE (radio)'], ['ble_ll', 'Livello di collegamento Bluetooth LE (radio)'],
+  ['httpd', 'Server web (HTTP o HTTPS)'], ['mdns', 'Risponditore mDNS (slink.local)'], ['mqtt', 'Client MQTT'], ['ipc', 'Chiamate tra i due core (ESP-IDF)'], ['main', 'app_main (termina quando tutto è avviato)'],
+  ['CHIP', 'Stack Matter'], ['usb', 'USB Serial/JTAG'],
+];
+const taskRole = n => { const r = TASK_ROLES.find(x => n.startsWith(x[0])); return r ? tr(r[1]) : ''; };
+let taskTimer = null;
+function taskStop() { clearInterval(taskTimer); taskTimer = null; }
+function taskOpen() {
+  const d = $('#taskDlg'); if (!d.open) d.showModal();
+  $('#taskSum').textContent = tr('Attendi…'); $('#taskTbl tbody').textContent = '';
+  taskStop(); fetchJson('/api/tasks'); setTimeout(() => fetchJson('/api/tasks'), 1500);
+  taskTimer = setInterval(() => { if (!document.hidden) fetchJson('/api/tasks'); }, 3000);
+}
+function renderTasks(j) {
+  if (!$('#taskDlg').open) return;
+  const L = (j.tasks || []).slice(), idle = L.filter(t => t.n.startsWith('IDLE')), cores = j.cores || Math.max(1, idle.length);
+  const busy = L.filter(t => !t.n.startsWith('IDLE')).reduce((a, t) => a + t.c, 0) / cores;
+  $('#taskSum').textContent = tr('{n} task', { n: L.length }) + ' · ' + tr('carico CPU {p} %', { p: busy.toFixed(1) }) + ' · ' + (j.win >= 0 ? tr('CPU negli ultimi {s} s', { s: j.win }) : tr('CPU dall’avvio')) + ' · ' + tr('% di un core');
+  L.sort((a, b) => (a.n.startsWith('IDLE') - b.n.startsWith('IDLE')) || b.c - a.c || a.n.localeCompare(b.n));
+  const ST = [tr('In esecuzione'), tr('Pronto'), tr('In attesa'), tr('Sospeso'), tr('Terminato')];
+  $('#taskTbl tbody').innerHTML = L.map(t => {
+    const mw = t.m < 1000 ? 'bad' : t.m < 2000 ? 'warn' : '', role = taskRole(t.n);
+    return '<tr class="' + (t.n.startsWith('IDLE') ? 'idle' : '') + '"><td class="tn"><b>' + esc(t.n) + '</b>' + (role ? '<span>' + esc(role) + '</span>' : '') + '<span class="tmeta">' + tr('Priorità') + ' ' + t.p + ' · ' + esc(ST[t.s] || '') + '</span></td><td class="num tp">' + t.p + '</td>' +
+      '<td class="num">' + t.c.toFixed(1) + ' %<div class="tbar"><i style="width:' + Math.min(100, t.c) + '%"></i></div></td>' +
+      '<td class="num">' + t.m + ' B<div class="tbar ' + mw + '"><i style="width:' + Math.min(100, t.m / 60) + '%"></i></div></td><td class="ts">' + esc(ST[t.s] || '') + '</td></tr>';
+  }).join('');
+}
+function demoTasks() {
+  const r = (n, p, c, m, s) => ({ n, p, c, m, s: s ?? 2 });
+  return { t: 'tasks', win: 3, cores: 2, tasks: [r('IDLE0', 0, 97.8, 650, 1), r('IDLE1', 0, 98.9, 756, 1), r('wifi', 23, 0.9 + Math.random(), 4480), r('slink_rx', 10, 0.4, 2296), r('tcpip', 18, 0.3, 1704), r('esp_timer', 22, 0.2, 3068), r('httpd', 5, 0.1, 5168, 0),
+    r('slink_ws', 4, 0.1, 2012), r('slink_cmd', 5, 0.1, 2836), r('mdns', 1, 0, 3308), r('slink_net', 4, 0, 1904), r('nimble_host', 21, 0, 2268), r('Tmr Svc', 1, 0, 1420), r('sys_evt', 20, 0, 2084), r('slink_cli', 5, 0, 900)] };
+}
 /* the way this page reaches the device: Bluetooth LE (the page of GitHub Pages), HTTPS or HTTP (+ WebSocket), or the demo */
 function accessProto(j) {
   if (DEMO) return tr('Demo (nessun dispositivo)');
@@ -2910,7 +3020,7 @@ function renderStats(j) {
   kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', fmtBleDiag(j.bleDiag)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
     ['Firmware', j.fw], ['Compilato', fmtBuilt(j.built)], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['RAM interna', memTxt(j.heap, j.heapTotal)], ['RAM interna: minimo libero', fmtKb(j.heapMin)], ['RAM interna: blocco libero più grande', fmtKb(j.heapBlock)],
-    ['PSRAM esterna', j.psram ? memTxt(j.psramFree, j.psram) : tr('assente')], ['PSRAM: minimo libero', j.psram ? fmtKb(j.psramMin) : '—'], ['Task attivi', j.tasks]]);
+    ['PSRAM esterna', j.psram ? memTxt(j.psramFree, j.psram) : tr('assente')], ['PSRAM: minimo libero', j.psram ? fmtKb(j.psramMin) : '—'], ['Task attivi', '<button type="button" class="btn sm" id="taskOpen">' + j.tasks + ' · ' + tr('dettagli') + '</button>', true]]);
   kvRows('#stWifi', j.wifi ? [['Rete', j.ssid], ['Segnale', j.wifi.rssi + ' dBm'], ['Canale', j.wifi.ch], ['Banda WiFi', j.wifi.ch > 14 ? '5 GHz' : '2.4 GHz'], ['Indirizzo', j.wifi.ip], ['Larghezza di banda', j.bw + ' MHz']]
     : [['Rete', j.ssid || '—'], ['Segnale', na]]);
   kvRows('#stSvc', svcRows(j.svc));
@@ -4250,6 +4360,9 @@ function applyHide() {
 }
 function scheduleHide() { if (hxTimer) return; hxTimer = setTimeout(() => { hxTimer = 0; applyHide(); }, 120); }
 function initUiOptions() {
+  $('#stSys').addEventListener('click', e => { if (e.target.closest('#taskOpen')) taskOpen(); });
+  $('#taskClose').onclick = () => $('#taskDlg').close();
+  $('#taskDlg').addEventListener('close', taskStop);
   $('#editSw').onclick = () => { const e = $('#editSw'); e.setAttribute('aria-checked', e.getAttribute('aria-checked') !== 'true'); applyEdit(); };
   /* While the settings are read-only (their cards are inert), holding the finger or the mouse on any control for 0.7 s switches the editing on. The inert cards do not get the
    * events, so they are caught on the tab itself; a movement of more than 12 px (a scroll) cancels it. */

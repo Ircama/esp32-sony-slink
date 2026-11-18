@@ -236,6 +236,17 @@ static esp_err_t send_json(httpd_req_t *r, size_t (*fn)(char *, size_t))
 static size_t j_state(char *b, size_t n) { return state_json(b, n, cli_vol_pct(), cli_vol_x10()); }
 static esp_err_t h_state(httpd_req_t *r) { return send_json(r, j_state); }
 static esp_err_t h_stats(httpd_req_t *r) { return send_json(r, stats_json); }
+static esp_err_t h_tasks(httpd_req_t *r)                        /* the tasks: bigger than the other frames, so a buffer of its own (freed at once) */
+{
+    char *buf = malloc(3600);
+    if (!buf) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no memory");
+    size_t n = tasks_json(buf, 3600);
+    httpd_resp_set_type(r, "application/json");
+    httpd_resp_set_hdr(r, "Cache-Control", "no-store");
+    esp_err_t e = httpd_resp_send(r, buf, (ssize_t)n);
+    free(buf);
+    return e;
+}
 static esp_err_t h_favs(httpd_req_t *r) { return send_json(r, cli_favs_json); }
 
 /* The interface preferences (knob curvature, safety limit, visible tabs, colours, hidden items ...) live in the device, not in each browser:
@@ -340,6 +351,7 @@ static void reg_all(httpd_handle_t srv)
         { .uri = "/api/stations", .method = HTTP_GET,  .handler = h_stations },
         { .uri = "/api/dbg",      .method = HTTP_GET,  .handler = h_dbg },
         { .uri = "/api/stats",    .method = HTTP_GET,  .handler = h_stats },
+        { .uri = "/api/tasks",    .method = HTTP_GET,  .handler = h_tasks },
         { .uri = "/api/favs",     .method = HTTP_GET,  .handler = h_favs },
         { .uri = "/api/prefs",    .method = HTTP_GET,  .handler = h_prefs_get },
         { .uri = "/api/prefs",    .method = HTTP_POST, .handler = h_prefs_post },

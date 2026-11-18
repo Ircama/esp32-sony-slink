@@ -172,7 +172,7 @@ static void tx_task(void *arg)
 
 /* ---- JSON frames for the web page (GitHub Pages "Bluetooth" page): the same {"t":...} frames the portal gets over its WebSocket, one per line ---- */
 
-enum { J_STATE = 1, J_TABLES = 2, J_NET = 4, J_STATS = 8 };
+enum { J_STATE = 1, J_TABLES = 2, J_NET = 4, J_STATS = 8, J_TASKS = 16 };
 
 static void json_line(char *b, size_t n, size_t cap)
 {
@@ -203,6 +203,7 @@ static void json_task(void *arg)
         }
         if (bits & J_NET) json_line(b, net_json_get(b, sizeof b - 2), sizeof b);
         if (bits & J_STATS) json_line(b, stats_json(b, sizeof b - 2), sizeof b);
+        if (bits & J_TASKS) json_line(b, tasks_json(b, sizeof b - 2), sizeof b);
     }
 }
 
@@ -240,7 +241,7 @@ static int rx_access(uint16_t conn, uint16_t attr, struct ble_gatt_access_ctxt *
                     if (!strcmp(line, "@UI")) { s_ui = true; xTaskNotify(s_json_task, J_STATE | J_TABLES | J_NET, eSetBits); }
                     else if (!strncmp(line, "@GET ", 5)) {
                         const char *w = line + 5;
-                        xTaskNotify(s_json_task, !strcmp(w, "stats") ? J_STATS : !strcmp(w, "net") ? J_NET : !strcmp(w, "state") ? J_STATE
+                        xTaskNotify(s_json_task, !strcmp(w, "tasks") ? J_TASKS : !strcmp(w, "stats") ? J_STATS : !strcmp(w, "net") ? J_NET : !strcmp(w, "state") ? J_STATE
                                     : (!strcmp(w, "stations") || !strcmp(w, "presets") || !strcmp(w, "favs") || !strcmp(w, "tables")) ? J_TABLES : 0, eSetBits);
                     }
                 }
