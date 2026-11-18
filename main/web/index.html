@@ -21,7 +21,7 @@
   --bg:#f3f0e9; --bg2:#eae6dc; --surface:#ffffff; --surface2:#f7f4ed; --line:#ddd7c9; --line2:#cfc8b6;
   --text:#1c1b18; --text2:#5d584d; --text3:#8b8576;
   --accent:#a9741a; --accent-ink:#ffffff; --accent-soft:rgba(169,116,26,.12); --accent-glow:rgba(169,116,26,.35);
-  --ok:#2f7d4f; --err:#b23a30; --warn:#a8650c;
+  --ok:#2f7d4f; --err:#b23a30; --warn:#a8650c; --ble:#2b62d9; --ble-try:#4cc9f0;
   --shadow:0 1px 2px rgba(40,30,10,.06),0 6px 20px -8px rgba(40,30,10,.18);
   --r:18px; --r-sm:12px;
   --mono:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
@@ -32,7 +32,7 @@
   --bg:#0c0d10; --bg2:#121317; --surface:#17191e; --surface2:#1d2026; --line:#262a31; --line2:#333843;
   --text:#ecebe6; --text2:#a6a396; --text3:#6f6d63;
   --accent:#e1b66a; --accent-ink:#1a1303; --accent-soft:rgba(225,182,106,.13); --accent-glow:rgba(225,182,106,.38);
-  --ok:#5fc088; --err:#ef7468; --warn:#e5a04a;
+  --ok:#5fc088; --err:#ef7468; --warn:#e5a04a; --ble:#4d8dff; --ble-try:#8be9ff;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -10px rgba(0,0,0,.65);
 }
 @media (prefers-color-scheme:dark){
@@ -40,7 +40,7 @@
     --bg:#0c0d10; --bg2:#121317; --surface:#17191e; --surface2:#1d2026; --line:#262a31; --line2:#333843;
     --text:#ecebe6; --text2:#a6a396; --text3:#6f6d63;
     --accent:#e1b66a; --accent-ink:#1a1303; --accent-soft:rgba(225,182,106,.13); --accent-glow:rgba(225,182,106,.38);
-    --ok:#5fc088; --err:#ef7468; --warn:#e5a04a;
+    --ok:#5fc088; --err:#ef7468; --warn:#e5a04a; --ble:#4d8dff; --ble-try:#8be9ff;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -10px rgba(0,0,0,.65);
   }
 }
@@ -98,6 +98,10 @@ body.waiting,body.waiting *{cursor:progress}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex:none}
 .dot.live{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
 .dot.wait{background:var(--warn);animation:pulse 1.2s infinite}
+/* Bluetooth page: blue = linked; light blue, fast pulse = an attempt has just started (about a second); then yellow = still trying; red = not reachable */
+.dot.ble{background:var(--ble);box-shadow:0 0 0 3px color-mix(in srgb,var(--ble) 28%,transparent)}
+.dot.try{background:var(--ble-try);box-shadow:0 0 0 3px color-mix(in srgb,var(--ble-try) 40%,transparent);animation:pulse .6s infinite}
+.dot.dead{background:var(--err);box-shadow:0 0 0 3px color-mix(in srgb,var(--err) 25%,transparent)}
 @keyframes pulse{50%{opacity:.35}}
 .pwr{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line2);
   color:var(--text2);transition:.2s;box-shadow:var(--shadow)}
@@ -559,7 +563,7 @@ body.hxon .hx{display:block}
     <ul>
       <li>Servono Chrome, Edge o Opera (PC o Android): Firefox e Safari non supportano Web Bluetooth.</li>
       <li>Il dispositivo deve essere acceso, con il BLE attivo, e non collegato ad altre app.</li>
-      <li>Non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.</li>
+      <li>Senza password Bluetooth (comando BLEPASS) non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.</li>
     </ul>
     <div id="bleLandList"></div>
     <p class="hint" id="bleHint"></p>
@@ -1645,7 +1649,7 @@ const TRX = [
   ['Questa pagina controlla il tuo dispositivo S-Link direttamente via Bluetooth LE, senza WiFi e senza il portale web del dispositivo. Serve soprattutto per l’ESP32-H2, che non ha il WiFi, e per ogni scheda con il BLE acceso (comando BLE ON).', 'This page controls your S-Link device directly over Bluetooth LE, with no WiFi and without the device’s own web portal. It is mainly meant for the ESP32-H2, which has no WiFi, and for any board with BLE turned on (command BLE ON).', 'Cette page pilote votre appareil S-Link directement en Bluetooth LE, sans WiFi et sans le portail web de l’appareil. Elle sert surtout pour l’ESP32-H2, qui n’a pas de WiFi, et pour toute carte dont le BLE est activé (commande BLE ON).', 'Diese Seite steuert Ihr S-Link-Gerät direkt über Bluetooth LE, ohne WLAN und ohne das Webportal des Geräts. Sie ist vor allem für den ESP32-H2 gedacht, der kein WLAN hat, und für jede Platine mit eingeschaltetem BLE (Befehl BLE ON).', 'Esta página controla su dispositivo S-Link directamente por Bluetooth LE, sin WiFi y sin el portal web del dispositivo. Sirve sobre todo para el ESP32-H2, que no tiene WiFi, y para cualquier placa con el BLE activado (comando BLE ON).'],
   ['Servono Chrome, Edge o Opera (PC o Android): Firefox e Safari non supportano Web Bluetooth.', 'You need Chrome, Edge or Opera (PC or Android): Firefox and Safari do not support Web Bluetooth.', 'Il faut Chrome, Edge ou Opera (PC ou Android) : Firefox et Safari ne gèrent pas Web Bluetooth.', 'Erforderlich: Chrome, Edge oder Opera (PC oder Android); Firefox und Safari unterstützen Web Bluetooth nicht.', 'Se necesita Chrome, Edge u Opera (PC o Android): Firefox y Safari no admiten Web Bluetooth.'],
   ['Il dispositivo deve essere acceso, con il BLE attivo, e non collegato ad altre app.', 'The device must be on, with BLE active, and not connected to other apps.', 'L’appareil doit être allumé, avec le BLE actif, et non connecté à d’autres applications.', 'Das Gerät muss eingeschaltet sein, BLE aktiv und nicht mit anderen Apps verbunden.', 'El dispositivo debe estar encendido, con el BLE activo, y no conectado a otras aplicaciones.'],
-  ['Non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.', 'There is no authentication: anyone within range can connect with any app. Keep BLE on only when needed.', 'Il n’y a pas d’authentification : toute personne à portée peut se connecter avec une application quelconque. N’activez le BLE que si nécessaire.', 'Es gibt keine Authentifizierung: jeder in Reichweite kann sich mit einer beliebigen App verbinden. BLE nur bei Bedarf eingeschaltet lassen.', 'No hay autenticación: cualquiera al alcance puede conectarse con cualquier aplicación. Mantenga el BLE encendido solo cuando haga falta.'],
+  ['Senza password Bluetooth (comando BLEPASS) non c’è autenticazione: chiunque sia nel raggio può collegarsi con un’app qualsiasi. Tieni il BLE acceso solo quando serve.', 'Without a Bluetooth password (BLEPASS command) there is no authentication: anyone within range can connect with any app. Keep BLE on only when needed.', 'Sans mot de passe Bluetooth (commande BLEPASS) il n’y a pas d’authentification : toute personne à portée peut se connecter avec n’importe quelle app. Gardez le BLE activé seulement quand c’est nécessaire.', 'Ohne Bluetooth-Passwort (Befehl BLEPASS) gibt es keine Authentifizierung: jeder in Reichweite kann sich mit einer beliebigen App verbinden. BLE nur einschalten, wenn nötig.', 'Sin contraseña Bluetooth (comando BLEPASS) no hay autenticación: cualquiera al alcance puede conectarse con cualquier app. Mantén el BLE activado solo cuando haga falta.'],
   ['Cerca e collega il dispositivo', 'Search for and connect the device', 'Rechercher et connecter l’appareil', 'Gerät suchen und verbinden', 'Buscar y conectar el dispositivo'],
   ['Questo browser non supporta Web Bluetooth.', 'This browser does not support Web Bluetooth.', 'Ce navigateur ne gère pas Web Bluetooth.', 'Dieser Browser unterstützt Web Bluetooth nicht.', 'Este navegador no admite Web Bluetooth.'],
   ['Connessione persa. Ricollega il dispositivo.', 'Connection lost. Connect the device again.', 'Connexion perdue. Reconnectez l’appareil.', 'Verbindung verloren. Gerät erneut verbinden.', 'Conexión perdida. Vuelva a conectar el dispositivo.'],
@@ -1779,6 +1783,7 @@ const TRX = [
   ['app_main (termina quando tutto è avviato)', 'app_main (ends once everything is started)', 'app_main (se termine une fois tout démarré)', 'app_main (endet, wenn alles gestartet ist)', 'app_main (termina cuando todo está iniciado)'],
   ['Stack Matter', 'Matter stack', 'Pile Matter', 'Matter-Stack', 'Pila Matter'],
   ['USB Serial/JTAG', 'USB Serial/JTAG', 'USB Serial/JTAG', 'USB Serial/JTAG', 'USB Serial/JTAG'],
+  ['Bluetooth non raggiungibile', 'Bluetooth not reachable', 'Bluetooth injoignable', 'Bluetooth nicht erreichbar', 'Bluetooth no accesible'],
   ['Portale web HTTPS', 'HTTPS web portal', 'Portail web HTTPS', 'HTTPS-Webportal', 'Portal web HTTPS'],
   ['Porta 443, certificato di una CA propria del dispositivo (da installare sul telefono)', 'Port 443, certificate from the device’s own CA (install it on the phone)', 'Port 443, certificat de l’autorité propre à l’appareil (à installer sur le téléphone)', 'Port 443, Zertifikat der geräteigenen CA (auf dem Handy installieren)', 'Puerto 443, certificado de la CA propia del dispositivo (instalarlo en el teléfono)'],
   ['Attivo · porta 443', 'On · port 443', 'Actif · port 443', 'Aktiv · Port 443', 'Activo · puerto 443'],
@@ -2165,10 +2170,25 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 $('#dot').onclick = () => toast(connTxt);                 /* touch screens have no hover: a tap shows the status */
 let nameTry = 0, linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
 let uiLive = false, offT = null;
+/* The dot. WiFi: green when linked, yellow when not. Bluetooth: blue when linked; light blue for about a second at the start of every attempt; then yellow while it keeps trying;
+ * red when the device is not reachable (three failed attempts, or half a minute without the link). */
+let dotTry = Date.now(), dotLost = Date.now(), dotWasLive = false, dotDead = false;
+function dotUpd() {
+  const live = S.connected && linkReady;
+  if (live) { dotLost = 0; dotWasLive = true; } else if (dotWasLive || !dotLost) { dotLost = Date.now(); dotWasLive = false; }
+  let c;
+  if (!BLEMODE) c = live ? 'live' : 'wait';
+  else if (live) c = 'ble';
+  else if (Date.now() - dotTry < 1000) c = 'try';
+  else if (bleFails >= 3 || (dotLost && Date.now() - dotLost > 30000)) c = 'dead';
+  else c = 'wait';
+  const d = $('#dot'); const cls = 'dot ' + c; if (d.className !== cls) d.className = cls;
+  if (c === 'dead' && !dotDead) { dotDead = true; connTxt = 'Bluetooth non raggiungibile'; connLabel(); } else if (c !== 'dead') dotDead = false;
+}
 function setConn(ok, txt) {
   S.connected = ok; if (!ok) linkReady = false;
   const live = ok && linkReady;
-  $('#dot').className = 'dot ' + (live ? 'live' : 'wait'); connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel();
+  connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel(); dotUpd();
   /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
   const apply = () => { offT = null; uiLive = live; ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); }); };   /* the page, the header's volume buttons and the power button */
   clearTimeout(offT); offT = null;
@@ -2339,6 +2359,7 @@ function bleOpen() {
 }
 
 function connect() {
+  dotTry = Date.now();                                                     /* a new attempt: the Bluetooth dot is light blue for a moment */
   if (DEMO) { linkReady = true; setConn(true, 'Modalità demo'); demoStart(); return; }
   if (BLEMODE && !bleDev) {                                                                              /* nothing chosen yet: the device used last time, else the landing page */
     setConn(false, 'Connessione…');
@@ -4589,6 +4610,7 @@ if (BLEMODE) {
   /* the page does not answer while the device does not: this bar is not inside the dimmed page, so it stays usable. Shown after 8 s without a link */
   const barUpd = () => { const live = S.connected && linkReady; if (live) bleBarT = Date.now(); $('#bleBar').hidden = live || !$('#bleLanding').hidden || Date.now() - bleBarT < 8000; };
   setInterval(barUpd, 1000);
+  setInterval(dotUpd, 400);
   $('#bleRetry').onclick = () => {
     bleBarT = Date.now();
     if (bleFails >= 2 && bleDev) { const n = bleDev.name; bleFails = 0; bleSwitch(); bleChoose(n); return; }               /* the automatic way fails: the browser's window (a tap is the gesture it needs) */
