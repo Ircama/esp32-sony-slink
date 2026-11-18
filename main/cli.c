@@ -21,6 +21,9 @@
 #include "driver/usb_serial_jtag.h"
 #include "slink.h"
 #include "cli.h"
+#include <time.h>
+#include <sys/time.h>
+#include "esp_system.h"
 #include "decode.h"
 #include "esp_timer.h"
 #include "freertos/queue.h"
@@ -110,6 +113,10 @@ static void out(const char *fmt, ...)
 
 bool cli_decode_on(void) { return s_decode; }
 
+static int s_tzmin = 0; static const char *s_tzsrc = "";
+int64_t cli_now(void) { time_t t = time(NULL); return t > 1700000000 ? (int64_t)t : 0; }        /* epoch seconds, 0 = the clock is not set */
+int cli_tz(void) { return s_tzmin; }
+static void restart_task(void *a) { (void)a; vTaskDelay(pdMS_TO_TICKS(1000)); esp_restart(); }
 void cli_out(const char *fmt, ...)               /* the same output as the commands' own, for the other modules (ota.c) */
 {
     va_list ap;
@@ -419,6 +426,8 @@ static void help(void)
         "  ECHO ON|OFF (now %s)   DECODE ON|OFF (now %s)   LOOPBACK ON|OFF (own frames as RX)" CRLF
         "  LINE | BLINK HIGH|LOW <ms> HIGH|LOW <ms> [n] | BLINK OFF | LEVEL HIGH|LOW|OFF   (line tests)" CRLF, slink_get_gpio(), s_echo ? "ON" : "OFF", s_decode ? "ON" : "OFF");
     out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
+        "  REBOOT | RESTART   restart the device (a motorised volume knob loses its position estimate)" CRLF
+        "  TIME | TIME SET <epoch seconds> [offset min]   device clock (no battery: NTP over WiFi, or set it from the phone)" CRLF
         "  TASKS [seconds]    every task with what it does, the CPU it uses (since the start, or in the next <seconds>) and its stack margin (to find a task that loops and to size the stacks)" CRLF
         "  MATTER ON|OFF | OPEN | MAX <1-100> | NAME <text> | NEWCODE | RESET   amplifier as a Matter light (Google Home, Apple Home ...): only in the esp32s3-matter build, see docs/MATTER.md" CRLF
         "  HUE ON|OFF | MAX <1-100> | NAME <text>   amplifier as a Philips Hue light for Alexa / Hue apps: on-off = power, brightness = volume up to MAX %% of the knob (default 30); off by default (saved)" CRLF
@@ -748,6 +757,21 @@ static void handle_cmd(char *line)
         int n = slink_dbg_edges(d, l, 48);
         for (int i = 0; i < n; i++) out("%s%lu%s", l[i] ? "H<" : "L<", (unsigned long)d[i], i % 8 == 7 ? CRLF : " ");
         out(CRLF);
+    }
+    else if (!strcmp(c0, "REBOOT") || !strcmp(c0, "RESTART")) {          /* restart the device (the volume position estimate of a motorised knob is lost) */
+        out("OK restarting" CRLF);
+        xTaskCreate(restart_task, "slink_rb", 2048, NULL, 5, NULL);
+    }
+    else if (!strcmp(c0, "TIME")) {                                     /* TIME | TIME SET <epoch seconds> [offset minutes from UTC]: the clock has no battery, it is set by NTP (WiFi) or by the phone */
+        if (nt >= 3 && !strcasecmp(tok[1], "SET")) {
+            long long e = atoll(tok[2]); int off = nt >= 4 ? atoi(tok[3]) : 0;
+            if (e < 1700000000LL || e > 4102444800LL || off < -840 || off > 840) { out("ERR time: epoch seconds (2023-2100) and offset -840..840 minutes" CRLF); return; }
+            struct timeval tv = { .tv_sec = (time_t)e, .tv_usec = 0 }; settimeofday(&tv, NULL);
+            s_tzmin = off; s_tzsrc = "phone";
+        }
+        int64_t n = cli_now();
+        if (n) out("TIME %lld offset %d min source %s" CRLF, (long long)n, s_tzmin, s_tzsrc[0] ? s_tzsrc : "ntp");
+        else out("TIME not set (no WiFi/NTP yet): TIME SET <epoch seconds> [offset minutes]" CRLF);
     }
     else if (!strcmp(c0, "TASKS")) {                                    /* TASKS [seconds]: every task with what it does, the CPU it used and its stack margin; the CPU since the start, or in the next <seconds> */
         int secs = nt >= 2 ? atoi(tok[1]) : 0;

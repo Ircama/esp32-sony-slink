@@ -380,6 +380,7 @@ body.logmax{overflow:hidden}
 .log{height:min(52dvh,460px);overflow:auto;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;
   font:12.5px/1.55 var(--mono);overscroll-behavior-y:auto}   /* at the end of the log the scroll goes on with the page (not "contain": on a phone the log fills the screen) */
 .log div{white-space:pre-wrap;word-break:break-word}
+.log .ts{color:var(--text3);font-size:11px;margin-top:6px;user-select:none}.log .ts:first-child{margin-top:0}
 .log .rx{color:var(--text)} .log .rx i{color:var(--text3);font-style:normal}
 .log .tx{color:var(--accent)} .log .ok{color:var(--ok)} .log .err{color:var(--err)} .log .info{color:var(--text2)} .log .me{color:var(--accent);font-weight:600}
 .cmdline{display:flex;gap:8px;margin-top:10px}
@@ -851,6 +852,11 @@ body.hxon .hx{display:block}
       <div class="grid two">
         <div class="card span2" id="editBar">
           <div class="set"><div class="t"><b>Modifica</b><span>Le impostazioni sono in sola lettura: attiva la modifica, o tieni premuto un controllo, per cambiarle</span></div><button class="sw" role="switch" aria-checked="false" id="editSw" aria-label="Modifica"></button></div>
+        </div>
+        <div class="card">
+          <h2>Dispositivo</h2>
+          <div class="set"><div class="t"><b>Ora del dispositivo</b><span id="devTimeTxt">—</span></div><button class="btn sm" id="timeSync">Sincronizza l’ora</button></div>
+          <div class="set"><div class="t"><b>Riavvia il dispositivo</b><span>Riavvio software, un secondo; la pagina si ricollega da sola</span></div><button class="btn sm" id="devReboot">Riavvia</button></div>
         </div>
         <div class="card">
           <h2>Interfacce</h2>
@@ -1601,6 +1607,16 @@ const TRX = [
   ["Sensore interno del chip: indica la temperatura del silicio, non quella dell'ambiente.", 'Internal chip sensor: it shows the silicon temperature, not the room temperature.', "Capteur interne de la puce : il indique la température du silicium, pas celle de la pièce.", 'Interner Chip-Sensor: zeigt die Silizium-Temperatur, nicht die Raumtemperatur.', 'Sensor interno del chip: indica la temperatura del silicio, no la del ambiente.'],
   ['Aggiornato ogni 3 secondi, solo mentre questa scheda è aperta.', 'Refreshed every 3 seconds, only while this tab is open.', 'Actualisé toutes les 3 secondes, uniquement tant que cet onglet est ouvert.', 'Wird alle 3 Sekunden aktualisiert, nur solange dieser Tab geöffnet ist.', 'Se actualiza cada 3 segundos, solo mientras esta pestaña está abierta.'],
   ['Tempo di attività', 'Uptime', 'Durée de fonctionnement', 'Laufzeit', 'Tiempo activo'],
+  ['Dispositivo', 'Device', 'Appareil', 'Gerät', 'Dispositivo'],
+  ['Ora del dispositivo', 'Device time', 'Heure de l’appareil', 'Gerätezeit', 'Hora del dispositivo'],
+  ['Sincronizza l’ora', 'Sync the time', 'Synchroniser l’heure', 'Zeit synchronisieren', 'Sincronizar la hora'],
+  ['Riavvia il dispositivo', 'Restart the device', 'Redémarrer l’appareil', 'Gerät neu starten', 'Reiniciar el dispositivo'],
+  ['Riavvia', 'Restart', 'Redémarrer', 'Neu starten', 'Reiniciar'],
+  ['Riavvio software, un secondo; la pagina si ricollega da sola', 'Software restart, one second; the page reconnects by itself', 'Redémarrage logiciel, une seconde ; la page se reconnecte seule', 'Software-Neustart, eine Sekunde; die Seite verbindet sich von selbst neu', 'Reinicio por software, un segundo; la página se reconecta sola'],
+  ['Riavviare il dispositivo?', 'Restart the device?', 'Redémarrer l’appareil ?', 'Gerät neu starten?', '¿Reiniciar el dispositivo?'],
+  ['Si riavvia in un secondo. Con una manopola del volume motorizzata la stima della posizione va persa: il volume andrà riletto o riportato a zero.', 'It restarts in a second. With a motorised volume knob the position estimate is lost: the volume must be read again or brought back to zero.', 'Il redémarre en une seconde. Avec un bouton de volume motorisé, l’estimation de la position est perdue : le volume devra être relu ou ramené à zéro.', 'Es startet in einer Sekunde neu. Bei einem motorisierten Lautstärkeregler geht die Positionsschätzung verloren: die Lautstärke muss neu gelesen oder auf null gebracht werden.', 'Se reinicia en un segundo. Con un mando de volumen motorizado se pierde la estimación de la posición: habrá que releer el volumen o ponerlo a cero.'],
+  ['non impostata', 'not set', 'non réglée', 'nicht gesetzt', 'sin establecer'],
+  ['non impostata (si imposta con NTP o dallo smartphone)', 'not set (set by NTP or from the smartphone)', 'non réglée (réglée par NTP ou depuis le smartphone)', 'nicht gesetzt (per NTP oder vom Smartphone)', 'sin establecer (se fija por NTP o desde el móvil)'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
@@ -2458,10 +2474,15 @@ async function fetchJson(u) {
 }
 
 /* ---------------- console ---------------- */
-let paused = false; const hist = []; let hi = -1;
+let paused = false; const hist = []; let hi = -1, lastLog = 0;
 function log(cls, txt) {
   if (paused) return;
   const L = $('#log'), stick = L.scrollTop + L.clientHeight >= L.scrollHeight - 30, d = document.createElement('div');
+  const now = Date.now();
+  if (now - lastLog > 3000) {                                               /* new block: its local time (of this phone / computer) */
+    const h = document.createElement('div'); h.className = 'ts'; h.textContent = '── ' + new Date(now).toLocaleTimeString([], { hour12: false }) + ' ──'; L.appendChild(h);
+  }
+  lastLog = now;
   d.className = cls;
   if (cls === 'rx') { const i = txt.indexOf(' ; '); d.innerHTML = i < 0 ? esc(txt) : esc(txt.slice(0, i)) + '<i>' + esc(txt.slice(i)) + '</i>'; }
   else d.textContent = txt;
@@ -3016,7 +3037,9 @@ function accessProto(j) {
 }
 function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
-  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', fmtBleDiag(j.bleDiag)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
+  if (j.now === 0 && !timeTried && !DEMO) { timeTried = true; syncTime(false); }     /* clock not set (no NTP, e.g. Bluetooth only): set it once from this page */
+  { const t = $('#devTimeTxt'); if (t) t.textContent = j.now ? new Date(j.now * 1000).toLocaleString([], { hour12: false }) : tr('non impostata (si imposta con NTP o dallo smartphone)'); }
+  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Ora del dispositivo', j.now ? new Date(j.now * 1000).toLocaleString([], { hour12: false }) : tr('non impostata')], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', fmtBleDiag(j.bleDiag)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
     ['Firmware', j.fw], ['Compilato', fmtBuilt(j.built)], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['RAM interna', memTxt(j.heap, j.heapTotal)], ['RAM interna: minimo libero', fmtKb(j.heapMin)], ['RAM interna: blocco libero più grande', fmtKb(j.heapBlock)],
     ['PSRAM esterna', j.psram ? memTxt(j.psramFree, j.psram) : tr('assente')], ['PSRAM: minimo libero', j.psram ? fmtKb(j.psramMin) : '—'], ['Task attivi', '<button type="button" class="btn sm" id="taskOpen">' + j.tasks + ' · ' + tr('dettagli') + '</button>', true]]);
@@ -3038,6 +3061,9 @@ function demoStats() {
     ssid: 'CasaWiFi', ps: e ? 2 : 1, txq: e ? 44 : 80, bw: 20, wifi: { rssi: -52, ch: 6, ip: '192.168.1.42' }, web: 1, tcp: 0, ble: 0, bleConn: 0, mqtt: 1, mqttOk: 1,
     bus: { edges: 18234, syncs: 311, bits: 4980, frames: 311, level: 1 } };
 }
+/* The device has no battery clock: it takes the time from NTP (WiFi) or from here. TIME SET <epoch seconds> <offset minutes east of UTC> */
+let timeTried = false;
+function syncTime(user) { cmd('TIME SET ' + Math.floor(Date.now() / 1000) + ' ' + (-new Date().getTimezoneOffset()), user ? { ack: true } : { auto: true }); }
 function pollStats() { if (DEMO) renderStats(demoStats()); else fetchJson('/api/stats'); }
 async function copyLog() {
   const txt = [...$('#log').children].map(d => d.textContent).join('\n');
@@ -4402,6 +4428,11 @@ function initUiOptions() {
   /* titles */
   $('#tApp').value = TITLE.app; $('#tPage').value = TITLE.page; $('#tPwa').value = TITLE.pwa; $('#tName').value = TITLE.name;
   $('#tName').oninput = () => { if ($('#tName').value.trim()) $('#tPwa').value = 'NAME'; };   /* typing a name selects it */
+  $('#timeSync').onclick = () => syncTime(true);
+  $('#devReboot').onclick = async () => {
+    if (!await confirmDlg('Riavviare il dispositivo?', 'Si riavvia in un secondo. Con una manopola del volume motorizzata la stima della posizione va persa: il volume andrà riletto o riportato a zero.', 'Riavvia')) return;
+    cmd('REBOOT', { ack: true }); setConn(false, 'Riavvio…');
+  };
   $('#blePwForm').onsubmit = e => { e.preventDefault(); const v = $('#blePwIn').value.trim();
     if (v.length < 4 || /["\s]/.test(v)) { toast(tr('Almeno 4 caratteri, senza spazi'), 'err'); return; }
     if (BLEMODE && bleDev) store.set('ble-pw-' + bleDev.id, v);                       /* this page keeps it for this device: it answers the challenge when the connection is made again */

@@ -17,6 +17,7 @@
 #include "esp_rom_sys.h"
 #include "esp_app_desc.h"
 #include "ota.h"
+#include "cli.h"
 #include "driver/temperature_sensor.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -82,8 +83,8 @@ size_t stats_json(char *b, size_t sz)
 
     char slot[20]; const char *ost; ota_slot_info(slot, sizeof slot, &ost);
     uint32_t fimg, fslot, fflash; ota_size_info(&fimg, &fslot, &fflash);
-    P("{\"t\":\"stats\",\"inst\":%lld,\"slot\":\"%s\",\"ostate\":\"%s\",\"fimg\":%u,\"fslot\":%u,\"fflash\":%u,\"up\":%lld,\"reset\":\"%s\",\"chip\":\"%s\",\"rev\":%d,\"cores\":%d,\"fw\":\"%s\",\"built\":\"%s\",\"idf\":\"%s\",",
-      (long long)ota_installed(), slot, ost, (unsigned)fimg, (unsigned)fslot, (unsigned)fflash, (long long)(esp_timer_get_time() / 1000000), reset_reason(), CONFIG_IDF_TARGET, ci.revision, ci.cores, fw, built, idf);
+    P("{\"t\":\"stats\",\"inst\":%lld,\"slot\":\"%s\",\"ostate\":\"%s\",\"fimg\":%u,\"fslot\":%u,\"fflash\":%u,\"up\":%lld,\"now\":%lld,\"tz\":%d,\"reset\":\"%s\",\"chip\":\"%s\",\"rev\":%d,\"cores\":%d,\"fw\":\"%s\",\"built\":\"%s\",\"idf\":\"%s\",",
+      (long long)ota_installed(), slot, ost, (unsigned)fimg, (unsigned)fslot, (unsigned)fflash, (long long)(esp_timer_get_time() / 1000000), (long long)cli_now(), cli_tz(), reset_reason(), CONFIG_IDF_TARGET, ci.revision, ci.cores, fw, built, idf);
     if (t_ok) P("\"temp\":%.1f,", (double)t); else P("\"temp\":null,");
     P("\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,",       /* internal RAM only: it is the one that runs short */
       (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),

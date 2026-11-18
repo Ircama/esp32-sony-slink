@@ -120,11 +120,11 @@ size_t stats_json(char *b, size_t sz)
     default: break;
     }
     int n = snprintf(b, sz,
-        "{\"t\":\"stats\",\"inst\":0,\"slot\":\"-\",\"ostate\":\"unknown\",\"fimg\":0,\"fslot\":0,\"fflash\":0,\"up\":%lld,\"reset\":\"%s\",\"chip\":\"esp32h2\",\"rev\":%d,\"cores\":%d,"
+        "{\"t\":\"stats\",\"inst\":0,\"slot\":\"-\",\"ostate\":\"unknown\",\"fimg\":0,\"fslot\":0,\"fflash\":0,\"up\":%lld,\"now\":%lld,\"tz\":%d,\"reset\":\"%s\",\"chip\":\"esp32h2\",\"rev\":%d,\"cores\":%d,"
         "\"fw\":\"%.31s\",\"built\":\"%.15s %.8s\",\"idf\":\"%.31s\",\"temp\":null,"
         "\"heap\":%u,\"heapMin\":%u,\"heapBlock\":%u,\"heapTotal\":%u,\"tasks\":%u,\"psram\":0,\"psramFree\":0,\"psramMin\":0,%s"
         "\"cpu\":%u,\"cpuMax\":%d,\"cpuMin\":%d,\"eco\":%d,\"twt\":0,\"twtMs\":0,\"host\":\"\",\"mac\":\"\",\"bleMac\":\"%s\",\"bleName\":\"%s\",\"bleDiag\":\"%s\"}",
-        (long long)(esp_timer_get_time() / 1000000), rs, ci.revision, ci.cores, ad->version, ad->date, ad->time, ad->idf_ver,
+        (long long)(esp_timer_get_time() / 1000000), (long long)cli_now(), cli_tz(), rs, ci.revision, ci.cores, ad->version, ad->date, ad->time, ad->idf_ver,
         (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
         (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), (unsigned)heap_caps_get_total_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
         (unsigned)uxTaskGetNumberOfTasks(), sv, (unsigned)esp_rom_get_cpu_ticks_per_us(), g_set.eco ? 48 : 96, g_set.eco ? 32 : 96, g_set.eco, bm, bn, dg);

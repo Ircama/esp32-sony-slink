@@ -10,6 +10,8 @@ void cli_start(void);
 void cli_start_rx(void);   /* call after slink_init() */
 void cli_report_error(const char *msg);
 bool cli_decode_on(void);                        /* DECODE ON/OFF: frames are annotated */
+int64_t cli_now(void);
+int cli_tz(void);
 void cli_out(const char *fmt, ...) __attribute__((format(printf, 1, 2)));   /* printf to every output (USB, BLE, TCP, web, MQTT) */
 
 /* Output sinks: called (under the output lock) with every chunk the CLI prints. Must NOT block. */
