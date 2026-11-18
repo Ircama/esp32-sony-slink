@@ -177,7 +177,7 @@ static wifi_ps_type_t eff_ps(void)
     case 2: return WIFI_PS_MIN_MODEM;
     case 3: return WIFI_PS_MAX_MODEM;
     default:
-        if (g_set.matter && matter_available()) return WIFI_PS_NONE;      /* Matter: the controller's requests (UDP, retried after 300 ms) found the radio asleep: every command was slow */
+        if (g_set.matter && matter_available()) return WIFI_PS_MIN_MODEM; /* Matter: the radio wakes at every DTIM beacon (the controller's UDP requests were retried after 300 ms with the maximum sleep). NOT "none": the radio always on took the S3 from 60 to 90 C */
         return g_set.eco ? WIFI_PS_MAX_MODEM : WIFI_PS_MIN_MODEM;
     }
 }
