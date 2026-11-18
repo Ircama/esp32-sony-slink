@@ -451,8 +451,8 @@ body.ble .bleonly{display:block}
 #cliTbl td.num{text-align:right;white-space:nowrap}
 #cliTbl tr.out td{color:var(--text3)}
 /* search in the page (the installed PWA has no find bar of the browser) */
-.srch-fab{position:fixed;right:14px;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom,0px));z-index:31;width:42px;height:42px;border-radius:50%;border:1px solid var(--line2);background:var(--surface);color:var(--text2);display:grid;place-items:center;box-shadow:var(--shadow);opacity:.88;cursor:pointer;padding:0}
-@media (min-width:860px){.srch-fab{bottom:20px;right:20px}}
+.srch-fab{position:fixed;left:14px;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom,0px));z-index:31;width:42px;height:42px;border-radius:50%;border:1px solid var(--line2);background:var(--surface);color:var(--text2);display:grid;place-items:center;box-shadow:var(--shadow);opacity:.88;cursor:pointer;padding:0}
+@media (min-width:860px){.srch-fab{bottom:20px;left:calc(var(--rail-w,92px) + 14px)}}      /* on the left: the arrows of the log and of the manual are at the right */
 .srch-bar{position:fixed;left:0;right:0;top:0;z-index:40;display:flex;gap:8px;align-items:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:var(--surface);border-bottom:1px solid var(--line2);box-shadow:var(--shadow)}
 .srch-bar[hidden]{display:none}
 .srch-bar input{flex:1;min-width:0;height:40px;border-radius:var(--r-sm);border:1px solid var(--line2);background:var(--surface2);padding:0 12px;color:var(--text);font-size:16px}
