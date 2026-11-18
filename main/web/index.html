@@ -2183,12 +2183,15 @@ if (window.ResizeObserver) new ResizeObserver(fitTitle).observe($('#ampName')); 
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 $('#dot').onclick = () => toast(connTxt);                 /* touch screens have no hover: a tap shows the status */
 let nameTry = 0, linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
+let wasLive = false;
 function setConn(ok, txt) {
   S.connected = ok; if (!ok) linkReady = false;
   const live = ok && linkReady;
   $('#dot').className = 'dot ' + (live ? (BLEMODE ? 'ble' : 'live') : 'wait'); connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel();   /* WiFi: green / yellow; Bluetooth: blue / yellow */
   /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
   ['main', '#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the page, the header's volume buttons and the power button */
+  if (live && !wasLive && $('#tab-set') && $('#tab-set').classList.contains('active')) pollStats();      /* Settings open while the link comes up: the device time needs the statistics */
+  wasLive = live;
   if (live) S.stale = 0;
   staleUpd();
 }
@@ -2474,13 +2477,13 @@ async function fetchJson(u) {
 }
 
 /* ---------------- console ---------------- */
-let paused = false; const hist = []; let hi = -1, lastLog = 0;
+let paused = false; const hist = []; let hi = -1, lastLog = 0, lastDay = '';
 function log(cls, txt) {
   if (paused) return;
   const L = $('#log'), stick = L.scrollTop + L.clientHeight >= L.scrollHeight - 30, d = document.createElement('div');
   const now = Date.now();
   if (now - lastLog > 3000) {                                               /* new block: its local time (of this phone / computer) */
-    const h = document.createElement('div'); h.className = 'ts'; h.textContent = '── ' + new Date(now).toLocaleTimeString([], { hour12: false }) + ' ──'; L.appendChild(h);
+    const h = document.createElement('div'); h.className = 'ts'; const dt = new Date(now), day = dt.toLocaleDateString(); h.textContent = '── ' + (day !== lastDay ? day + ' ' : '') + dt.toLocaleTimeString([], { hour12: false }) + ' ──'; lastDay = day;     /* the date at the first block and when the day changes */ L.appendChild(h);
   }
   lastLog = now;
   d.className = cls;
@@ -3389,6 +3392,7 @@ function showTab(n) {
   navReveal(n);
   store.set('tab', n); scrollTo({ top: 0 });
   clearInterval(statsTimer); statsTimer = null;
+  if (n === 'set') pollStats();                                            /* the device time shown in Settings comes from the statistics */
   if (n === 'stats') { pollStats(); statsTimer = setInterval(() => { if (!document.hidden) pollStats(); }, 3000); }
   if (n === 'sound' && !S.eq[0].every(Boolean) && S.power === 1) eqRead();
   if (n === 'set') otaLoad();
