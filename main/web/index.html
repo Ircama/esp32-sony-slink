@@ -3122,8 +3122,12 @@ function srchShow() {
   if (!SRCH.q) { c.textContent = ''; return; }
   c.textContent = SRCH.m.length ? (SRCH.i + 1) + '/' + SRCH.m.length : tr('Nessun risultato');
 }
+/* on the Help tab the search is in the manual: it lives in a sandboxed frame, which does the search and answers with the count */
+const helpOn = () => $('#tab-help').classList.contains('active') && $('#helpFrame') && $('#helpFrame').contentWindow;
+function helpFind(q, step) { $('#helpFrame').contentWindow.postMessage({ slink: 'find', q, step }, '*'); if (!q) $('#srchCnt').textContent = ''; }
 function srchRun(keep) {
   srchClear();
+  if (helpOn()) { SRCH.q = $('#srchIn').value.trim(); helpFind(SRCH.q, 0); return; }
   SRCH.q = $('#srchIn').value.trim();
   if (!SRCH.q) { SRCH.m = []; SRCH.i = -1; srchShow(); return; }
   SRCH.m = srchCollect(SRCH.q);
@@ -3139,17 +3143,18 @@ function srchGo(k, noWrapCheck) {
   $$('.srch-hit').forEach(e => e.classList.remove('srch-hit'));
   const el = m.n.parentElement; if (el) { el.classList.add('srch-hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
 }
-function srchStep(d) { srchRun(true); if (SRCH.m.length) srchGo(SRCH.i + d); }        /* the page may have been redrawn since: collect again, then move */
+function srchStep(d) { if (helpOn()) { helpFind($('#srchIn').value.trim(), d); return; } srchRun(true); if (SRCH.m.length) srchGo(SRCH.i + d); }        /* the page may have been redrawn since: collect again, then move */
 function srchOpen() {
   $('#srchIn').placeholder = tr('Cerca nella pagina'); $('#srchBar').hidden = false; $('#srchIn').focus(); $('#srchIn').select();
 }
-function srchClose() { $('#srchBar').hidden = true; srchClear(); SRCH.q = ''; SRCH.m = []; SRCH.i = -1; }
+function srchClose() { $('#srchBar').hidden = true; if (helpOn()) helpFind('', 0); srchClear(); SRCH.q = ''; SRCH.m = []; SRCH.i = -1; }
 function initSearch() {
   const fab = $('#srchFab'); fab.setAttribute('aria-label', tr('Cerca nella pagina')); fab.title = tr('Cerca nella pagina');
   $('#srchPrev').setAttribute('aria-label', tr('Risultato precedente')); $('#srchNext').setAttribute('aria-label', tr('Risultato successivo')); $('#srchClose').setAttribute('aria-label', tr('Chiudi'));
   fab.onclick = () => { if ($('#srchBar').hidden) srchOpen(); else srchClose(); };
   $('#srchIn').addEventListener('input', () => { clearTimeout(SRCH.tm); SRCH.tm = setTimeout(() => srchRun(false), 120); });
   $('#srchIn').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); srchStep(e.shiftKey ? -1 : 1); } else if (e.key === 'Escape') srchClose(); });
+  addEventListener('message', e => { const f = $('#helpFrame'); if (!f || e.source !== f.contentWindow || !e.data || e.data.slink !== 'found') return; $('#srchCnt').textContent = e.data.n ? (e.data.i + 1) + '/' + e.data.n : tr('Nessun risultato'); });
   $('#srchNext').onclick = () => srchStep(1); $('#srchPrev').onclick = () => srchStep(-1); $('#srchClose').onclick = srchClose;
   addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !e.shiftKey) { e.preventDefault(); srchOpen(); } });   /* where the browser has its own find bar too, the one of the page replaces it (it also looks in the other tabs) */
 }

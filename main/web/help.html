@@ -1809,6 +1809,47 @@
         })();
 
     </script>
+    <style>
+        ::highlight(find) { background: rgba(229, 160, 74, .38); }
+        ::highlight(findcur) { background: #e5a04a; color: #000; }
+        .find-hit { outline: 2px solid #e5a04a; outline-offset: 3px; border-radius: 4px; }
+    </style>
+    <script>
+        /* search in the manual, asked by the page that embeds it (the frame is sandboxed: the page cannot read this document): {slink:'find', q, step} -> {slink:'found', n, i} */
+        (function () {
+            var F = { q: '', m: [], i: -1 };
+            function clear() {
+                if (window.CSS && CSS.highlights) { CSS.highlights.delete('find'); CSS.highlights.delete('findcur'); }
+                var h = document.querySelectorAll('.find-hit'); for (var k = 0; k < h.length; k++) h[k].classList.remove('find-hit');
+            }
+            function collect(q) {
+                var out = [], ql = q.toLowerCase();
+                var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: function (n) { var p = n.parentElement; return p && !p.closest('script,style,[hidden],svg') ? 1 : 2; } });
+                for (var n; (n = w.nextNode());) { var t = n.nodeValue.toLowerCase(); for (var p = t.indexOf(ql); p >= 0; p = t.indexOf(ql, p + ql.length)) out.push({ n: n, p: p }); }
+                return out;
+            }
+            function range(m) { var r = document.createRange(); r.setStart(m.n, m.p); r.setEnd(m.n, m.p + F.q.length); return r; }
+            function report() { try { parent.postMessage({ slink: 'found', n: F.m.length, i: F.i }, '*'); } catch (e) { } }
+            function run(q, step) {
+                clear(); F.q = q;
+                if (!q) { F.m = []; F.i = -1; report(); return; }
+                F.m = collect(q);
+                var len = F.m.length;
+                if (!len) { F.i = -1; report(); return; }
+                F.i = (step === 0 || F.i < 0 || F.i >= len) ? 0 : (F.i + step + len) % len;
+                if (window.CSS && CSS.highlights && typeof Highlight !== 'undefined') {
+                    var rg = F.m.map(range);
+                    var hl = new Highlight(); rg.forEach(function (r) { hl.add(r); }); CSS.highlights.set('find', hl);
+                    CSS.highlights.set('findcur', new Highlight(rg[F.i]));
+                }
+                var el = F.m[F.i].n.parentElement;
+                for (var d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;       /* a closed section opens */
+                el.classList.add('find-hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                report();
+            }
+            window.addEventListener('message', function (e) { var d = e.data; if (d && d.slink === 'find') run(String(d.q || '').trim(), d.step | 0); });
+        })();
+    </script>
 </body>
 
 </html>
