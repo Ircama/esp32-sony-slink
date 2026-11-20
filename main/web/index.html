@@ -3423,10 +3423,25 @@ function wire() {
     else if (e.key >= '1' && e.key <= '7') showTab(['home', 'radio', 'sound', 'stats', 'console', 'set', 'help'][+e.key - 1]);
   });
 }
+/* The manual comes from the device (or from the copy of the service worker); when the device cannot be reached (installed app, device off or out of range) and the Internet is there, from the GitHub Pages site, which serves the same page. */
+const HELP_REMOTE = 'https://ircama.github.io/esp32-sony-slink/help.html';
+async function helpSrc() {
+  const q = '?theme=' + (helpDark() ? 'dark' : 'light'), local = 'help.html' + q;
+  if (BLEMODE || DEMO || location.hostname.endsWith('github.io')) return local;          /* these pages are on the Pages site already */
+  try {
+    const ac = new AbortController(), t = setTimeout(() => ac.abort(), 4000);
+    const r = await fetch('help.html', { signal: ac.signal }); clearTimeout(t);
+    if (r.ok) return local;
+  } catch (e) {}
+  return HELP_REMOTE + q;
+}
 /* Help: the manual (the README of the repository) is shown by help.html, a separate page in a sandboxed frame so its styles stay out of this one */
 function helpOpen() {
   const f = $('#helpFrame'); if (!f) return;
-  if (!f.getAttribute('src')) f.src = 'help.html?theme=' + (helpDark() ? 'dark' : 'light');
+  if (!f.getAttribute('src') && !helpOpen.loading) {
+    helpOpen.loading = true;
+    helpSrc().then(u => { f.src = u; helpOpen.loading = false; });
+  }
   helpFit();
   if (!helpOpen.on) {
     helpOpen.on = 1;
