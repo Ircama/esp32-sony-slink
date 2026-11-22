@@ -108,6 +108,7 @@ void state_feed(const uint8_t *d, size_t n)
     xSemaphoreTake(s_mtx, portMAX_DELAY);
     const int o_pw = S.power, o_mu = S.mute, o_au = S.audio, o_vi = S.video, o_sf = S.sf;       /* what changed is recorded in the functional log (oplog.c) */
     const unsigned o_tf = S.tun.f; const uint8_t o_tfl = S.tun.fl;
+    char o_nm[sizeof S.tun.name]; memcpy(o_nm, S.tun.name, sizeof o_nm);
     if (who == 0) {                                                            /* amplifier */
         switch (c) {
         case 0x2E: ch = S.power != 1; S.power = 1; break;
@@ -180,12 +181,14 @@ void state_feed(const uint8_t *d, size_t n)
     }
     const int n_pw = S.power, n_mu = S.mute, n_au = S.audio, n_vi = S.video, n_sf = S.sf;
     const unsigned n_tf = S.tun.f; const uint8_t n_tfl = S.tun.fl; const bool n_tv = S.tun.valid;
+    char n_nm[sizeof S.tun.name]; memcpy(n_nm, S.tun.name, sizeof n_nm);
     xSemaphoreGive(s_mtx);
     if (n_pw != o_pw && (n_pw == 0 || n_pw == 1)) oplog_add(OPL_POWER, (uint8_t)n_pw, 0);
     if (n_mu != o_mu && (n_mu == 0 || n_mu == 1)) oplog_add(OPL_MUTE, (uint8_t)n_mu, 0);
     if ((n_au != o_au || n_vi != o_vi) && n_au >= 0) oplog_add(OPL_INPUT, (uint8_t)n_au, n_vi < 0 ? 0xFF : (uint16_t)n_vi);
     if (n_sf != o_sf && n_sf >= 0) oplog_add(OPL_SF, (uint8_t)n_sf, 0);
     if (n_tv && n_tf && (n_tf != o_tf || ((n_tfl ^ o_tfl) & 1))) oplog_add(OPL_TUNER, n_tfl & 1, (uint16_t)n_tf);
+    if (n_nm[0] && strcmp(o_nm, n_nm)) oplog_rds(n_nm);
     if (ch && s_cb) s_cb();
 }
 

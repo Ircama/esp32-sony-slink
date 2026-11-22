@@ -429,7 +429,7 @@ static void help(void)
     out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
         "  REBOOT | RESTART   restart the device (a motorised volume knob loses its position estimate)" CRLF
         "  TIME | TIME SET <epoch seconds> [offset min]   device clock (no battery: NTP over WiFi, or set it from the phone)" CRLF
-        "  OPLOG | OPLOG LIST [n] | OPLOG SET <depth> <mask> | OPLOG CLEAR | OPLOG RESET   functional log of the operations (power, input, mute, volume, sound field, radio, system) kept in the PSRAM, and the time counters; SET: events kept (0 = off) and categories (bits: 1 power, 2 input, 4 mute, 8 volume, 16 sound field, 32 radio, 64 system)" CRLF
+        "  OPLOG | OPLOG LIST [n] | OPLOG SET <depth> <mask> | OPLOG CLEAR | OPLOG RESET   functional log of the operations (power, input, mute, volume, sound field, radio, system) kept in the PSRAM, and the time counters; SET: events kept (0 = off) and categories (bits: 1 power, 2 input, 4 mute, 8 volume, 16 sound field, 32 radio, 64 system, 128 RDS station names)" CRLF
         "  TASKS [seconds]    every task with what it does, the CPU it uses (since the start, or in the next <seconds>) and its stack margin (to find a task that loops and to size the stacks)" CRLF
         "  MATTER ON|OFF | OPEN | MAX <1-100> | NAME <text> | NEWCODE | RESET   amplifier as a Matter light (Google Home, Apple Home ...): only in the esp32s3-matter build, see docs/MATTER.md" CRLF
         "  HUE ON|OFF | MAX <1-100> | NAME <text>   amplifier as a Philips Hue light for Alexa / Hue apps: on-off = power, brightness = volume up to MAX %% of the knob (default 30); off by default (saved)" CRLF
@@ -779,7 +779,7 @@ static void handle_cmd(char *line)
     else if (!strcmp(c0, "OPLOG")) {                                    /* functional log and time counters (oplog.c) */
         if (nt >= 2 && !strcasecmp(tok[1], "SET")) {
             int d = nt >= 3 ? atoi(tok[2]) : -1, m = nt >= 4 ? atoi(tok[3]) : -1;
-            if (nt < 3 || d < 0 || m < -1 || m > 127) { out("ERR usage: OPLOG SET <depth> [mask 0-127]" CRLF); return; }
+            if (nt < 3 || d < 0 || m < -1 || m > 255) { out("ERR usage: OPLOG SET <depth> [mask 0-255]" CRLF); return; }
             oplog_set(d, m);
             out("OK oplog depth %u (max %u), mask %u (saved)" CRLF, (unsigned)g_set.oplog_depth, oplog_max_depth(), (unsigned)g_set.oplog_mask);
         } else if (nt >= 2 && !strcasecmp(tok[1], "CLEAR")) { oplog_clear(); out("OK oplog cleared" CRLF); }
@@ -1349,7 +1349,7 @@ static void handle_net(char *raw, char **tok, int nt)
             else if (!strcmp(k, "matter")) g_set.matter = n != 0;
             else if (!strcmp(k, "matter_max") && n >= 1 && n <= 100) g_set.matter_max = (uint8_t)n;
             else if (!strcmp(k, "oplog_depth") && n >= 0 && n <= 20000) g_set.oplog_depth = (uint16_t)n;
-            else if (!strcmp(k, "oplog_mask") && n >= 0 && n <= 127) g_set.oplog_mask = (uint8_t)n;
+            else if (!strcmp(k, "oplog_mask") && n >= 0 && n <= 255) g_set.oplog_mask = (uint8_t)n;
             else if (!strcmp(k, "matter_name") && strlen(vv) < sizeof g_set.matter_name) strcpy(g_set.matter_name, vv);
             else if (!strcmp(k, "hue_max") && n >= 1 && n <= 100) g_set.hue_max = (uint8_t)n;
             else if (!strcmp(k, "hue_name") && strlen(vv) < sizeof g_set.hue_name) strcpy(g_set.hue_name, vv);

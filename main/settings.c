@@ -69,7 +69,7 @@ void settings_load(void)
     if (nvs_get_u8(h, "mtr", &v) == ESP_OK) g_set.matter = v;
     g_set.matter_max = 30; if (nvs_get_u8(h, "mtrmax", &v) == ESP_OK && v >= 1 && v <= 100) g_set.matter_max = v;
     get_str(h, "mtrn", g_set.matter_name, sizeof g_set.matter_name, "");
-    { uint16_t d16; if (nvs_get_u16(h, "opld", &d16) == ESP_OK) g_set.oplog_depth = d16; if (nvs_get_u8(h, "opmk", &v) == ESP_OK) g_set.oplog_mask = v & 127; }
+    { uint16_t d16; if (nvs_get_u16(h, "opld", &d16) == ESP_OK) g_set.oplog_depth = d16; if (nvs_get_u8(h, "opmk", &v) == ESP_OK) g_set.oplog_mask = v; }
     { uint32_t u = 0; uint16_t d = 0; if (nvs_get_u32(h, "mtrpin", &u) == ESP_OK) g_set.matter_pass = u; if (nvs_get_u16(h, "mtrdsc", &d) == ESP_OK) g_set.matter_disc = d; }
     nvs_close(h);
 }

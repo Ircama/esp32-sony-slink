@@ -23,6 +23,7 @@ static volatile int64_t s_org_us;                                             /*
 void oplog_origin(uint8_t src) { s_org = src; s_org_us = esp_timer_get_time(); }
 static uint8_t auto_src(uint8_t type)                                         /* a change seen within 4 s of one of our commands is attributed to it, any other comes from the bus: the remote control or the amplifier itself */
 {
+    if (type >= OPL_RDS) return 0;                                            /* the station name comes from the tuner, on the bus */
     if (type < OPL_POWER || type > OPL_TUNER) return 10;                      /* system events: the device */
     return esp_timer_get_time() - s_org_us < 4000000 && s_org_us ? s_org : 0;
 }
@@ -50,6 +51,7 @@ static unsigned cat_of(uint8_t t)
     case OPL_VOLUME: return OPC_VOLUME;
     case OPL_SF: return OPC_SF;
     case OPL_TUNER: return OPC_TUNER;
+    case OPL_RDS: case OPL_RDS2: case OPL_RDS3: return OPC_RDS;
     default: return OPC_SYSTEM;
     }
 }
@@ -88,6 +90,24 @@ static void apply_depth(unsigned n)                 /* a new ring of n events, k
 }
 
 void oplog_add(uint8_t type, uint8_t a, uint16_t v) { oplog_add_src(type, a, v, auto_src(type)); }
+
+void oplog_rds(const char *name)
+{
+    if (!s_mtx || !name || !name[0]) return;
+    size_t n = strlen(name);
+    if (n > 8) n = 8;
+    xSemaphoreTake(s_mtx, portMAX_DELAY);
+    if (s_ev && (g_set.oplog_mask & OPC_RDS)) {
+        for (unsigned k = 0; k * 3 < n; k++) {                                 /* three characters per event, in the same second */
+            char c[3] = { 0, 0, 0 };
+            for (unsigned i = 0; i < 3 && k * 3 + i < n; i++) c[i] = name[k * 3 + i];
+            s_ev[s_head] = (ev_t){ .up = (uint32_t)(esp_timer_get_time() / 1000000), .ts = (uint8_t)(OPL_RDS + k), .a = (uint8_t)c[0], .v = (uint16_t)((uint8_t)c[1] | ((uint8_t)c[2] << 8)) };
+            s_head = (s_head + 1) % s_cap;
+            if (s_len < s_cap) s_len++;
+        }
+    }
+    xSemaphoreGive(s_mtx);
+}
 
 void oplog_add_src(uint8_t type, uint8_t a, uint16_t v, uint8_t src)
 {
@@ -205,7 +225,7 @@ size_t oplog_json(char *b, size_t sz, unsigned max_events)
 
 void oplog_text(void (*out)(const char *fmt, ...), unsigned n)
 {
-    static const char *NM[] = { "?", "BOOT", "POWER", "INPUT", "MUTE", "VOLUME", "SOUNDFIELD", "TUNER", "TIME", "REBOOT", "OTA" };
+    static const char *NM[] = { "?", "BOOT", "POWER", "INPUT", "MUTE", "VOLUME", "SOUNDFIELD", "TUNER", "TIME", "REBOOT", "OTA", "RDS", "RDS+", "RDS++" };
     static const char *SRC[] = { "bus/remote", "usb", "tcp", "web", "websocket", "ble", "mqtt", "hue", "matter", "slink-e", "device" };
     ev_t tmp[60];
     if (!s_mtx) return;
@@ -216,6 +236,6 @@ void oplog_text(void (*out)(const char *fmt, ...), unsigned n)
     xSemaphoreGive(s_mtx);
     for (unsigned i = 0; i < n; i++) {
         unsigned ty = tmp[i].ts & 15, sr = tmp[i].ts >> 4;
-        out("%02u:%02u:%02u  %-10s %u %u  from %s\r\n", (unsigned)(tmp[i].up / 3600), (unsigned)(tmp[i].up / 60 % 60), (unsigned)(tmp[i].up % 60), ty < 11 ? NM[ty] : "?", tmp[i].a, tmp[i].v, sr < 11 ? SRC[sr] : "?");
+        out("%02u:%02u:%02u  %-10s %u %u  from %s\r\n", (unsigned)(tmp[i].up / 3600), (unsigned)(tmp[i].up / 60 % 60), (unsigned)(tmp[i].up % 60), ty < 14 ? NM[ty] : "?", tmp[i].a, tmp[i].v, sr < 11 ? SRC[sr] : "?");
     }
 }

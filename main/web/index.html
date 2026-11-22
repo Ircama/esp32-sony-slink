@@ -1799,6 +1799,7 @@ const TRX = [
   ['Acceso da almeno {d}', 'On for at least {d}', 'Allumé depuis au moins {d}', 'Seit mindestens {d} an', 'Encendido desde hace al menos {d}'],
   ['Spento (standby) da {d}', 'In standby for {d}', 'En veille depuis {d}', 'Seit {d} im Standby', 'En espera desde hace {d}'],
   ['Spento (standby) da almeno {d}', 'In standby for at least {d}', 'En veille depuis au moins {d}', 'Seit mindestens {d} im Standby', 'En espera desde hace al menos {d}'],
+  ['Nome RDS della stazione', 'RDS station name', 'Nom RDS de la station', 'RDS-Sendername', 'Nombre RDS de la emisora'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
@@ -3224,14 +3225,14 @@ function demoTasks() {
  * when there is one); the times here are of this phone / computer: the device sends the seconds since its start, not a date. */
 const OPCATS = [
   { b: 1, t: 'Accensione', c: '#2f7d4f' }, { b: 2, t: 'Ingresso', c: '#2b62d9' }, { b: 4, t: 'Muto', c: '#8a6d1d' }, { b: 8, t: 'Volume', c: '#d9822b' },
-  { b: 16, t: 'Campo sonoro', c: '#7a3fb0' }, { b: 32, t: 'Radio', c: '#c4423a' }, { b: 64, t: 'Sistema', c: '#6b7280' } ];
-const OPTYPE_CAT = { 2: 1, 3: 2, 4: 4, 5: 8, 6: 16, 7: 32 };            /* event type -> category (the other types are "Sistema") */
+  { b: 16, t: 'Campo sonoro', c: '#7a3fb0' }, { b: 32, t: 'Radio', c: '#c4423a' }, { b: 64, t: 'Sistema', c: '#6b7280' }, { b: 128, t: 'Nome RDS della stazione', c: '#0f8f9e' } ];
+const OPTYPE_CAT = { 2: 1, 3: 2, 4: 4, 5: 8, 6: 16, 7: 32, 11: 128 };            /* event type -> category (the other types are "Sistema") */
 const OPSLOTS = ['Tuner', 'Phono', 'CD', 'DAT', 'MD', 'Tape', 'Digitale', 'Video 1', 'Video 2', 'Video 3', 'Video 4', 'DVD', 'SAT', 'TV', 'Altro'];
 const RST = ['?', 'Accensione', 'Reset esterno', 'Riavvio software', 'Crash (panic)', 'Watchdog', 'Watchdog', 'Watchdog', 'Deep sleep', 'Brownout', 'SDIO', 'Reset USB', 'Reset JTAG', 'Reset eFuse', 'Power glitch', 'CPU lockup'];
 /* who gave the command (the firmware tells by the interface it came from; a change that no command of ours explains was made on the amplifier itself or with its remote control, and is read from the S-Link bus) */
 const OPSRC = ['Amplificatore o telecomando', 'USB', 'Console TCP', 'Portale web (HTTP)', 'Portale web', 'Bluetooth', 'MQTT', 'Philips Hue', 'Matter', 'Protocollo Slink-e', 'Il dispositivo stesso'];
 const OPSRC_SHORT = ['Bus S-Link', 'USB', 'TCP', 'HTTP', 'Portale', 'Bluetooth', 'MQTT', 'Hue', 'Matter', 'Slink-e', 'Bridge'];
-let OPL = null, opCats = 127, opSrc = 2047, opPer = 86400, opN = 400, opTimer = null;
+let OPL = null, opCats = 255, opSrc = 2047, opPer = 86400, opN = 400, opTimer = null;
 const fmtDur = sec => { sec = Math.round(sec); const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
   return d ? d + ' g ' + h + ' h' : h ? h + ' h ' + String(m).padStart(2, '0') + ' min' : m ? m + ' min' : sec + ' s'; };
 function opInName(c) { if (c === 7) return tr('Digitale'); const x = SOURCES.find(q => q.c === c || (q.alt && q.alt.includes(c))); return x ? x.t : '0x' + c.toString(16).toUpperCase(); }
@@ -3248,12 +3249,18 @@ function opText(e) {
     case 8: return [tr('Orologio del dispositivo sincronizzato'), ''];
     case 9: return [tr('Riavvio richiesto'), ''];
     case 10: return [tr('Firmware aggiornato'), ''];
+    case 11: return [tr('Radio') + ' · RDS: ' + e[5], ''];
     default: return ['?', ''];
   }
 }
 /* the events with their time (ms), the periods the amplifier was on and on the radio, replayed from the events */
 function opModel(j) {
-  const ref = j.ref, ev = (j.ev || []).map(e => ({ e, t: ref - (j.up - e[0]) * 1000, cat: OPTYPE_CAT[e[1]] || 64, src: e[4] === undefined ? 0 : e[4] }));
+  const ref = j.ref, ev = [];
+  (j.ev || []).forEach((e, i, A) => {
+    if (e[1] === 12 || e[1] === 13) return;                                  /* the continuation of a name (taken with the first part) */
+    if (e[1] === 11) { let nm = ''; for (let k = 0; k < 3; k++) { const x = A[i + k]; if (!x || x[1] !== 11 + k || (k && x[0] !== e[0] && x[0] !== e[0] + 1)) break; nm += [x[2], x[3] & 255, x[3] >> 8].map(c => c ? String.fromCharCode(c) : '').join(''); } e = [e[0], 11, 0, 0, e[4], nm]; }
+    ev.push({ e, t: ref - (j.up - e[0]) * 1000, cat: OPTYPE_CAT[e[1]] || 64, src: e[4] === undefined ? 0 : e[4] });
+  });
   const on = [], rad = [];
   let pw = null, au = null, a0 = null, r0 = null;
   const close = (t) => { if (a0 !== null) { on.push([a0, t]); a0 = null; } if (r0 !== null) { rad.push([r0, t]); r0 = null; } };
@@ -3287,7 +3294,7 @@ function opRender() {
     const dt = new Date(x.t), dk = dt.toLocaleDateString(LANG || [], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     if (dk !== day) { day = dk; html += '<div class="opday">' + esc(dk) + '</div>'; }
     const [t1, t2] = opText(x.e); let extra = t2;
-    if (x.e[1] !== 1 && x.src !== 10) extra = (extra ? extra + ' · ' : '') + tr('da') + ': ' + tr(OPSRC[x.src]);
+    if (x.e[1] !== 1 && x.e[1] !== 11 && x.src !== 10) extra = (extra ? extra + ' · ' : '') + tr('da') + ': ' + tr(OPSRC[x.src]);
     const du = M.dur.get(x); if (du !== undefined) extra = (extra ? extra + ' · ' : '') + (du < 0 ? tr('acceso da {d}', { d: fmtDur((now - x.t) / 1000) }) : tr('è stato acceso per {d}', { d: fmtDur(du) }));
     const c = OPCATS.find(q => q.b === x.cat).c;
     html += '<div class="oprow"><span class="optime">' + dt.toLocaleTimeString([], { hour12: false }) + '</span><span class="opdot" style="background:' + c + '"></span><span class="optxt">' + esc(t1) + (extra ? '<small>' + esc(extra) + '</small>' : '') + '</span></div>';
@@ -3337,7 +3344,7 @@ function demoOplog() {
   const add = (ago, ty, a, v, src) => ev.push([T(ago), ty, a || 0, v || 0, src === undefined ? (ty === 1 ? 10 : [0, 4, 0, 5, 0, 6][ev.length % 6]) : src]);
   add(90000, 1, 1); add(86000, 7, 0, 0); add(80000, 2, 1); add(79990, 3, 2, 255); add(79000, 5, 0, 120); add(76000, 4, 1); add(75900, 4, 0); add(72000, 2, 0);
   add(40000, 2, 1); add(39990, 3, 0, 255); add(39980, 7, 0, 9850); add(36000, 7, 0, 10110); add(30000, 3, 1, 255); add(29000, 6, 0, 0); add(28000, 6, 4); add(20000, 5, 0, 180); add(14000, 2, 0);
-  add(9000, 2, 1); add(8990, 3, 0x04, 255); add(7000, 6, 5); add(3000, 3, 0x15, 0x15); add(600, 5, 0, 95);
+  add(36500, 11, 82, 65 + 73 * 256, 0); add(9000, 2, 1); add(8990, 3, 0x04, 255); add(7000, 6, 5); add(3000, 3, 0x15, 0x15); add(600, 5, 0, 95);
   return { t: 'oplog', up, cap: 2000, len: ev.length, depth: 2000, max: 20000, mask: 127, psram: 1, since: Math.floor(Date.now() / 1000) - 12 * 86400, non: 37,
     pw: 1, psince: 190000, pexact: 1, cnt: [18000, 600, 14500, 0, 3000, 0, 0, 0, 0, 0, 0, 7200, 0, 0, 0, 52000, 900], ev };
 }
