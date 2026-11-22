@@ -1794,6 +1794,11 @@ const TRX = [
   ['Bus S-Link', 'S-Link bus', 'Bus S-Link', 'S-Link-Bus', 'Bus S-Link'],
   ['Portale', 'Portal', 'Portail', 'Portal', 'Portal'],
   ['Bridge', 'Bridge', 'Bridge', 'Bridge', 'Bridge'],
+  ['Amplificatore', 'Amplifier', 'Amplificateur', 'Verstärker', 'Amplificador'],
+  ['Acceso da {d}', 'On for {d}', 'Allumé depuis {d}', 'Seit {d} an', 'Encendido desde hace {d}'],
+  ['Acceso da almeno {d}', 'On for at least {d}', 'Allumé depuis au moins {d}', 'Seit mindestens {d} an', 'Encendido desde hace al menos {d}'],
+  ['Spento (standby) da {d}', 'In standby for {d}', 'En veille depuis {d}', 'Seit {d} im Standby', 'En espera desde hace {d}'],
+  ['Spento (standby) da almeno {d}', 'In standby for at least {d}', 'En veille depuis au moins {d}', 'Seit mindestens {d} im Standby', 'En espera desde hace al menos {d}'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
@@ -3293,6 +3298,12 @@ function opRender() {
   $$('#opChips .opchip').forEach(b => b.setAttribute('aria-pressed', !!(opCats & +b.dataset.b)));
   $$('#opPer button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.p === opPer));
 }
+/* since when the amplifier is on / in standby (from the log's power events; "at least" when the bridge did not see the change itself) */
+function opPowerTxt() {
+  const j = OPL; if (!j || j.pw === undefined || j.pw < 0) return '—';
+  const el = Math.max(0, j.up + (Date.now() - j.ref) / 1000 - j.psince), d = fmtDur(el);
+  return tr(j.pw === 1 ? (j.pexact ? 'Acceso da {d}' : 'Acceso da almeno {d}') : (j.pexact ? 'Spento (standby) da {d}' : 'Spento (standby) da almeno {d}'), { d });
+}
 function opFetch() { fetchJson('/api/oplog?n=' + opN); }
 function opOpen() {
   const d = $('#opDlg'); if (!d.open) d.showModal();
@@ -3318,6 +3329,7 @@ function renderOplog(j) {
     $('#opDepthHint').textContent = tr('Massimo {m} eventi su questo dispositivo ({k}). Ogni evento usa 8 byte; il registro si azzera al riavvio, i tempi no.', { m: j.max, k: j.psram ? tr('PSRAM') : tr('RAM interna') });
     if (!$('#opForm').contains(document.activeElement)) { if (!$('#opCats').children.length) $('#opCats').innerHTML = OPCATS.map(c => '<label><input type="checkbox" data-b="' + c.b + '">' + esc(tr(c.t)) + '</label>').join(''); $$('#opCats input').forEach(i => { i.checked = !!(j.mask & +i.dataset.b); }); }
   }
+  if (j.pw !== undefined && $('#stSys') && $('#stSys').children.length) { const dts = [...$('#stSys').children].find(e => e.tagName === 'DT' && e.textContent === tr('Amplificatore')); if (dts && dts.nextElementSibling) dts.nextElementSibling.textContent = opPowerTxt(); }
   opRender();
 }
 function demoOplog() {
@@ -3327,7 +3339,7 @@ function demoOplog() {
   add(40000, 2, 1); add(39990, 3, 0, 255); add(39980, 7, 0, 9850); add(36000, 7, 0, 10110); add(30000, 3, 1, 255); add(29000, 6, 0, 0); add(28000, 6, 4); add(20000, 5, 0, 180); add(14000, 2, 0);
   add(9000, 2, 1); add(8990, 3, 0x04, 255); add(7000, 6, 5); add(3000, 3, 0x15, 0x15); add(600, 5, 0, 95);
   return { t: 'oplog', up, cap: 2000, len: ev.length, depth: 2000, max: 20000, mask: 127, psram: 1, since: Math.floor(Date.now() / 1000) - 12 * 86400, non: 37,
-    cnt: [18000, 600, 14500, 0, 3000, 0, 0, 0, 0, 0, 0, 7200, 0, 0, 0, 52000, 900], ev };
+    pw: 1, psince: 190000, pexact: 1, cnt: [18000, 600, 14500, 0, 3000, 0, 0, 0, 0, 0, 0, 7200, 0, 0, 0, 52000, 900], ev };
 }
 function opInit() {
   $('#opOpen').onclick = opOpen;
@@ -3430,7 +3442,7 @@ function renderStats(j) {
   const na = tr('non disponibile'), psName = [tr('Off'), tr('Modem sleep minimo'), tr('Modem sleep massimo')][j.ps] || '—';
   if (j.now === 0 && !timeTried && !DEMO) { timeTried = true; syncTime(false); }     /* clock not set (no NTP, e.g. Bluetooth only): set it once from this page */
   { const t = $('#devTimeTxt'); if (t) t.textContent = j.now ? new Date(j.now * 1000).toLocaleString([], { hour12: false }) : tr('non impostata (si imposta con NTP o dallo smartphone)'); }
-  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Ora del dispositivo', j.now ? new Date(j.now * 1000).toLocaleString([], { hour12: false }) : tr('non impostata')], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', fmtBleDiag(j.bleDiag)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
+  kvRows('#stSys', [['Tempo di attività', fmtUp(j.up)], ['Amplificatore', opPowerTxt()], ['Ora del dispositivo', j.now ? new Date(j.now * 1000).toLocaleString([], { hour12: false }) : tr('non impostata')], ['Nome host', j.host || '—'], ['Indirizzo MAC WiFi', macTxt(j.mac)], ['Nome Bluetooth', j.bleName || '—'], ['Indirizzo MAC Bluetooth', macTxt(j.bleMac)], ['Collegamento Bluetooth', fmtBleDiag(j.bleDiag)], ['Ultimo reset', j.reset], ['Chip', j.chip.toUpperCase() + ' rev ' + (j.rev / 100).toFixed(2) + ' · ' + j.cores + ' core'],
     ['Firmware', j.fw], ['Compilato', fmtBuilt(j.built)], ['Installato', fmtInst(j.inst)], ['Slot firmware', j.slot + ' · ' + otaStateName(j.ostate)], ['Dimensione firmware', fmtFw(j)], ['ESP-IDF', j.idf], ['Temperatura chip', j.temp === null ? na : j.temp.toFixed(1) + ' °C'],
     ['RAM interna', memTxt(j.heap, j.heapTotal)], ['RAM interna: minimo libero', fmtKb(j.heapMin)], ['RAM interna: blocco libero più grande', fmtKb(j.heapBlock)],
     ['PSRAM esterna', j.psram ? memTxt(j.psramFree, j.psram) : tr('assente')], ['PSRAM: minimo libero', j.psram ? fmtKb(j.psramMin) : '—'], ['Task attivi', '<button type="button" class="btn sm" id="taskOpen">' + j.tasks + ' · ' + tr('dettagli') + '</button>', true]]);

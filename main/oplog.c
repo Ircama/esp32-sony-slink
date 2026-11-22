@@ -33,6 +33,9 @@ static bool s_psram;
 static SemaphoreHandle_t s_mtx;
 static struct { uint32_t magic, since, non; uint32_t sec[OPL_SLOTS]; } s_cnt;
 static bool s_dirty;
+static int s_pw = -1;                       /* power of the amplifier, and since when (uptime seconds): 0 = not known, only since the start of the bridge */
+static uint32_t s_psince;
+static bool s_pexact;
 #define CNT_MAGIC 0x4F50434E
 
 unsigned oplog_max_depth(void) { return s_psram ? 20000 : 300; }
@@ -90,7 +93,11 @@ void oplog_add_src(uint8_t type, uint8_t a, uint16_t v, uint8_t src)
 {
     if (!s_mtx) return;
     xSemaphoreTake(s_mtx, portMAX_DELAY);
-    if (type == OPL_POWER && a == 1) { s_cnt.non++; s_dirty = true; }
+    if (type == OPL_POWER) {
+        s_pexact = s_pw != -1;                                               /* the first state learned is not a change: the amplifier was already so */
+        s_psince = s_pexact ? (uint32_t)(esp_timer_get_time() / 1000000) : 0; s_pw = a;
+        if (a == 1) { s_cnt.non++; s_dirty = true; }
+    }
     if (s_ev && (g_set.oplog_mask & cat_of(type))) {
         s_ev[s_head] = (ev_t){ .up = (uint32_t)(esp_timer_get_time() / 1000000), .ts = (uint8_t)((src & 15) << 4 | (type & 15)), .a = a, .v = v };
         s_head = (s_head + 1) % s_cap;
@@ -179,8 +186,8 @@ size_t oplog_json(char *b, size_t sz, unsigned max_events)
     xSemaphoreTake(s_mtx, portMAX_DELAY);
     size_t o = 0;
     #define P(...) do { if (o < sz) { int w_ = snprintf(b + o, sz - o, __VA_ARGS__); if (w_ > 0) o += (size_t)w_; } } while (0)
-    P("{\"t\":\"oplog\",\"up\":%u,\"cap\":%u,\"len\":%u,\"depth\":%u,\"max\":%u,\"mask\":%u,\"psram\":%d,\"since\":%u,\"non\":%u,\"cnt\":[",
-      (unsigned)(esp_timer_get_time() / 1000000), s_cap, s_len, (unsigned)g_set.oplog_depth, oplog_max_depth(), (unsigned)g_set.oplog_mask, s_psram, (unsigned)s_cnt.since, (unsigned)s_cnt.non);
+    P("{\"t\":\"oplog\",\"up\":%u,\"cap\":%u,\"len\":%u,\"depth\":%u,\"max\":%u,\"mask\":%u,\"psram\":%d,\"since\":%u,\"non\":%u,\"pw\":%d,\"psince\":%u,\"pexact\":%d,\"cnt\":[",
+      (unsigned)(esp_timer_get_time() / 1000000), s_cap, s_len, (unsigned)g_set.oplog_depth, oplog_max_depth(), (unsigned)g_set.oplog_mask, s_psram, (unsigned)s_cnt.since, (unsigned)s_cnt.non, s_pw, (unsigned)s_psince, s_pexact);
     for (int i = 0; i < OPL_SLOTS; i++) P("%s%u", i ? "," : "", (unsigned)s_cnt.sec[i]);
     P("],\"ev\":[");
     unsigned room = o + 8 < sz ? (unsigned)((sz - o - 8) / 28) : 0, n = s_len;
