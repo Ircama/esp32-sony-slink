@@ -26,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 VERSION = '1.0'
 PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05']
 INPUTS = ['TUNER', 'PHONO', 'CD', 'MD', 'DAT', 'TAPE', 'VIDEO1', 'VIDEO2', 'VIDEO3', 'DVD', 'SAT', 'TV']
-BLOCKED = {'REBOOT', 'RESTART', 'WIFI', 'WIFIPWR', 'OTA', 'CFG', 'MQTT', 'HOSTNAME', 'WEB', 'APP', 'HTTPS', 'HUE', 'BLE', 'BLENAME', 'SLINKE', 'SLINKETX', 'ECO', 'UITITLE', 'VOLCFG',
+BLOCKED = {'REBOOT', 'RESTART', 'OPLOG', 'WIFI', 'WIFIPWR', 'OTA', 'CFG', 'MQTT', 'HOSTNAME', 'WEB', 'APP', 'HTTPS', 'HUE', 'BLE', 'BLENAME', 'SLINKE', 'SLINKETX', 'ECO', 'UITITLE', 'VOLCFG',
            'PAD', 'SLINK', 'LED', 'BLINK', 'LEVEL', 'STATION', 'DEV', 'REPEAT', 'GAP', 'LOOPBACK', 'DECODE', 'ECHO', 'VOL'}
 HEX = re.compile(r'^([0-9A-Fa-f]{2}\s*)+$')
 

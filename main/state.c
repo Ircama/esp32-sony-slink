@@ -2,6 +2,7 @@
 #include <string.h>
 #include "state.h"
 #include "decode.h"
+#include "oplog.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
@@ -39,6 +40,10 @@ bool state_tuner(unsigned *f, bool *am, char *name, size_t n)
     return ok;
 }
 
+int state_audio(void) { int v = -1; if (s_mtx) { xSemaphoreTake(s_mtx, portMAX_DELAY); v = S.audio; xSemaphoreGive(s_mtx); } return v; }
+int state_video(void) { int v = -1; if (s_mtx) { xSemaphoreTake(s_mtx, portMAX_DELAY); v = S.video; xSemaphoreGive(s_mtx); } return v; }
+int state_mute(void) { int v = -1; if (s_mtx) { xSemaphoreTake(s_mtx, portMAX_DELAY); v = S.mute; xSemaphoreGive(s_mtx); } return v; }
+
 int state_power(void)
 {
     if (!s_mtx) return -1;
@@ -57,6 +62,7 @@ void state_set_power(int on)
     bool ch = S.power != on;
     S.power = on;
     xSemaphoreGive(s_mtx);
+    if (ch && (on == 0 || on == 1)) oplog_add(OPL_POWER, (uint8_t)on, 0);
     if (ch && s_cb) s_cb();
 }
 
@@ -100,6 +106,8 @@ void state_feed(const uint8_t *d, size_t n)
     int who = d[0] & 7, c = d[1];
     bool ch = false;
     xSemaphoreTake(s_mtx, portMAX_DELAY);
+    const int o_pw = S.power, o_mu = S.mute, o_au = S.audio, o_vi = S.video, o_sf = S.sf;       /* what changed is recorded in the functional log (oplog.c) */
+    const unsigned o_tf = S.tun.f; const uint8_t o_tfl = S.tun.fl;
     if (who == 0) {                                                            /* amplifier */
         switch (c) {
         case 0x2E: ch = S.power != 1; S.power = 1; break;
@@ -170,7 +178,14 @@ void state_feed(const uint8_t *d, size_t n)
             S.par[8].valid = true; S.par[8].v = (int8_t)d[2]; ch = true;
         }
     }
+    const int n_pw = S.power, n_mu = S.mute, n_au = S.audio, n_vi = S.video, n_sf = S.sf;
+    const unsigned n_tf = S.tun.f; const uint8_t n_tfl = S.tun.fl; const bool n_tv = S.tun.valid;
     xSemaphoreGive(s_mtx);
+    if (n_pw != o_pw && (n_pw == 0 || n_pw == 1)) oplog_add(OPL_POWER, (uint8_t)n_pw, 0);
+    if (n_mu != o_mu && (n_mu == 0 || n_mu == 1)) oplog_add(OPL_MUTE, (uint8_t)n_mu, 0);
+    if ((n_au != o_au || n_vi != o_vi) && n_au >= 0) oplog_add(OPL_INPUT, (uint8_t)n_au, n_vi < 0 ? 0xFF : (uint16_t)n_vi);
+    if (n_sf != o_sf && n_sf >= 0) oplog_add(OPL_SF, (uint8_t)n_sf, 0);
+    if (n_tv && n_tf && (n_tf != o_tf || ((n_tfl ^ o_tfl) & 1))) oplog_add(OPL_TUNER, n_tfl & 1, (uint16_t)n_tf);
     if (ch && s_cb) s_cb();
 }
 

@@ -1,6 +1,8 @@
 /* Web portal: static page + WebSocket (/ws) carrying the CLI text protocol and JSON state frames.
  *   browser -> device : one CLI command per text frame
  *   device  -> browser: JSON frames ({"t":"state"|"presets"|"stations",...}) and plain CLI output lines */
+#include "oplog.h"
+#include "esp_heap_caps.h"
 #include "sdkconfig.h"
 #include <stdio.h>
 #include <string.h>
@@ -247,6 +249,24 @@ static esp_err_t h_tasks(httpd_req_t *r)                        /* the tasks: bi
     free(buf);
     return e;
 }
+static esp_err_t h_oplog(httpd_req_t *r)                        /* the functional log: ?n=<events> (the newest ones; the buffer is in the PSRAM when there is one) */
+{
+    char q[24] = "", v[12] = "";
+    unsigned n = 400;
+    if (httpd_req_get_url_query_str(r, q, sizeof q) == ESP_OK && httpd_query_key_value(q, "n", v, sizeof v) == ESP_OK) n = (unsigned)atoi(v);
+    if (n > 5000) n = 5000;
+    if (heap_caps_get_total_size(MALLOC_CAP_SPIRAM) == 0 && n > 150) n = 150;           /* without PSRAM the internal RAM is kept for the rest */
+    size_t sz = 500 + (size_t)n * 28;
+    char *buf = heap_caps_malloc(sz, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!buf) buf = malloc(sz);
+    if (!buf) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no memory");
+    size_t len = oplog_json(buf, sz, n);
+    httpd_resp_set_type(r, "application/json");
+    httpd_resp_set_hdr(r, "Cache-Control", "no-store");
+    esp_err_t e = httpd_resp_send(r, buf, (ssize_t)len);
+    free(buf);
+    return e;
+}
 static esp_err_t h_clients(httpd_req_t *r)                      /* the TCP/IP clients (net.c): the reverse DNS queries can take a moment, the buffer is the caller's */
 {
     char *buf = malloc(2200);
@@ -316,7 +336,7 @@ static esp_err_t h_cmd(httpd_req_t *r)
     int n = httpd_req_recv(r, buf, (size_t)r->content_len);
     if (n <= 0) return ESP_FAIL;
     buf[n] = 0;
-    bool ok = cli_submit(buf);
+    bool ok = cli_submit_from(CLI_SRC_WEB, buf);
     httpd_resp_set_type(r, "text/plain");
     return httpd_resp_send(r, ok ? "queued" : "busy", HTTPD_RESP_USE_STRLEN);
 }
@@ -342,7 +362,7 @@ static esp_err_t h_ws(httpd_req_t *r)
     e = httpd_ws_recv_frame(r, &f, f.len);
     if (e != ESP_OK) return e;
     buf[f.len] = 0;
-    if (f.type == HTTPD_WS_TYPE_TEXT) cli_submit(buf);
+    if (f.type == HTTPD_WS_TYPE_TEXT) cli_submit_from(CLI_SRC_WS, buf);
     else if (f.type == HTTPD_WS_TYPE_CLOSE) ws_remove(httpd_req_to_sockfd(r));
     return ESP_OK;
 }
@@ -364,6 +384,7 @@ static void reg_all(httpd_handle_t srv)
         { .uri = "/api/stats",    .method = HTTP_GET,  .handler = h_stats },
         { .uri = "/api/tasks",    .method = HTTP_GET,  .handler = h_tasks },
         { .uri = "/api/clients",  .method = HTTP_GET,  .handler = h_clients },
+        { .uri = "/api/oplog",    .method = HTTP_GET,  .handler = h_oplog },
         { .uri = "/api/favs",     .method = HTTP_GET,  .handler = h_favs },
         { .uri = "/api/prefs",    .method = HTTP_GET,  .handler = h_prefs_get },
         { .uri = "/api/prefs",    .method = HTTP_POST, .handler = h_prefs_post },

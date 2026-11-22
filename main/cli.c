@@ -28,6 +28,7 @@
 #include "esp_timer.h"
 #include "freertos/queue.h"
 #include "state.h"
+#include "oplog.h"
 #include "settings.h"
 #include "matter.h"
 #include "net.h"
@@ -428,6 +429,7 @@ static void help(void)
     out("  BLE ON|OFF   WEB ON|OFF   APP ON|OFF   enable/disable BLE UART, web portal, WiFi app interface (saved)" CRLF
         "  REBOOT | RESTART   restart the device (a motorised volume knob loses its position estimate)" CRLF
         "  TIME | TIME SET <epoch seconds> [offset min]   device clock (no battery: NTP over WiFi, or set it from the phone)" CRLF
+        "  OPLOG | OPLOG LIST [n] | OPLOG SET <depth> <mask> | OPLOG CLEAR | OPLOG RESET   functional log of the operations (power, input, mute, volume, sound field, radio, system) kept in the PSRAM, and the time counters; SET: events kept (0 = off) and categories (bits: 1 power, 2 input, 4 mute, 8 volume, 16 sound field, 32 radio, 64 system)" CRLF
         "  TASKS [seconds]    every task with what it does, the CPU it uses (since the start, or in the next <seconds>) and its stack margin (to find a task that loops and to size the stacks)" CRLF
         "  MATTER ON|OFF | OPEN | MAX <1-100> | NAME <text> | NEWCODE | RESET   amplifier as a Matter light (Google Home, Apple Home ...): only in the esp32s3-matter build, see docs/MATTER.md" CRLF
         "  HUE ON|OFF | MAX <1-100> | NAME <text>   amplifier as a Philips Hue light for Alexa / Hue apps: on-off = power, brightness = volume up to MAX %% of the knob (default 30); off by default (saved)" CRLF
@@ -760,6 +762,7 @@ static void handle_cmd(char *line)
     }
     else if (!strcmp(c0, "REBOOT") || !strcmp(c0, "RESTART")) {          /* restart the device (the volume position estimate of a motorised knob is lost) */
         out("OK restarting" CRLF);
+        oplog_add_src(OPL_REBOOT, 0, 0, (uint8_t)cli_cur_src()); oplog_flush();
         xTaskCreate(restart_task, "slink_rb", 2048, NULL, 5, NULL);
     }
     else if (!strcmp(c0, "TIME")) {                                     /* TIME | TIME SET <epoch seconds> [offset minutes from UTC]: the clock has no battery, it is set by NTP (WiFi) or by the phone */
@@ -767,11 +770,28 @@ static void handle_cmd(char *line)
             long long e = atoll(tok[2]); int off = nt >= 4 ? atoi(tok[3]) : 0;
             if (e < 1700000000LL || e > 4102444800LL || off < -840 || off > 840) { out("ERR time: epoch seconds (2023-2100) and offset -840..840 minutes" CRLF); return; }
             struct timeval tv = { .tv_sec = (time_t)e, .tv_usec = 0 }; settimeofday(&tv, NULL);
-            s_tzmin = off; s_tzsrc = "phone";
+            s_tzmin = off; s_tzsrc = "phone"; oplog_add_src(OPL_TIME, 1, 0, (uint8_t)cli_cur_src());
         }
         int64_t n = cli_now();
         if (n) out("TIME %lld offset %d min source %s" CRLF, (long long)n, s_tzmin, s_tzsrc[0] ? s_tzsrc : "ntp");
         else out("TIME not set (no WiFi/NTP yet): TIME SET <epoch seconds> [offset minutes]" CRLF);
+    }
+    else if (!strcmp(c0, "OPLOG")) {                                    /* functional log and time counters (oplog.c) */
+        if (nt >= 2 && !strcasecmp(tok[1], "SET")) {
+            int d = nt >= 3 ? atoi(tok[2]) : -1, m = nt >= 4 ? atoi(tok[3]) : -1;
+            if (nt < 3 || d < 0 || m < -1 || m > 127) { out("ERR usage: OPLOG SET <depth> [mask 0-127]" CRLF); return; }
+            oplog_set(d, m);
+            out("OK oplog depth %u (max %u), mask %u (saved)" CRLF, (unsigned)g_set.oplog_depth, oplog_max_depth(), (unsigned)g_set.oplog_mask);
+        } else if (nt >= 2 && !strcasecmp(tok[1], "CLEAR")) { oplog_clear(); out("OK oplog cleared" CRLF); }
+        else if (nt >= 2 && !strcasecmp(tok[1], "RESET")) { oplog_reset_counters(); out("OK time counters reset" CRLF); }
+        else if (nt >= 2 && !strcasecmp(tok[1], "LIST")) { oplog_text(out, nt >= 3 ? (unsigned)atoi(tok[2]) : 30); out("OK" CRLF); }
+        else {
+            char *b = malloc(900);
+            if (!b) { out("ERR no memory" CRLF); return; }
+            oplog_json(b, 900, 0);
+            out("OPLOG depth %u of max %u, %u events, mask %u" CRLF "%s" CRLF, (unsigned)g_set.oplog_depth, oplog_max_depth(), oplog_len(), (unsigned)g_set.oplog_mask, b);
+            free(b);
+        }
     }
     else if (!strcmp(c0, "TASKS")) {                                    /* TASKS [seconds]: every task with what it does, the CPU it used and its stack margin; the CPU since the start, or in the next <seconds> */
         int secs = nt >= 2 ? atoi(tok[1]) : 0;
@@ -1216,7 +1236,7 @@ static void handle_net(char *raw, char **tok, int nt)
             g_set.matter = v; settings_save();
             out("OK MATTER %s (saved): the device restarts in a moment" CRLF, v ? "ON" : "OFF");
             if (v) out("NOTE Matter takes over Bluetooth (the Bluetooth UART / portal over BLE is off while Matter is on); pair from the Google Home / Apple Home app with the code shown by MATTER" CRLF);
-            matter_restart_soon();
+            oplog_flush(); matter_restart_soon();
         } else {
             char b[700];
             if (matter_info(b, sizeof b)) out("%s", b);
@@ -1328,6 +1348,8 @@ static void handle_net(char *raw, char **tok, int nt)
             else if (!strcmp(k, "hue")) g_set.hue = n != 0;
             else if (!strcmp(k, "matter")) g_set.matter = n != 0;
             else if (!strcmp(k, "matter_max") && n >= 1 && n <= 100) g_set.matter_max = (uint8_t)n;
+            else if (!strcmp(k, "oplog_depth") && n >= 0 && n <= 20000) g_set.oplog_depth = (uint16_t)n;
+            else if (!strcmp(k, "oplog_mask") && n >= 0 && n <= 127) g_set.oplog_mask = (uint8_t)n;
             else if (!strcmp(k, "matter_name") && strlen(vv) < sizeof g_set.matter_name) strcpy(g_set.matter_name, vv);
             else if (!strcmp(k, "hue_max") && n >= 1 && n <= 100) g_set.hue_max = (uint8_t)n;
             else if (!strcmp(k, "hue_name") && strlen(vv) < sizeof g_set.hue_name) strcpy(g_set.hue_name, vv);
@@ -1351,6 +1373,7 @@ static void handle_net(char *raw, char **tok, int nt)
             out("CFG host \"%s\"" CRLF "CFG ssid \"%s\"" CRLF "CFG mqtt_uri \"%s\"" CRLF "CFG mqtt_user \"%s\"" CRLF, g_set.host, g_set.ssid, g_set.mqtt_uri, g_set.mqtt_user);
             out("CFG title_app \"%s\"" CRLF "CFG title_page \"%s\"" CRLF, g_set.title_app, g_set.title_page);
             out("CFG slinke %d" CRLF "CFG slinke_tx %d" CRLF "CFG https %d" CRLF "CFG ble_name \"%s\"" CRLF "CFG hue %d" CRLF "CFG hue_max %d" CRLF "CFG hue_name \"%s\"" CRLF, g_set.slinke, g_set.slinke_tx, g_set.https, g_set.ble_name, g_set.hue, g_set.hue_max, g_set.hue_name);
+            out("CFG oplog_depth %u" CRLF "CFG oplog_mask %u" CRLF, (unsigned)g_set.oplog_depth, (unsigned)g_set.oplog_mask);
             out("CFG ota_url \"%s\"" CRLF "CFG ota_push %d" CRLF "CFG ota_pull %d" CRLF, g_set.ota_url, g_set.ota_push, g_set.ota_pull);
             if (pw) out("CFG pass \"%s\"" CRLF "CFG mqtt_pass \"%s\"" CRLF "CFG ota_pass \"%s\"" CRLF "CFG ota_token \"%s\"" CRLF, g_set.pass, g_set.mqtt_pass, g_set.ota_pass, g_set.ota_token);
             out("OK cfg end%s" CRLF, pw ? " (with passwords)" : "");
@@ -1451,14 +1474,29 @@ static void handle_net(char *raw, char **tok, int nt)
 static QueueHandle_t s_cmdq;
 static bool cmd_waiting(void) { return s_cmdq && uxQueueMessagesWaiting(s_cmdq) > 0; }
 
-bool cli_submit(const char *line)
+static volatile unsigned s_cur_src = CLI_SRC_INT;
+unsigned cli_cur_src(void) { return s_cur_src; }
+bool cli_submit(const char *line) { return cli_submit_from(CLI_SRC_INT, line); }
+
+/* The commands that change what the operations log records (power, input, mute, volume, sound field, radio): the changes seen on the bus a moment after one of them are attributed to its source. */
+static void note_origin(unsigned src, const char *line)
+{
+    static const char *const verbs[] = { "PWRON", "PWROFF", "ALLOFF", "MUTE", "UNMUTE", "VOL", "VOLUP", "VOLDN", "INPUT", "SF", "TUNE", "TUNER", "PRESET", "STATION", NULL };
+    char v[10]; size_t k = 0;
+    while (*line == ' ') line++;
+    for (; line[k] && line[k] != ' ' && k < sizeof v - 1; k++) v[k] = (char)toupper((unsigned char)line[k]);
+    v[k] = 0;
+    for (int i = 0; verbs[i]; i++) if (!strcmp(v, verbs[i])) { oplog_origin((uint8_t)src); return; }
+}
+
+bool cli_submit_from(unsigned src, const char *line)
 {
     if (!s_cmdq || !line) return false;
     size_t n = strlen(line);
     if (n == 0) return true;
     if (n >= CLI_LINE_MAX) { out("ERR line too long" CRLF); return false; }
-    char buf[CLI_LINE_MAX];
-    memcpy(buf, line, n + 1);
+    char buf[CLI_LINE_MAX + 1];
+    buf[0] = (char)src; memcpy(buf + 1, line, n + 1);
     /* Several clients (web pages, TCP, BLE) refresh the same state: an identical idempotent query that was submitted a moment ago
      * is dropped instead of queued behind the long commands (STATUS 1.4 s, INPUTS 4.5 s, EQ 3 s) and overflowing the queue. */
     static char last[4][CLI_LINE_MAX]; static int64_t last_us[4]; static int li;
@@ -1524,9 +1562,9 @@ static const char *task_role(const char *n)
 
 static void worker_task(void *arg)
 {
-    char line[CLI_LINE_MAX];
+    char line[CLI_LINE_MAX + 1];
     for (;;)
-        if (xQueueReceive(s_cmdq, line, portMAX_DELAY) == pdTRUE) handle(line);
+        if (xQueueReceive(s_cmdq, line, portMAX_DELAY) == pdTRUE) { s_cur_src = (unsigned char)line[0]; note_origin(s_cur_src, line + 1); handle(line + 1); s_cur_src = CLI_SRC_INT; }
 }
 
 int cli_vol_x10(void) { return s_vol_pos < 0 ? -1 : (s_vol_pos * 1000 + VOL_UP_TRAVEL / 2) / VOL_UP_TRAVEL; }
@@ -1577,7 +1615,7 @@ static void cli_task(void *arg)
         if (usb_serial_jtag_read_bytes(&ch, 1, portMAX_DELAY) != 1) continue;
         if (ch == '\r' || ch == '\n') {
             if (s_echo && ch == '\r') out("\r\n");
-            if (n) { line[n] = 0; cli_submit(line); n = 0; }
+            if (n) { line[n] = 0; cli_submit_from(CLI_SRC_USB, line); n = 0; }
         } else if (ch == 0x08 || ch == 0x7F) {          /* backspace */
             if (n) { n--; if (s_echo) out("\b \b"); }
         } else if (n < sizeof line - 1) {
@@ -1590,13 +1628,14 @@ static void cli_task(void *arg)
 void cli_start(void)
 {
     s_out_mtx = xSemaphoreCreateMutex();
-    s_cmdq = xQueueCreate(24, CLI_LINE_MAX);
+    s_cmdq = xQueueCreate(24, CLI_LINE_MAX + 1);
     esp_err_t ne = nvs_flash_init();
     if (ne == ESP_ERR_NVS_NO_FREE_PAGES || ne == ESP_ERR_NVS_NEW_VERSION_FOUND) { nvs_flash_erase(); nvs_flash_init(); }
     st_load();
     fav_load();
     settings_load();
     state_init();
+    oplog_init();
     usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
     cfg.tx_buffer_size = 1024;
     usb_serial_jtag_driver_install(&cfg);

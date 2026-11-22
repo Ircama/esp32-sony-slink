@@ -179,15 +179,15 @@ static esp_err_t h_put(httpd_req_t *r)                         /* PUT /api/<user
     const char *q = strstr(body, "\"bri\"");
     int bri = -1;
     if (q && (q = strchr(q, ':'))) { while (*++q == ' '); if (isdigit((unsigned char)*q)) bri = atoi(q); }
-    if (on == 1 && state_power() != 1) cli_submit("PWRON");
-    if (on == 0) cli_submit("PWROFF");
+    if (on == 1 && state_power() != 1) cli_submit_from(CLI_SRC_HUE, "PWRON");
+    if (on == 0) cli_submit_from(CLI_SRC_HUE, "PWROFF");
     if (on >= 0) o += snprintf(out + o, sizeof out - o, "{\"success\":{\"/lights/1/state/on\":%s}}", on ? "true" : "false");
     if (bri >= 0 && on != 0) {
         if (bri < 1) bri = 1;
         if (bri > 254) bri = 254;
         char cmd[32];
         snprintf(cmd, sizeof cmd, "VOL SET %.1f", bri * (double)hue_max() / 254.0);          /* never above the maximum volume setting */
-        cli_submit(cmd);
+        cli_submit_from(CLI_SRC_HUE, cmd);
         o += snprintf(out + o, sizeof out - o, "%s{\"success\":{\"/lights/1/state/bri\":%d}}", on >= 0 ? "," : "", bri);
     }
     if (o == 1) o += snprintf(out + o, sizeof out - o, "{\"success\":{}}");

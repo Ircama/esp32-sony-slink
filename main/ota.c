@@ -26,6 +26,7 @@
 #include "cli.h"
 #include "net.h"
 #include "ota.h"
+#include "oplog.h"
 #include "web_page.h"
 
 #ifndef CONFIG_SLINK_OTA_GITHUB_REPO
@@ -349,6 +350,7 @@ done:
     cli_out("OTA: done - restarting into the new firmware\r\n");
     httpd_resp_set_type(r, "text/plain");
     esp_err_t e = httpd_resp_send(r, "OK firmware installed, restarting", HTTPD_RESP_USE_STRLEN);
+    oplog_add_src(OPL_OTA, 0, 0, 3); oplog_flush();
     reboot_soon();
     return e;
 }

@@ -24,8 +24,11 @@ typedef void (*cli_frame_cb_t)(const slink_frame_t *f);
 int  cli_frame_hook_add(cli_frame_cb_t fn);      /* 0 ok, -1 full */
 void cli_frame_hook_remove(cli_frame_cb_t fn);
 
-/* Queue a command line for the (single) worker task. false = queue full or line too long. */
-bool cli_submit(const char *line);
+/* Queue a command line for the (single) worker task. false = queue full or line too long. The source is who gave it (for the operations log). */
+enum { CLI_SRC_BUS = 0, CLI_SRC_USB, CLI_SRC_TCP, CLI_SRC_WEB, CLI_SRC_WS, CLI_SRC_BLE, CLI_SRC_MQTT, CLI_SRC_HUE, CLI_SRC_MATTER, CLI_SRC_SLINKE, CLI_SRC_INT };
+bool cli_submit_from(unsigned src, const char *line);
+bool cli_submit(const char *line);               /* source: the device itself */
+unsigned cli_cur_src(void);                      /* source of the command being executed (CLI_SRC_INT outside one) */
 
 /* Data for the web/MQTT layers */
 int    cli_vol_pct(void);                              /* estimated volume 0-100, -1 unknown */

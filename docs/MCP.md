@@ -60,7 +60,7 @@ Other clients: the same command in their MCP settings (transport *stdio*). If `s
 The bridge has no login, and the one thing an assistant must not cause is a loud sound:
 
 - the volume never goes above `--max-volume` (default **30**, percent of the knob travel; `$SLINK_MAX_VOLUME`), whatever is asked. Going up by steps is also refused when the knob position is not known. Volume tools refuse while the amplifier is in standby (the knob does not move). `VOL ...` is not accepted by `console_command`;
-- `console_command` refuses `WIFI`, `OTA`, `REBOOT`, `CFG`, `MQTT`, `HTTPS`, `HUE`, `BLE`, `WEB`, `APP`, `HOSTNAME`, `VOL` and the other commands that change the network, the security, the firmware or the volume (`--allow-admin` lifts it); raw hex frames need `--allow-raw`;
+- `console_command` refuses `WIFI`, `OTA`, `REBOOT`, `OPLOG`, `CFG`, `MQTT`, `HTTPS`, `HUE`, `BLE`, `WEB`, `APP`, `HOSTNAME`, `VOL` and the other commands that change the network, the security, the firmware or the volume (`--allow-admin` lifts it); raw hex frames need `--allow-raw`;
 - `--dry-run` writes the commands to the log instead of sending them: a way to see what an assistant would do.
 
 Options can also be set with `$SLINK_HOST`, `$SLINK_TLS=1`, `$SLINK_CA`, `$SLINK_MCP_TOKEN`, `$SLINK_MCP_RAW=1`, `$SLINK_MCP_ADMIN=1`, `$SLINK_DRY_RUN=1`.

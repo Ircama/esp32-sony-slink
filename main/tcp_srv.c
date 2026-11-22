@@ -83,7 +83,7 @@ static void srv_task(void *arg)
             for (int k = 0; k < n; k++) {
                 char ch = buf[k];
                 if (ch == '\r' || ch == '\n') {
-                    if (ll[i]) { line[i][ll[i]] = 0; cli_submit(line[i]); ll[i] = 0; }
+                    if (ll[i]) { line[i][ll[i]] = 0; cli_submit_from(CLI_SRC_TCP, line[i]); ll[i] = 0; }
                 } else if (ch == 0x08 || ch == 0x7F) { if (ll[i]) ll[i]--; }
                 else if ((unsigned char)ch >= 32 && ll[i] < sizeof line[i] - 1) line[i][ll[i]++] = ch;
             }

@@ -443,13 +443,44 @@ body.ble .bleonly{display:block}
 .form input,.form select{height:42px;border-radius:var(--r-sm);border:1px solid var(--line2);background:var(--surface2);padding:0 13px;font-weight:400;color:var(--text)}
 .form input:focus{border-color:var(--accent);outline:none}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13.5px}
-.taskdlg{width:min(96vw,920px);max-height:92vh;overflow:auto;padding:14px 16px}
-@media (min-width:900px){.taskdlg{width:min(94vw,1280px)}#taskTbl td.tn span{max-width:70em}}
+.taskdlg{width:min(96vw,920px);max-width:96vw;max-height:92vh;overflow:auto;padding:14px 16px}   /* max-width: the plain dialogs are capped at 400px */
+@media (min-width:900px){.taskdlg{width:min(94vw,1280px);max-width:94vw}#taskTbl td.tn span{max-width:70em}}
 #cliTbl{border-collapse:collapse;width:100%;font-size:13px}
 #cliTbl th{text-align:left;color:var(--text3);font-weight:600;padding:4px 8px 4px 0;border-bottom:1px solid var(--line2);white-space:nowrap}
 #cliTbl td{padding:6px 8px 6px 0;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
 #cliTbl td.num{text-align:right;white-space:nowrap}
 #cliTbl tr.out td{color:var(--text3)}
+/* functional log (Statistics, dialog) and its settings */
+.opdlg{width:min(96vw,980px)}
+.opbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+.opbar .seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
+.opbar .seg button{border:0;background:transparent;color:var(--text2);padding:7px 11px;font:inherit;font-size:13px;cursor:pointer;border-right:1px solid var(--line2)}
+.opbar .seg button:last-child{border-right:0}
+.opbar .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.opchip{border:1px solid var(--line2);background:var(--surface2);color:var(--text2);border-radius:999px;padding:5px 11px 5px 8px;font:inherit;font-size:12.5px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.opchip i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.opchip[aria-pressed="false"]{opacity:.45}
+.optl{position:relative;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);overflow:hidden;margin:6px 0 2px}
+.optl i{position:absolute;top:4px;bottom:15px;border-radius:3px;background:var(--ok);opacity:.85}
+.optl i.r{top:16px;bottom:3px;background:var(--warn)}
+.optl-ax{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px}
+.optl-lg{font-size:11.5px;color:var(--text3);display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px}.optl-lg b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.oplist{max-height:min(52vh,520px);overflow:auto;border:1px solid var(--line);border-radius:var(--r-sm)}
+.opday{position:sticky;top:0;background:var(--surface2);color:var(--text2);font-weight:650;font-size:12.5px;padding:6px 12px;border-bottom:1px solid var(--line);z-index:1}
+.oprow{display:grid;grid-template-columns:64px 14px 1fr;gap:10px;align-items:baseline;padding:6px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+.oprow:last-child{border-bottom:0}
+.optime{font:12.5px var(--mono);color:var(--text3)}
+.opdot{width:9px;height:9px;border-radius:50%;align-self:center}
+.optxt small{display:block;color:var(--text3);font-size:12px}
+.usage{display:grid;gap:9px;margin-top:10px}
+.usage .u{display:grid;grid-template-columns:minmax(80px,32%) 1fr auto;gap:10px;align-items:center;font-size:13px}
+.usage .u .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}.usage .u .bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.usage .u.on .bar i{background:var(--ok)}.usage .u.rad .bar i{background:var(--warn)}
+.usage .u span:last-child{font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap}
+.opcats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px;margin:4px 0 8px}
+.opcats label{display:flex;gap:8px;align-items:center;font-weight:400}
+.opcats input{height:auto;width:auto;padding:0}
+@media (max-width:520px){.oprow{grid-template-columns:56px 12px 1fr;padding:6px 8px}.usage .u{grid-template-columns:1fr auto;}.usage .u .bar{grid-column:1/3;order:3}}
 /* search in the page (the installed PWA has no find bar of the browser) */
 .srch-fab{position:fixed;left:14px;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom,0px));z-index:31;width:42px;height:42px;border-radius:50%;border:1px solid var(--line2);background:var(--surface);color:var(--text2);display:grid;place-items:center;box-shadow:var(--shadow);opacity:.88;cursor:pointer;padding:0}
 @media (min-width:860px){.srch-fab{bottom:20px;left:calc(var(--rail-w,92px) + 14px)}}      /* on the left: the arrows of the log and of the manual are at the right */
@@ -786,6 +817,8 @@ body.hxon .hx{display:block}
         <div class="card"><h2>WiFi</h2><dl class="kv" id="stWifi"></dl></div>
         <div class="card"><h2>Connessioni</h2><dl class="kv" id="stConn"></dl></div>
         <div class="card"><h2>Interfacce e funzioni</h2><dl class="kv" id="stSvc"></dl></div>
+        <div class="card"><h2>Registro e tempi d’uso</h2><dl class="kv" id="stLog"></dl><div class="usage" id="stUsage"></div>
+          <div class="row" style="margin-top:12px"><button class="btn sm" id="opOpen" type="button">Apri il registro</button><button class="btn sm" id="opResetA" type="button">Azzera i tempi</button></div></div>
         <div class="card"><h2>Bus S-Link</h2><dl class="kv" id="stBus"></dl></div>
         <div class="card"><h2>Dispositivi S-Link</h2><dl class="kv" id="stDev"></dl></div>
         <div class="card span2"><h2>Energia</h2><dl class="kv" id="stPow"></dl></div>
@@ -875,6 +908,15 @@ body.hxon .hx{display:block}
           <h2>Dispositivo</h2>
           <div class="set"><div class="t"><b>Ora del dispositivo</b><span id="devTimeTxt">—</span></div><button class="btn sm" id="timeSync">Sincronizza l’ora</button></div>
           <div class="set"><div class="t"><b>Riavvia il dispositivo</b><span>Riavvio software, un secondo; la pagina si ricollega da sola</span></div><button class="btn sm" id="devReboot">Riavvia</button></div>
+        </div>
+        <div class="card">
+          <h2>Registro operazioni</h2>
+          <form class="form" id="opForm" autocomplete="off">
+            <label>Eventi conservati (0 = registro spento)<input id="opDepth" type="number" min="0" max="20000" step="50"></label>
+            <div class="hint" id="opDepthHint"></div>
+            <div class="opcats" id="opCats"></div>
+            <div class="row"><button class="btn sm" type="submit">Salva</button><button class="btn sm" type="button" id="opClear">Svuota il registro</button><button class="btn sm" type="button" id="opResetS">Azzera i tempi</button></div>
+          </form>
         </div>
         <div class="card">
           <h2>Interfacce</h2>
@@ -1112,6 +1154,13 @@ body.hxon .hx{display:block}
 <dialog id="taskDlg" class="taskdlg"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">Task</h3><button class="btn sm" id="taskClose" type="button">Chiudi</button></div>
   <div id="taskSum" class="hint"></div>
   <div class="taskwrap"><table id="taskTbl"><thead><tr><th>Task</th><th class="tp">Priorità</th><th>CPU</th><th>Margine stack</th><th class="ts">Stato</th></tr></thead><tbody></tbody></table></div></dialog>
+<dialog id="opDlg" class="taskdlg opdlg"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:2px"><h3 style="margin:0">Registro operazioni</h3><span><button class="btn sm" id="opRefresh" type="button">Aggiorna</button> <button class="btn sm" id="opClose" type="button">Chiudi</button></span></div>
+  <div class="opbar"><span class="seg" id="opPer"><button type="button" data-p="3600" aria-pressed="false">1 h</button><button type="button" data-p="86400" aria-pressed="true">24 h</button><button type="button" data-p="604800" aria-pressed="false">7 g</button><button type="button" data-p="0" aria-pressed="false">Tutto</button></span><span id="opChips" style="display:contents"></span></div>
+  <div class="opbar" id="opSrcs" style="margin-top:0"></div>
+  <div class="optl" id="opTl"></div><div class="optl-ax"><span id="opTlA"></span><span id="opTlB"></span></div>
+  <div class="optl-lg"><span><b style="background:var(--ok)"></b>Acceso</span><span><b style="background:var(--warn)"></b>Radio</span><span id="opSum"></span></div>
+  <div class="oplist" id="opList" tabindex="0"></div>
+  <div class="row" style="margin-top:8px"><button class="btn sm" id="opMore" type="button" hidden>Carica altri eventi</button></div></dialog>
 <dialog id="cliDlg" class="taskdlg"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">Client TCP/IP</h3><span><button class="btn sm" id="cliRefresh" type="button">Aggiorna</button> <button class="btn sm" id="cliClose" type="button">Chiudi</button></span></div>
   <div id="cliSum" class="hint"></div>
   <div class="taskwrap"><table id="cliTbl"><thead><tr><th>Servizio</th><th>Indirizzo IP</th><th>Nome</th><th class="num">Connessioni</th></tr></thead><tbody></tbody></table></div></dialog>
@@ -1669,6 +1718,81 @@ const TRX = [
   ['Risultato precedente', 'Previous result', 'Résultat précédent', 'Voriges Ergebnis', 'Resultado anterior'],
   ['Risultato successivo', 'Next result', 'Résultat suivant', 'Nächstes Ergebnis', 'Resultado siguiente'],
   ['Leggi il manuale', 'Read the manual', 'Lire le manuel', 'Handbuch lesen', 'Leer el manual'],
+  ['Registro e tempi d’uso', 'Log and usage times', 'Journal et temps d’utilisation', 'Protokoll und Nutzungszeiten', 'Registro y tiempos de uso'],
+  ['Apri il registro', 'Open the log', 'Ouvrir le journal', 'Protokoll öffnen', 'Abrir el registro'],
+  ['Azzera i tempi', 'Reset the times', 'Remettre les temps à zéro', 'Zeiten zurücksetzen', 'Poner los tiempos a cero'],
+  ['Registro operazioni', 'Operations log', 'Journal des opérations', 'Betriebsprotokoll', 'Registro de operaciones'],
+  ['Registro', 'Log', 'Journal', 'Protokoll', 'Registro'],
+  ['Tempi contati dal', 'Times counted since', 'Temps comptés depuis le', 'Zeiten gezählt seit', 'Tiempos contados desde'],
+  ['Aggiorna', 'Refresh', 'Actualiser', 'Aktualisieren', 'Actualizar'],
+  ['Carica altri eventi', 'Load more events', 'Charger plus d’événements', 'Mehr Ereignisse laden', 'Cargar más eventos'],
+  ['Tutto', 'All', 'Tout', 'Alles', 'Todo'],
+  ['adesso', 'now', 'maintenant', 'jetzt', 'ahora'],
+  ['Acceso', 'On', 'Allumé', 'Eingeschaltet', 'Encendido'],
+  ['Radio', 'Radio', 'Radio', 'Radio', 'Radio'],
+  ['Radio (Tuner)', 'Radio (Tuner)', 'Radio (Tuner)', 'Radio (Tuner)', 'Radio (Tuner)'],
+  ['Accensione', 'Power', 'Alimentation', 'Einschalten', 'Encendido'],
+  ['Ingresso', 'Input', 'Entrée', 'Eingang', 'Entrada'],
+  ['Muto', 'Mute', 'Muet', 'Stumm', 'Silencio'],
+  ['Volume', 'Volume', 'Volume', 'Lautstärke', 'Volumen'],
+  ['Campo sonoro', 'Sound field', 'Champ sonore', 'Klangfeld', 'Campo sonoro'],
+  ['Sistema', 'System', 'Système', 'System', 'Sistema'],
+  ['Digitale', 'Digital', 'Numérique', 'Digital', 'Digital'],
+  ['Altro', 'Other', 'Autre', 'Andere', 'Otro'],
+  ['Video', 'Video', 'Vidéo', 'Video', 'Vídeo'],
+  ['accensione', 'power-on', 'allumage', 'Einschaltung', 'encendido'],
+  ['accensioni', 'power-ons', 'allumages', 'Einschaltungen', 'encendidos'],
+  ['Avvio del dispositivo', 'Device start', 'Démarrage de l’appareil', 'Start des Geräts', 'Inicio del dispositivo'],
+  ['Reset esterno', 'External reset', 'Reset externe', 'Externer Reset', 'Reinicio externo'],
+  ['Riavvio software', 'Software restart', 'Redémarrage logiciel', 'Software-Neustart', 'Reinicio por software'],
+  ['Crash (panic)', 'Crash (panic)', 'Plantage (panic)', 'Absturz (Panic)', 'Fallo (panic)'],
+  ['Watchdog', 'Watchdog', 'Watchdog', 'Watchdog', 'Watchdog'],
+  ['Reset USB', 'USB reset', 'Reset USB', 'USB-Reset', 'Reinicio USB'],
+  ['Reset JTAG', 'JTAG reset', 'Reset JTAG', 'JTAG-Reset', 'Reinicio JTAG'],
+  ['Reset eFuse', 'eFuse reset', 'Reset eFuse', 'eFuse-Reset', 'Reinicio eFuse'],
+  ['Power glitch', 'Power glitch', 'Power glitch', 'Power-Glitch', 'Power glitch'],
+  ['CPU lockup', 'CPU lockup', 'CPU lockup', 'CPU-Lockup', 'CPU lockup'],
+  ['Deep sleep', 'Deep sleep', 'Veille profonde', 'Deep Sleep', 'Sueño profundo'],
+  ['Brownout', 'Brownout', 'Sous-tension', 'Brownout', 'Caída de tensión'],
+  ['Amplificatore acceso', 'Amplifier on', 'Amplificateur allumé', 'Verstärker an', 'Amplificador encendido'],
+  ['Amplificatore spento', 'Amplifier off', 'Amplificateur éteint', 'Verstärker aus', 'Amplificador apagado'],
+  ['Muto inserito', 'Mute on', 'Muet activé', 'Stumm ein', 'Silencio activado'],
+  ['Muto disinserito', 'Mute off', 'Muet désactivé', 'Stumm aus', 'Silencio desactivado'],
+  ['stima, in % della corsa', 'estimate, in % of the travel', 'estimation, en % de la course', 'Schätzung, in % des Regelwegs', 'estimación, en % del recorrido'],
+  ['Orologio del dispositivo sincronizzato', 'Device clock synchronised', 'Horloge de l’appareil synchronisée', 'Geräteuhr synchronisiert', 'Reloj del dispositivo sincronizado'],
+  ['Riavvio richiesto', 'Restart requested', 'Redémarrage demandé', 'Neustart angefordert', 'Reinicio solicitado'],
+  ['Firmware aggiornato', 'Firmware updated', 'Firmware mis à jour', 'Firmware aktualisiert', 'Firmware actualizado'],
+  ['acceso da {d}', 'on for {d} so far', 'allumé depuis {d}', 'seit {d} an', 'encendido desde hace {d}'],
+  ['è stato acceso per {d}', 'was on for {d}', 'est resté allumé {d}', 'war {d} an', 'estuvo encendido {d}'],
+  ['Nessun evento nel periodo scelto', 'No event in the chosen period', 'Aucun événement dans la période choisie', 'Keine Ereignisse im gewählten Zeitraum', 'Ningún evento en el periodo elegido'],
+  ['Il registro è spento (Impostazioni)', 'The log is off (Settings)', 'Le journal est désactivé (Réglages)', 'Das Protokoll ist aus (Einstellungen)', 'El registro está apagado (Ajustes)'],
+  ['{n} eventi mostrati · {l} nel registro (massimo {c})', '{n} events shown · {l} in the log (maximum {c})', '{n} événements affichés · {l} dans le journal (maximum {c})', '{n} Ereignisse angezeigt · {l} im Protokoll (maximal {c})', '{n} eventos mostrados · {l} en el registro (máximo {c})'],
+  ['{l} eventi · profondità {d} · {m}', '{l} events · depth {d} · {m}', '{l} événements · profondeur {d} · {m}', '{l} Ereignisse · Tiefe {d} · {m}', '{l} eventos · profundidad {d} · {m}'],
+  ['in PSRAM', 'in PSRAM', 'en PSRAM', 'im PSRAM', 'en PSRAM'],
+  ['in RAM interna', 'in internal RAM', 'en RAM interne', 'im internen RAM', 'en RAM interna'],
+  ['PSRAM', 'PSRAM', 'PSRAM', 'PSRAM', 'PSRAM'],
+  ['RAM interna', 'internal RAM', 'RAM interne', 'interner RAM', 'RAM interna'],
+  ['spento', 'off', 'désactivé', 'aus', 'apagado'],
+  ['data non nota (orologio non impostato)', 'date unknown (clock not set)', 'date inconnue (horloge non réglée)', 'Datum unbekannt (Uhr nicht gestellt)', 'fecha desconocida (reloj sin ajustar)'],
+  ['Eventi conservati (0 = registro spento)', 'Events kept (0 = log off)', 'Événements conservés (0 = journal désactivé)', 'Gespeicherte Ereignisse (0 = Protokoll aus)', 'Eventos conservados (0 = registro apagado)'],
+  ['Massimo {m} eventi su questo dispositivo ({k}). Ogni evento usa 8 byte; il registro si azzera al riavvio, i tempi no.', 'At most {m} events on this device ({k}). Each event takes 8 bytes; the log is emptied at a restart, the times are not.', 'Au plus {m} événements sur cet appareil ({k}). Chaque événement prend 8 octets ; le journal est vidé au redémarrage, pas les temps.', 'Höchstens {m} Ereignisse auf diesem Gerät ({k}). Jedes Ereignis belegt 8 Byte; das Protokoll wird beim Neustart geleert, die Zeiten nicht.', 'Como máximo {m} eventos en este dispositivo ({k}). Cada evento usa 8 bytes; el registro se vacía al reiniciar, los tiempos no.'],
+  ['Svuota il registro', 'Empty the log', 'Vider le journal', 'Protokoll leeren', 'Vaciar el registro'],
+  ['Azzerare i tempi?', 'Reset the times?', 'Remettre les temps à zéro ?', 'Zeiten zurücksetzen?', '¿Poner los tiempos a cero?'],
+  ['I contatori del tempo di accensione e di ascolto di ogni sorgente ripartono da zero.', 'The counters of the power-on time and of the listening time of every source start again from zero.', 'Les compteurs du temps d’allumage et d’écoute de chaque source repartent de zéro.', 'Die Zähler für Einschaltzeit und Hörzeit jeder Quelle beginnen bei null.', 'Los contadores del tiempo encendido y de escucha de cada fuente vuelven a cero.'],
+  ['Azzera', 'Reset', 'Remettre à zéro', 'Zurücksetzen', 'Poner a cero'],
+  ['Svuotare il registro?', 'Empty the log?', 'Vider le journal ?', 'Protokoll leeren?', '¿Vaciar el registro?'],
+  ['Gli eventi registrati vengono cancellati. I tempi contati restano.', 'The recorded events are deleted. The counted times stay.', 'Les événements enregistrés sont supprimés. Les temps comptés restent.', 'Die gespeicherten Ereignisse werden gelöscht. Die gezählten Zeiten bleiben.', 'Los eventos registrados se borran. Los tiempos contados permanecen.'],
+  ['Svuota', 'Empty', 'Vider', 'Leeren', 'Vaciar'],
+  ['Origine', 'Origin', 'Origine', 'Herkunft', 'Origen'],
+  ['da', 'from', 'depuis', 'von', 'desde'],
+  ['Amplificatore o telecomando (letto dal bus S-Link)', 'Amplifier or remote control (read from the S-Link bus)', 'Amplificateur ou télécommande (lu sur le bus S-Link)', 'Verstärker oder Fernbedienung (vom S-Link-Bus gelesen)', 'Amplificador o mando a distancia (leído del bus S-Link)'],
+  ['Portale web (HTTP)', 'Web portal (HTTP)', 'Portail web (HTTP)', 'Webportal (HTTP)', 'Portal web (HTTP)'],
+  ['Portale web', 'Web portal', 'Portail web', 'Webportal', 'Portal web'],
+  ['Protocollo Slink-e', 'Slink-e protocol', 'Protocole Slink-e', 'Slink-e-Protokoll', 'Protocolo Slink-e'],
+  ['Il dispositivo stesso', 'The device itself', 'L’appareil lui-même', 'Das Gerät selbst', 'El propio dispositivo'],
+  ['Bus S-Link', 'S-Link bus', 'Bus S-Link', 'S-Link-Bus', 'Bus S-Link'],
+  ['Portale', 'Portal', 'Portail', 'Portal', 'Portal'],
+  ['Bridge', 'Bridge', 'Bridge', 'Bridge', 'Bridge'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
@@ -2456,6 +2580,7 @@ function onMsg(d) {
     else if (j.t === 'stats') renderStats(j);
     else if (j.t === 'tasks') renderTasks(j);
     else if (j.t === 'clients') renderClients(j);
+    else if (j.t === 'oplog') renderOplog(j);
     return;
   }
   log(logClass(d), maskLine(d));
@@ -2527,7 +2652,7 @@ function handleLine(d) {
   const m = /^(\d)\/(\d+)\s/.exec(d); if (m) { $('#preProg').classList.add('show'); $('#preProgT').textContent = tr('Lettura preset {a}/{b}…', { a: m[1], b: m[2] }); }
 }
 async function fetchJson(u) {
-  if (DEMO) { if (u === '/api/tasks') renderTasks(demoTasks()); else if (u === '/api/clients') renderClients({ t: 'clients', c: [['192.168.178.20', 'iphone.fritz.box', 80, 51234, 2], ['192.168.178.31', 'pc.fritz.box', 443, 50100, 3], ['192.168.178.31', 'pc.fritz.box', 2323, 50222, 1], ['192.168.178.1', 'fritz.box', 51000, 1883, 1]] }); return; }
+  if (DEMO) { if (u.startsWith('/api/oplog')) renderOplog(demoOplog()); else if (u === '/api/tasks') renderTasks(demoTasks()); else if (u === '/api/clients') renderClients({ t: 'clients', c: [['192.168.178.20', 'iphone.fritz.box', 80, 51234, 2], ['192.168.178.31', 'pc.fritz.box', 443, 50100, 3], ['192.168.178.31', 'pc.fritz.box', 2323, 50222, 1], ['192.168.178.1', 'fritz.box', 51000, 1883, 1]] }); return; }
   if (BLEMODE) { const m = /\/api\/(\w+)/.exec(u); if (m && ws && ws.readyState === 1) ws.send('@GET ' + m[1]); return; }      /* the device answers with the same JSON frame */
   try { const r = await fetch(u, { cache: 'no-store' }); onMsg(await r.text()); } catch (e) {}
 }
@@ -3089,6 +3214,136 @@ function demoTasks() {
   return { t: 'tasks', win: 3, cores: 2, tasks: [r('IDLE0', 0, 97.8, 650, 1), r('IDLE1', 0, 98.9, 756, 1), r('wifi', 23, 0.9 + Math.random(), 4480), r('slink_rx', 10, 0.4, 2296), r('tcpip', 18, 0.3, 1704), r('esp_timer', 22, 0.2, 3068), r('httpd', 5, 0.1, 5168, 0),
     r('slink_ws', 4, 0.1, 2012), r('slink_cmd', 5, 0.1, 2836), r('mdns', 1, 0, 3308), r('slink_net', 4, 0, 1904), r('nimble_host', 21, 0, 2268), r('Tmr Svc', 1, 0, 1420), r('sys_evt', 20, 0, 2084), r('slink_cli', 5, 0, 900)] };
 }
+/* ---- functional log: what the amplifier did (power, input, mute, volume, sound field, radio, system) and the time counters. The device keeps the events (8 bytes each, in the PSRAM
+ * when there is one); the times here are of this phone / computer: the device sends the seconds since its start, not a date. */
+const OPCATS = [
+  { b: 1, t: 'Accensione', c: '#2f7d4f' }, { b: 2, t: 'Ingresso', c: '#2b62d9' }, { b: 4, t: 'Muto', c: '#8a6d1d' }, { b: 8, t: 'Volume', c: '#d9822b' },
+  { b: 16, t: 'Campo sonoro', c: '#7a3fb0' }, { b: 32, t: 'Radio', c: '#c4423a' }, { b: 64, t: 'Sistema', c: '#6b7280' } ];
+const OPTYPE_CAT = { 2: 1, 3: 2, 4: 4, 5: 8, 6: 16, 7: 32 };            /* event type -> category (the other types are "Sistema") */
+const OPSLOTS = ['Tuner', 'Phono', 'CD', 'DAT', 'MD', 'Tape', 'Digitale', 'Video 1', 'Video 2', 'Video 3', 'Video 4', 'DVD', 'SAT', 'TV', 'Altro'];
+const RST = ['?', 'Accensione', 'Reset esterno', 'Riavvio software', 'Crash (panic)', 'Watchdog', 'Watchdog', 'Watchdog', 'Deep sleep', 'Brownout', 'SDIO', 'Reset USB', 'Reset JTAG', 'Reset eFuse', 'Power glitch', 'CPU lockup'];
+/* who gave the command (the firmware tells by the interface it came from; a change that no command of ours explains was made on the amplifier itself or with its remote control, and is read from the S-Link bus) */
+const OPSRC = ['Amplificatore o telecomando (letto dal bus S-Link)', 'USB', 'Console TCP', 'Portale web (HTTP)', 'Portale web', 'Bluetooth', 'MQTT', 'Philips Hue', 'Matter', 'Protocollo Slink-e', 'Il dispositivo stesso'];
+const OPSRC_SHORT = ['Bus S-Link', 'USB', 'TCP', 'HTTP', 'Portale', 'Bluetooth', 'MQTT', 'Hue', 'Matter', 'Slink-e', 'Bridge'];
+let OPL = null, opCats = 127, opSrc = 2047, opPer = 86400, opN = 400, opTimer = null;
+const fmtDur = sec => { sec = Math.round(sec); const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60);
+  return d ? d + ' g ' + h + ' h' : h ? h + ' h ' + String(m).padStart(2, '0') + ' min' : m ? m + ' min' : sec + ' s'; };
+function opInName(c) { if (c === 7) return tr('Digitale'); const x = SOURCES.find(q => q.c === c || (q.alt && q.alt.includes(c))); return x ? x.t : '0x' + c.toString(16).toUpperCase(); }
+function opText(e) {
+  const [, ty, a, v] = e;
+  switch (ty) {
+    case 1: return [tr('Avvio del dispositivo'), tr(RST[a] || '?')];
+    case 2: return [tr(a ? 'Amplificatore acceso' : 'Amplificatore spento'), ''];
+    case 3: return [tr('Ingresso') + ': ' + opInName(a), v !== 255 && v >= 0x10 ? tr('Video') + ': ' + opInName(v) : ''];
+    case 4: return [tr(a ? 'Muto inserito' : 'Muto disinserito'), ''];
+    case 5: return [tr('Volume') + ' ' + fmtVol(v), tr('stima, in % della corsa')];
+    case 6: return [tr('Campo sonoro') + ': ' + (SF_NAMES[a] || a), ''];
+    case 7: return [tr('Radio') + ' ' + (a & 1 ? v + ' kHz AM' : (v / 100).toFixed(2) + ' MHz FM'), ''];
+    case 8: return [tr('Orologio del dispositivo sincronizzato'), ''];
+    case 9: return [tr('Riavvio richiesto'), ''];
+    case 10: return [tr('Firmware aggiornato'), ''];
+    default: return ['?', ''];
+  }
+}
+/* the events with their time (ms), the periods the amplifier was on and on the radio, replayed from the events */
+function opModel(j) {
+  const ref = j.ref, ev = (j.ev || []).map(e => ({ e, t: ref - (j.up - e[0]) * 1000, cat: OPTYPE_CAT[e[1]] || 64, src: e[4] === undefined ? 0 : e[4] }));
+  const on = [], rad = [];
+  let pw = null, au = null, a0 = null, r0 = null;
+  const close = (t) => { if (a0 !== null) { on.push([a0, t]); a0 = null; } if (r0 !== null) { rad.push([r0, t]); r0 = null; } };
+  const open = t => { const p = pw === 1, r = pw === 1 && au === 0; if (p && a0 === null) a0 = t; if (!p && a0 !== null) { on.push([a0, t]); a0 = null; } if (r && r0 === null) r0 = t; if (!r && r0 !== null) { rad.push([r0, t]); r0 = null; } };
+  const dur = new Map();
+  let ons = null;
+  ev.forEach(x => {
+    const [, ty, a, v] = x.e;
+    if (ty === 2) { pw = a; if (a === 1) ons = x; else if (ons) { dur.set(x, (x.t - ons.t) / 1000); ons = null; } open(x.t); }
+    else if (ty === 3) { au = a; open(x.t); }
+    else if (ty === 1) { pw = null; au = null; close(x.t); ons = null; }
+  });
+  close(ref);
+  if (pw === 1 && ons) dur.set(ons, -1);
+  return { ev, on, rad, dur, ref };
+}
+function opRender() {
+  const d = $('#opDlg'); if (!d.open || !OPL) return;
+  const M = opModel(OPL), now = OPL.ref, from = opPer ? now - opPer * 1000 : (M.ev.length ? M.ev[0].t : now - 3600e3);
+  const win = Math.max(1, now - from);
+  const seg = (arr, cls) => arr.filter(r => r[1] > from).map(r => { const l = Math.max(0, (r[0] - from) / win * 100), w = Math.max(0.3, (Math.min(r[1], now) - Math.max(r[0], from)) / win * 100);
+    return '<i class="' + cls + '" style="left:' + l.toFixed(2) + '%;width:' + w.toFixed(2) + '%" title="' + esc(new Date(r[0]).toLocaleString(LANG || [], { hour12: false }) + ' → ' + new Date(r[1]).toLocaleTimeString([], { hour12: false }) + ' · ' + fmtDur((r[1] - r[0]) / 1000)) + '"></i>'; }).join('');
+  $('#opTl').innerHTML = seg(M.on, '') + seg(M.rad, 'r');
+  const f = new Date(from), fmtA = t => (opPer && opPer <= 86400 ? t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : t.toLocaleDateString(LANG || [], { day: '2-digit', month: '2-digit' }) + ' ' + t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+  $('#opTlA').textContent = fmtA(f); $('#opTlB').textContent = tr('adesso');
+  const present = [...new Set(M.ev.filter(x => x.t >= from).map(x => x.src))].sort((a, b) => a - b);
+  $('#opSrcs').innerHTML = present.length > 1 ? '<span class="hint" style="margin-right:2px">' + esc(tr('Origine')) + ':</span>' + present.map(i => '<button type="button" class="opchip" data-s="' + i + '" aria-pressed="' + !!(opSrc & (1 << i)) + '" title="' + esc(tr(OPSRC[i])) + '">' + esc(tr(OPSRC_SHORT[i])) + '</button>').join('') : '';
+  const sel = M.ev.filter(x => x.t >= from && (opCats & x.cat) && (opSrc & (1 << x.src))).reverse();
+  let html = '', day = '';
+  sel.forEach(x => {
+    const dt = new Date(x.t), dk = dt.toLocaleDateString(LANG || [], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    if (dk !== day) { day = dk; html += '<div class="opday">' + esc(dk) + '</div>'; }
+    const [t1, t2] = opText(x.e); let extra = t2;
+    if (x.e[1] !== 1 && x.src !== 10) extra = (extra ? extra + ' · ' : '') + tr('da') + ': ' + tr(OPSRC[x.src]);
+    const du = M.dur.get(x); if (du !== undefined) extra = (extra ? extra + ' · ' : '') + (du < 0 ? tr('acceso da {d}', { d: fmtDur((now - x.t) / 1000) }) : tr('è stato acceso per {d}', { d: fmtDur(du) }));
+    const c = OPCATS.find(q => q.b === x.cat).c;
+    html += '<div class="oprow"><span class="optime">' + dt.toLocaleTimeString([], { hour12: false }) + '</span><span class="opdot" style="background:' + c + '"></span><span class="optxt">' + esc(t1) + (extra ? '<small>' + esc(extra) + '</small>' : '') + '</span></div>';
+  });
+  $('#opList').innerHTML = html || '<div class="hint" style="padding:14px">' + esc(OPL.depth ? tr('Nessun evento nel periodo scelto') : tr('Il registro è spento (Impostazioni)')) + '</div>';
+  $('#opSum').textContent = tr('{n} eventi mostrati · {l} nel registro (massimo {c})', { n: sel.length, l: OPL.len, c: OPL.cap });
+  $('#opMore').hidden = !(OPL.ev.length < OPL.len && opN < 5000);
+  $$('#opChips .opchip').forEach(b => b.setAttribute('aria-pressed', !!(opCats & +b.dataset.b)));
+  $$('#opPer button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.p === opPer));
+}
+function opFetch() { fetchJson('/api/oplog?n=' + opN); }
+function opOpen() {
+  const d = $('#opDlg'); if (!d.open) d.showModal();
+  $('#opChips').innerHTML = OPCATS.map(c => '<button type="button" class="opchip" data-b="' + c.b + '" aria-pressed="true"><i style="background:' + c.c + '"></i>' + esc(tr(c.t)) + '</button>').join('');
+  $('#opList').textContent = tr('Attendi…'); opFetch();
+  clearInterval(opTimer); opTimer = setInterval(() => { if (!document.hidden) opFetch(); }, 4000);
+}
+function renderOplog(j) {
+  j.ref = Date.now(); OPL = j;
+  /* Statistics: the counters */
+  const tot = j.cnt[15], row = (cls, name, sec, note) => '<div class="u ' + cls + '"><span>' + esc(name) + '</span><span class="bar"><i style="width:' + (tot ? Math.min(100, sec / tot * 100) : 0).toFixed(1) + '%"></i></span><span>' + esc(fmtDur(sec)) + (note ? ' · ' + esc(note) : '') + '</span></div>';
+  const srcs = j.cnt.slice(0, 15).map((v, i) => [i, v]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+  if ($('#stUsage')) {
+    $('#stUsage').innerHTML = row('on', tr('Acceso'), tot, j.non + ' ' + tr(j.non === 1 ? 'accensione' : 'accensioni')) +
+      srcs.map(x => row(x[0] === 0 ? 'rad' : '', x[0] === 0 ? tr('Radio (Tuner)') : tr(OPSLOTS[x[0]]), x[1], tot ? Math.round(x[1] / tot * 100) + ' %' : '')).join('') +
+      (j.cnt[16] ? row('', tr('Muto'), j.cnt[16], tot ? Math.round(j.cnt[16] / tot * 100) + ' %' : '') : '');
+    kvRows('#stLog', [['Registro', j.depth ? tr('{l} eventi · profondità {d} · {m}', { l: j.len, d: j.depth, m: j.psram ? tr('in PSRAM') : tr('in RAM interna') }) : tr('spento')],
+      ['Tempi contati dal', j.since ? new Date(j.since * 1000).toLocaleDateString() : tr('data non nota (orologio non impostato)')]]);
+  }
+  /* Settings */
+  if ($('#opDepth')) {
+    fieldSet($('#opDepth'), String(j.depth)); $('#opDepth').max = j.max;
+    $('#opDepthHint').textContent = tr('Massimo {m} eventi su questo dispositivo ({k}). Ogni evento usa 8 byte; il registro si azzera al riavvio, i tempi no.', { m: j.max, k: j.psram ? tr('PSRAM') : tr('RAM interna') });
+    if (!$('#opForm').contains(document.activeElement)) { if (!$('#opCats').children.length) $('#opCats').innerHTML = OPCATS.map(c => '<label><input type="checkbox" data-b="' + c.b + '">' + esc(tr(c.t)) + '</label>').join(''); $$('#opCats input').forEach(i => { i.checked = !!(j.mask & +i.dataset.b); }); }
+  }
+  opRender();
+}
+function demoOplog() {
+  const up = 200000, ev = [], T = (ago) => up - ago;
+  const add = (ago, ty, a, v, src) => ev.push([T(ago), ty, a || 0, v || 0, src === undefined ? (ty === 1 ? 10 : [0, 4, 0, 5, 0, 6][ev.length % 6]) : src]);
+  add(90000, 1, 1); add(86000, 7, 0, 0); add(80000, 2, 1); add(79990, 3, 2, 255); add(79000, 5, 0, 120); add(76000, 4, 1); add(75900, 4, 0); add(72000, 2, 0);
+  add(40000, 2, 1); add(39990, 3, 0, 255); add(39980, 7, 0, 9850); add(36000, 7, 0, 10110); add(30000, 3, 1, 255); add(29000, 6, 0, 0); add(28000, 6, 4); add(20000, 5, 0, 180); add(14000, 2, 0);
+  add(9000, 2, 1); add(8990, 3, 0x04, 255); add(7000, 6, 5); add(3000, 3, 0x15, 0x15); add(600, 5, 0, 95);
+  return { t: 'oplog', up, cap: 2000, len: ev.length, depth: 2000, max: 20000, mask: 127, psram: 1, since: Math.floor(Date.now() / 1000) - 12 * 86400, non: 37,
+    cnt: [18000, 600, 14500, 0, 3000, 0, 0, 0, 0, 0, 0, 7200, 0, 0, 0, 52000, 900], ev };
+}
+function opInit() {
+  $('#opOpen').onclick = opOpen;
+  $('#opClose').onclick = () => $('#opDlg').close(); $('#opDlg').addEventListener('close', () => { clearInterval(opTimer); opTimer = null; });
+  $('#opRefresh').onclick = opFetch;
+  $('#opMore').onclick = () => { opN = Math.min(5000, opN * 3); opFetch(); };
+  $('#opPer').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; opPer = +b.dataset.p; opRender(); });
+  $('#opSrcs').addEventListener('click', e => { const b = e.target.closest('.opchip'); if (!b) return; opSrc ^= 1 << +b.dataset.s; opRender(); });
+  $('#opChips').addEventListener('click', e => { const b = e.target.closest('.opchip'); if (!b) return; opCats ^= +b.dataset.b; opRender(); });
+  const reset = async () => { if (await confirmDlg('Azzerare i tempi?', 'I contatori del tempo di accensione e di ascolto di ogni sorgente ripartono da zero.', 'Azzera')) { cmd('OPLOG RESET', { ack: true }); setTimeout(opFetch, 600); } };
+  $('#opResetA').onclick = reset; $('#opResetS').onclick = reset;
+  $('#opClear').onclick = async () => { if (await confirmDlg('Svuotare il registro?', 'Gli eventi registrati vengono cancellati. I tempi contati restano.', 'Svuota')) { cmd('OPLOG CLEAR', { ack: true }); setTimeout(opFetch, 600); } };
+  $('#opForm').onsubmit = e => { e.preventDefault();
+    const dpt = Math.max(0, Math.min(+($('#opDepth').max || 20000), parseInt($('#opDepth').value, 10) || 0));
+    let m = 0; $$('#opCats input').forEach(i => { if (i.checked) m |= +i.dataset.b; });
+    cmd('OPLOG SET ' + dpt + ' ' + m, { ack: true }); setTimeout(opFetch, 600); };
+}
 /* the TCP/IP clients: every connected socket of the device (web portal, TCP console, Slink-e and the connections it opened itself), with the name from the router's DNS */
 function cliOpen() {
   const d = $('#cliDlg'); if (!d.open) d.showModal();
@@ -3539,8 +3794,9 @@ function showTab(n) {
   navReveal(n);
   store.set('tab', n); scrollTo({ top: 0 });
   clearInterval(statsTimer); statsTimer = null;
+  if (n === 'set' || n === 'stats') fetchJson('/api/oplog?n=0');                  /* settings and counters of the log (the events are asked by the dialog) */
   if (n === 'set') pollStats();                                            /* the device time shown in Settings comes from the statistics */
-  if (n === 'stats') { pollStats(); statsTimer = setInterval(() => { if (!document.hidden) pollStats(); }, 3000); }
+  if (n === 'stats') { pollStats(); let k = 0; statsTimer = setInterval(() => { if (!document.hidden) { pollStats(); if (++k % 5 === 0 && !$('#opDlg').open) fetchJson('/api/oplog?n=0'); } }, 3000); }
   if (n === 'sound' && !S.eq[0].every(Boolean) && S.power === 1) eqRead();
   if (n === 'set') otaLoad();
   if (n === 'help') helpOpen();
@@ -4538,6 +4794,7 @@ function scheduleHide() { if (hxTimer) return; hxTimer = setTimeout(() => { hxTi
 function initUiOptions() {
   $('#stSys').addEventListener('click', e => { if (e.target.closest('#taskOpen')) taskOpen(); });
   $('#stConn').addEventListener('click', e => { if (e.target.closest('#cliOpen')) cliOpen(); });
+  opInit();
   $('#cliClose').onclick = () => $('#cliDlg').close(); $('#cliRefresh').onclick = () => cliOpen();
   initSearch();
   $('#taskClose').onclick = () => $('#taskDlg').close();

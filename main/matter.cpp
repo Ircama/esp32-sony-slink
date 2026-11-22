@@ -169,8 +169,8 @@ static esp_err_t attr_cb(attribute::callback_type_t type, uint16_t endpoint_id, 
 {
     if (type != attribute::PRE_UPDATE || endpoint_id != s_ep || !val) return ESP_OK;     /* only what a controller asks: our own updates come as POST_UPDATE */
     if (cluster_id == OnOff::Id && attribute_id == OnOff::Attributes::OnOff::Id) {
-        if (val->val.b) { if (state_power() != 1) cli_submit("PWRON"); }
-        else cli_submit("PWROFF");
+        if (val->val.b) { if (state_power() != 1) cli_submit_from(CLI_SRC_MATTER, "PWRON"); }
+        else cli_submit_from(CLI_SRC_MATTER, "PWROFF");
     } else if (cluster_id == LevelControl::Id && attribute_id == LevelControl::Attributes::CurrentLevel::Id) {
         int l = val->val.u8;                                          /* a slider (and the cluster's own transitions) gives a series of values: only the last one is sent, see vol_task */
         if (l < 1) l = 1;
@@ -231,7 +231,7 @@ static void vol_task(void *)
         if (state_power() == 0) { s_hold_until_us = 0; matter_report(); continue; }   /* standby: the knob does not move, the controller gets the real level back */
         char cmd[32];
         snprintf(cmd, sizeof cmd, "VOL SET %.1f", l * (double)max_pct() / 254.0);
-        cli_submit(cmd);
+        cli_submit_from(CLI_SRC_MATTER, cmd);
     }
 }
 

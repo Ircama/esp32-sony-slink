@@ -6,6 +6,9 @@
  * Feeds the web portal (WebSocket) and the MQTT bridge. */
 void state_init(void);
 void state_feed(const uint8_t *d, size_t n);                 /* call for every received frame */
+int  state_audio(void);                                      /* audio / video input codes, -1 unknown */
+int  state_video(void);
+int  state_mute(void);                                       /* 1 muted, 0 not, -1 unknown */
 int  state_power(void);                                      /* 1 on, 0 off/standby, -1 unknown */
 void state_set_power(int on);                                /* optimistic update after our own PWRON/PWROFF */
 void state_set_listener(void (*cb)(void));                   /* called (from the rx task) after a change */

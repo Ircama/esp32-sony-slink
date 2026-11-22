@@ -41,6 +41,8 @@ typedef struct {
     char matter_name[33];   /* ... name shown by the ecosystem app (empty = "Amplificatore") */
     uint32_t matter_pass;   /* ... setup passcode: random, made at the first start (never the well-known test code) */
     uint16_t matter_disc;   /* ... 12-bit discriminator, random */
+    uint16_t oplog_depth;   /* functional log (oplog.c): events kept, 0 = off (default 2000 with PSRAM, 100 without) */
+    uint8_t oplog_mask;     /* ... what is recorded (OPC_* bits of oplog.h; default all) */
     bool slinke_tx;         /* ... and they may send to the bus (otherwise the connection is a read-only monitor). OFF by default */
 } settings_t;
 

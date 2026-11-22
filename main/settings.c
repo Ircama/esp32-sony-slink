@@ -2,6 +2,7 @@
 #include "settings.h"
 #include "nvs.h"
 #include "soc/soc_caps.h"
+#include "sdkconfig.h"
 
 settings_t g_set;
 
@@ -20,6 +21,11 @@ void settings_load(void)
     g_set.ble = true;                   /* no WiFi on this chip: BLE is the only wireless interface, on by default */
 #endif
     g_set.vol_up = 420; g_set.vol_down = 445; g_set.vol_margin = 10;
+    g_set.oplog_depth = 100;                       /* with PSRAM: 2000 (the log is in the PSRAM) */
+#ifdef CONFIG_SPIRAM
+    g_set.oplog_depth = 2000;
+#endif
+    g_set.oplog_mask = 127;
     g_set.hue_max = 30; g_set.matter_max = 30;          /* also on a device with an empty NVS (the namespace does not exist yet: nothing below runs) */
     nvs_handle_t h;
     if (nvs_open("slink", NVS_READONLY, &h) != ESP_OK) { strcpy(g_set.host, "slink"); return; }
@@ -63,6 +69,7 @@ void settings_load(void)
     if (nvs_get_u8(h, "mtr", &v) == ESP_OK) g_set.matter = v;
     g_set.matter_max = 30; if (nvs_get_u8(h, "mtrmax", &v) == ESP_OK && v >= 1 && v <= 100) g_set.matter_max = v;
     get_str(h, "mtrn", g_set.matter_name, sizeof g_set.matter_name, "");
+    { uint16_t d16; if (nvs_get_u16(h, "opld", &d16) == ESP_OK) g_set.oplog_depth = d16; if (nvs_get_u8(h, "opmk", &v) == ESP_OK) g_set.oplog_mask = v & 127; }
     { uint32_t u = 0; uint16_t d = 0; if (nvs_get_u32(h, "mtrpin", &u) == ESP_OK) g_set.matter_pass = u; if (nvs_get_u16(h, "mtrdsc", &d) == ESP_OK) g_set.matter_disc = d; }
     nvs_close(h);
 }
@@ -109,6 +116,8 @@ void settings_save(void)
     nvs_set_u8(h, "mtr", g_set.matter);
     nvs_set_u8(h, "mtrmax", g_set.matter_max);
     nvs_set_str(h, "mtrn", g_set.matter_name);
+    nvs_set_u16(h, "opld", g_set.oplog_depth);
+    nvs_set_u8(h, "opmk", g_set.oplog_mask);
     nvs_set_u32(h, "mtrpin", g_set.matter_pass);
     nvs_set_u16(h, "mtrdsc", g_set.matter_disc);
     nvs_commit(h);

@@ -12,6 +12,8 @@
  * "illegal command" response and the resume state, as in the original (everything is ignored until FF AA).
  *
  * Off by default (setting "slinke"); sending to the bus needs the second setting ("slinke_tx"), otherwise the connection is a read-only monitor. */
+#include "oplog.h"
+#include "cli.h"
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -81,6 +83,7 @@ static void flush_tx(cl_t *c)
         if (c->txover) { resp(c, 0, 0x81, NULL, 0); c->resume = true; }          /* longer than a bus frame: transmission timeout (critical) */
         else if (!g_set.slinke_tx) { /* sending not allowed: read-only monitor, the message is dropped */ }
         else {
+            oplog_origin(CLI_SRC_SLINKE);                         /* what the amplifier does in the next seconds comes from this program (operations log) */
             int rc = slink_send(c->txb, c->txn, 1);
             if (rc == 0) {
                 char line[8 + 3 * SLINK_MAX_FRAME]; int k = snprintf(line, sizeof line, "TX");

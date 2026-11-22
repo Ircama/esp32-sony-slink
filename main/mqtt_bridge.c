@@ -95,7 +95,7 @@ static void on_data(const char *t, int tl, const char *d, int dl)
                 break;
             }
     }
-    cli_submit(line);
+    cli_submit_from(CLI_SRC_MQTT, line);
 }
 
 static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
