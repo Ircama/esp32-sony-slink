@@ -17,6 +17,7 @@
 #include "esp_rom_sys.h"
 #include "esp_app_desc.h"
 #include "ota.h"
+#include "build_info.h"
 #include "cli.h"
 #include "driver/temperature_sensor.h"
 #include "freertos/FreeRTOS.h"
@@ -72,7 +73,7 @@ size_t stats_json(char *b, size_t sz)
     const esp_app_desc_t *ad = esp_app_get_description();
     char fw[40], built[40], idf[40], ssid[40];
     jesc(fw, sizeof fw, ad->version); jesc(idf, sizeof idf, ad->idf_ver);
-    char tb[40]; snprintf(tb, sizeof tb, "%s %s", ad->date, ad->time); jesc(built, sizeof built, tb);
+    char tb[40]; snprintf(tb, sizeof tb, "%s %s", slink_build_date(), slink_build_time()); jesc(built, sizeof built, tb);
     jesc(ssid, sizeof ssid, g_set.ssid);
 
     uint32_t edges = 0, syncs = 0, bits = 0, frames = 0;
