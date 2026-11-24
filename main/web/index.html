@@ -504,6 +504,10 @@ body.ble .bleonly{display:block}
 #taskTbl tr.idle{opacity:.55}
 #taskTbl .tmeta{display:none}
 @media (max-width:600px){#taskTbl .tp,#taskTbl .ts{display:none}#taskTbl .tmeta{display:block;color:var(--text3);font-size:12px}#taskTbl td.tn{min-width:9.5em}.tbar{min-width:60px}}
+/* a list that has no values yet (the page has just opened, the device has not answered): a line that says so instead of an empty box */
+.kv:empty::before,.usage:empty::before{content:var(--wait-txt,"");grid-column:1/-1;color:var(--text3);font-style:italic;font-size:13px;padding:2px 0;animation:waitp 1.4s ease-in-out infinite}
+@keyframes waitp{50%{opacity:.45}}
+.kv:empty + .usage:empty::before{content:none}
 .kv dt{color:var(--text3);overflow-wrap:anywhere} .kv dd{margin:0;word-break:break-all}
 /* portrait phone: the label above its value, and a thin line between one entry and the next */
 @media (max-width:520px){.kv{grid-template-columns:1fr;gap:0}.kv dt{padding-top:9px;font-size:12px}.kv dt:first-child{padding-top:0}.kv dd{padding:2px 0 9px;border-bottom:1px solid var(--line2)}.kv dd:last-child{border-bottom:0;padding-bottom:0}}
@@ -1800,6 +1804,8 @@ const TRX = [
   ['Spento (standby) da {d}', 'In standby for {d}', 'En veille depuis {d}', 'Seit {d} im Standby', 'En espera desde hace {d}'],
   ['Spento (standby) da almeno {d}', 'In standby for at least {d}', 'En veille depuis au moins {d}', 'Seit mindestens {d} im Standby', 'En espera desde hace al menos {d}'],
   ['Nome RDS della stazione', 'RDS station name', 'Nom RDS de la station', 'RDS-Sendername', 'Nombre RDS de la emisora'],
+  ['Aggiornamento valori in corso…', 'Updating values…', 'Mise à jour des valeurs…', 'Werte werden aktualisiert…', 'Actualizando valores…'],
+  ['In attesa del dispositivo…', 'Waiting for the device…', 'En attente de l’appareil…', 'Warten auf das Gerät…', 'Esperando al dispositivo…'],
   ['Ultimo reset', 'Last reset', 'Dernier reset', 'Letzter Reset', 'Último reinicio'],
   ['Compilato', 'Built', 'Compilé', 'Kompiliert', 'Compilado'],
   ['Installato', 'Installed', 'Installé', 'Installiert', 'Instalado'],
@@ -2368,9 +2374,13 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
 $('#dot').onclick = () => toast(connTxt);                 /* touch screens have no hover: a tap shows the status */
 let nameTry = 0, linkReady = false;                     /* the socket is open AND the device has sent its state: only then are the controls usable */
 let wasLive = false;
+function setWaitTxt() {                              /* the text of the empty lists (CSS --wait-txt): the device is being read, or it is not there */
+  const t = tr(S.connected && linkReady ? 'Aggiornamento valori in corso…' : 'In attesa del dispositivo…');
+  document.documentElement.style.setProperty('--wait-txt', JSON.stringify(t));
+}
 function setConn(ok, txt) {
   S.connected = ok; if (!ok) linkReady = false;
-  const live = ok && linkReady;
+  const live = ok && linkReady; setWaitTxt();
   $('#dot').className = 'dot ' + (live ? (BLEMODE ? 'ble' : 'live') : 'wait'); connTxt = ok && !linkReady ? 'Connessione…' : txt; connLabel();   /* WiFi: green / yellow; Bluetooth: blue / yellow */
   /* no commands while the connection is being (re)established, nor before the first state arrives: the controls are dimmed and cannot be used (mouse, touch or keyboard) */
   ['#miniVol', '#pwr'].forEach(q => { const e = $(q); e.inert = !live; e.classList.toggle('offline', !live); });   /* the header's volume buttons and the power button */
@@ -3807,6 +3817,7 @@ function navInit() {
   fit();
 }
 function showTab(n) {
+  setWaitTxt();
   if (n !== 'console' && window.logMaxOff) window.logMaxOff();
   if (n !== 'help' && document.body.classList.contains('helpfs')) helpFs(false);
   $$('section.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + n));
