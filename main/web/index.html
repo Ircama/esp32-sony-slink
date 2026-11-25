@@ -3614,6 +3614,7 @@ function wire() {
   /* small buttons over the log: to its first / last line; each one shows only when there is somewhere to go */
   const logFab = () => { const L = $('#log'); $('#logTop').hidden = L.scrollTop < 40; $('#logBot').hidden = L.scrollHeight - L.scrollTop - L.clientHeight < 40; };
   $('#log').addEventListener('scroll', logFab, { passive: true });
+  $('#log').addEventListener('scroll', () => { const L = $('#log'); if (L.clientHeight) L._follow = L.scrollHeight - L.scrollTop - L.clientHeight < 30; }, { passive: true });   /* is the reader at the end? (only while the tab is shown: hidden, the sizes are 0) */
   new MutationObserver(logFab).observe($('#log'), { childList: true });
   $('#logTop').onclick = () => { $('#log').scrollTop = 0; };
   $('#logBot').onclick = () => { const L = $('#log'); L.scrollTop = L.scrollHeight; };
@@ -3825,6 +3826,11 @@ function showTab(n) {
   navReveal(n);
   store.set('tab', n); scrollTo({ top: 0 });
   clearInterval(statsTimer); statsTimer = null;
+  if (n === 'console') requestAnimationFrame(() => {                       /* the log grew while the tab was hidden: show the end, as it would have been, and the buttons that go with it */
+    const L = $('#log'); if (!L) return;
+    if (L._follow !== false) L.scrollTop = L.scrollHeight;
+    L.dispatchEvent(new Event('scroll'));
+  });
   if (n === 'set' || n === 'stats') fetchJson('/api/oplog?n=0');                  /* settings and counters of the log (the events are asked by the dialog) */
   if (n === 'set') pollStats();                                            /* the device time shown in Settings comes from the statistics */
   if (n === 'stats') { pollStats(); let k = 0; statsTimer = setInterval(() => { if (!document.hidden) { pollStats(); if (++k % 5 === 0 && !$('#opDlg').open) fetchJson('/api/oplog?n=0'); } }, 3000); }
